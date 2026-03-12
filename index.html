@@ -47,6 +47,29 @@ function loadAdminScores(){
   db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
 }
 
+
+// ══ 관리자 전환 (앱 내에서) ══
+function tryAdminSwitch() {
+  if(isAdminAuthenticated) {
+    // 이미 관리자면 탭만 보여주기
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("이미 관리자 상태입니다");
+    return;
+  }
+  const pw = prompt("관리자 비밀번호");
+  if(pw === ADMIN_PW) {
+    isAdminAuthenticated = true;
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("🔐 관리자 모드 활성화!");
+  } else if(pw !== null) {
+    toast("비밀번호가 틀렸습니다");
+  }
+}
+
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js">
 // ══ 관리자 탭 전용 함수 ══
@@ -88,6 +111,29 @@ function loadAdminScores(){
   const stat={};
   Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
   db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+}
+
+
+// ══ 관리자 전환 (앱 내에서) ══
+function tryAdminSwitch() {
+  if(isAdminAuthenticated) {
+    // 이미 관리자면 탭만 보여주기
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("이미 관리자 상태입니다");
+    return;
+  }
+  const pw = prompt("관리자 비밀번호");
+  if(pw === ADMIN_PW) {
+    isAdminAuthenticated = true;
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("🔐 관리자 모드 활성화!");
+  } else if(pw !== null) {
+    toast("비밀번호가 틀렸습니다");
+  }
 }
 
 </script>
@@ -409,6 +455,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   </nav>
   <div class="sb-bottom">
     <div class="sb-nick">접속 중: <b id="sidebarNick">-</b></div>
+    <button id="sbAdminBtn" onclick="tryAdminSwitch()" style="width:100%;background:rgba(255,85,51,0.1);border:1px solid rgba(255,85,51,0.3);color:var(--text3);padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;display:block;">🔐 관리자 전환</button>
     <button class="sb-logout" onclick="doLogout()">로그아웃</button>
   </div>
 </div>
@@ -813,10 +860,12 @@ function enterApp() {
   else { document.getElementById("tabBar").classList.remove("hidden"); }
   document.getElementById("homeNick").textContent=myNick;
   if(document.getElementById("sidebarNick")) document.getElementById("sidebarNick").textContent=myNick;
-  // 관리자면 사이드바 관리자 섹션 표시
+  // 관리자면 사이드바 관리자 섹션 표시 + 전환 버튼 숨기기
   if(isAdminAuthenticated) {
     const adminNav = document.getElementById("adminNavSection");
     if(adminNav) adminNav.style.display="block";
+    const sbAdminBtn = document.getElementById("sbAdminBtn");
+    if(sbAdminBtn) sbAdminBtn.style.display="none";
   }
   switchTab("home");
   renderRanking();
@@ -1095,6 +1144,29 @@ function loadAdminScores(){
   const stat={};
   Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
   db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+}
+
+
+// ══ 관리자 전환 (앱 내에서) ══
+function tryAdminSwitch() {
+  if(isAdminAuthenticated) {
+    // 이미 관리자면 탭만 보여주기
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("이미 관리자 상태입니다");
+    return;
+  }
+  const pw = prompt("관리자 비밀번호");
+  if(pw === ADMIN_PW) {
+    isAdminAuthenticated = true;
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+    document.getElementById("sbAdminBtn").style.display="none";
+    toast("🔐 관리자 모드 활성화!");
+  } else if(pw !== null) {
+    toast("비밀번호가 틀렸습니다");
+  }
 }
 
 </script>
