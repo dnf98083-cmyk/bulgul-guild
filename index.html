@@ -772,7 +772,10 @@ function toast(msg) {
 // ══ 초기화 ══
 window.onload = () => {
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
-  if(nick&&key){ if(nick==="관리자"&&key==="ADMIN") isAdminAuthenticated=true; checkLogin(nick,key,true); }
+  if(nick&&key){
+    if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick="관리자"; enterApp(); }
+    else { checkLogin(nick,key,true); }
+  }
   document.getElementById("codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
   document.getElementById("nickInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
 };
@@ -786,6 +789,8 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
+  // 관리자 계정은 Firebase 조회 없이 바로 처리
+  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){ localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick; enterApp(); }
     else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
