@@ -5,138 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🔥 불굴 길드 DB</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">
-// ══ 관리자 탭 전용 함수 ══
-function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
-function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
-
-function loadAdminMembers(){
-  db.ref("allowedUsers").get().then(snap=>{
-    const div=document.getElementById("userKeyList2"); div.innerHTML="";
-    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
-    Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
-      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
-      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
-      div.appendChild(r);
-    });
-    filterKeys2();
-  });
-}
-
-function loadAdminReports(){
-  // 공격덱 제보
-  db.ref("suggestions/attack").get().then(snap=>{
-    const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
-    const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
-  });
-  // 방어덱 제보
-  db.ref("suggestions/defense").get().then(snap=>{
-    const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
-    const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
-  });
-}
-
-function loadAdminScores(){
-  const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
-  const stat={};
-  Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
-  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
-}
-
-
-// ══ 관리자 전환 (앱 내에서) ══
-function tryAdminSwitch() {
-  if(isAdminAuthenticated) {
-    // 이미 관리자면 탭만 보여주기
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("이미 관리자 상태입니다");
-    return;
-  }
-  const pw = prompt("관리자 비밀번호");
-  if(pw === ADMIN_PW) {
-    isAdminAuthenticated = true;
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("🔐 관리자 모드 활성화!");
-  } else if(pw !== null) {
-    toast("비밀번호가 틀렸습니다");
-  }
-}
-
-</script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js">
-// ══ 관리자 탭 전용 함수 ══
-function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
-function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
-
-function loadAdminMembers(){
-  db.ref("allowedUsers").get().then(snap=>{
-    const div=document.getElementById("userKeyList2"); div.innerHTML="";
-    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
-    Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
-      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
-      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
-      div.appendChild(r);
-    });
-    filterKeys2();
-  });
-}
-
-function loadAdminReports(){
-  // 공격덱 제보
-  db.ref("suggestions/attack").get().then(snap=>{
-    const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
-    const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
-  });
-  // 방어덱 제보
-  db.ref("suggestions/defense").get().then(snap=>{
-    const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
-    const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
-  });
-}
-
-function loadAdminScores(){
-  const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
-  const stat={};
-  Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
-  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
-}
-
-
-// ══ 관리자 전환 (앱 내에서) ══
-function tryAdminSwitch() {
-  if(isAdminAuthenticated) {
-    // 이미 관리자면 탭만 보여주기
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("이미 관리자 상태입니다");
-    return;
-  }
-  const pw = prompt("관리자 비밀번호");
-  if(pw === ADMIN_PW) {
-    isAdminAuthenticated = true;
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("🔐 관리자 모드 활성화!");
-  } else if(pw !== null) {
-    toast("비밀번호가 틀렸습니다");
-  }
-}
-
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root {
   --bg: #1c0a0a;
@@ -153,7 +23,7 @@ function tryAdminSwitch() {
   --tab-h: 64px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-html, body { background: linear-gradient(160deg, #1c0a0a 0%, #2e1010 40%, #1c0a0a 100%); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; overflow-x: hidden; }
+html, body { background: linear-gradient(160deg,#1c0a0a 0%,#2e1010 40%,#1c0a0a 100%); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; overflow-x: hidden; }
 body::before { content:''; position:fixed; inset:0; z-index:0; background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,85,51,0.18) 0%, transparent 65%); pointer-events:none; }
 
 /* ── 토스트 ── */
@@ -170,14 +40,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .login-card label { display:block; font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; margin-top:14px; }
 .login-card label:first-child { margin-top:0; }
 .login-card input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:14px 16px; border-radius:10px; font-size:16px; outline:none; font-family:inherit; transition:border 0.2s; }
-.login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,61,61,0.1); }
+.login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,85,51,0.1); }
 .btn-primary { width:100%; background:linear-gradient(135deg,#ff4b2b,#ff3d3d); color:#fff; border:none; padding:16px; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; transition:0.2s; box-shadow:var(--glow); margin-top:16px; }
 .btn-primary:active { transform:scale(0.98); }
 .admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
-/* ════════════════════════════════════════
-   모바일 레이아웃
-════════════════════════════════════════ */
+/* ── 모바일 하단 탭바 ── */
 #tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(4,1fr); }
 #tabBar.hidden { display:none; }
 .tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:8px 4px; color:var(--text3); border:none; background:none; font-family:inherit; }
@@ -186,77 +54,56 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .tab-item.active { color:var(--accent); }
 .tab-item.active .tab-icon { filter:drop-shadow(0 0 6px var(--accent)); transform:translateY(-2px); }
 
+/* ── PC 사이드바 ── */
 #sidebar { display:none; }
 
 .screen { display:none; position:relative; z-index:1; padding:20px 16px; padding-bottom:calc(var(--tab-h)+20px); max-width:100%; }
 .screen.active { display:block; }
 
-/* ════════════════════════════════════════
-   PC 레이아웃 (900px+)
-════════════════════════════════════════ */
+/* ════════ PC 레이아웃 ════════ */
 @media (min-width: 900px) {
   #tabBar { display:none !important; }
-
   #sidebar {
-    display:flex !important;
-    flex-direction:column;
-    position:fixed; top:0; left:0;
-    width:var(--sidebar-w); height:100vh;
-    background:rgba(26,8,8,0.98);
-    border-right:1px solid var(--border);
-    backdrop-filter:blur(20px);
-    z-index:100; padding:0;
-    overflow-y:auto;
+    display:flex !important; flex-direction:column;
+    position:fixed; top:0; left:0; width:var(--sidebar-w); height:100vh;
+    background:rgba(26,8,8,0.98); border-right:1px solid var(--border);
+    backdrop-filter:blur(20px); z-index:100; overflow-y:auto;
   }
   .sb-logo { padding:24px 20px; border-bottom:1px solid var(--border); }
   .sb-logo .sb-icon { font-size:24px; }
   .sb-logo .sb-name { font-size:15px; font-weight:900; background:linear-gradient(135deg,#ff6b35,#ff3d3d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-top:4px; }
   .sb-logo .sb-sub { font-size:11px; color:var(--text3); margin-top:2px; }
-
   .sb-nav { padding:12px 0; flex:1; }
+  .sb-divider { padding:14px 20px 4px; font-size:10px; font-weight:700; color:var(--accent); letter-spacing:1px; text-transform:uppercase; opacity:0.7; }
   .sb-item { display:flex; align-items:center; gap:12px; padding:13px 20px; cursor:pointer; border:none; background:none; width:100%; text-align:left; color:var(--text3); font-family:inherit; font-size:14px; font-weight:700; transition:0.15s; border-left:3px solid transparent; }
-  .sb-item:hover { background:rgba(255,61,61,0.05); color:var(--text2); }
-  .sb-item.active { background:rgba(255,61,61,0.08); color:var(--accent); border-left-color:var(--accent); }
+  .sb-item:hover { background:rgba(255,85,51,0.05); color:var(--text2); }
+  .sb-item.active { background:rgba(255,85,51,0.08); color:var(--accent); border-left-color:var(--accent); }
   .sb-item .si-icon { font-size:17px; width:22px; text-align:center; }
-
   .sb-bottom { padding:16px 20px; border-top:1px solid var(--border); }
   .sb-nick { font-size:11px; color:var(--text3); margin-bottom:8px; }
   .sb-nick b { color:var(--accent); }
-  .sb-logout { width:100%; background:rgba(255,61,61,0.08); border:1px solid var(--border); color:var(--text2); padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-
-  /* 메인 영역 */
+  .sb-admin-btn { width:100%; background:rgba(255,85,51,0.08); border:1px solid rgba(255,85,51,0.25); color:var(--text3); padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; margin-bottom:8px; }
+  .sb-admin-btn:hover { background:rgba(255,85,51,0.15); color:var(--text2); }
+  .sb-logout { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text3); padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
   #mainContent { margin-left:var(--sidebar-w); display:flex; justify-content:center; }
   .screen { padding:36px 48px; padding-bottom:48px; width:100%; max-width:880px; }
-
-  /* 홈 - 상단 2열 */
   .home-top-row { display:grid !important; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
   .home-stat-card { margin-bottom:0 !important; }
   .home-menu-grid { grid-template-columns:repeat(3,1fr) !important; }
   .home-menu-btn.big { grid-column:span 1 !important; height:130px; }
-
-  /* 공격 2단 */
   .attack-2col { display:grid !important; grid-template-columns:260px 1fr; gap:24px; align-items:start; }
   .attack-left-col { position:sticky; top:20px; }
   .atk-grid { grid-template-columns:repeat(2,1fr) !important; }
-
-  /* 방어 3열 */
   .def-grid { grid-template-columns:repeat(3,1fr) !important; }
-
-  /* PVE 4열 */
   .pve-grid { grid-template-columns:repeat(4,1fr) !important; }
-
-  /* hover 효과 */
+  .admin-2col { display:grid !important; grid-template-columns:1fr 1fr; gap:24px; }
   .atk-btn:hover,.def-btn:hover,.pve-btn:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.4); }
   .home-menu-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
-
-  /* 드롭다운 → 일반 팝업으로 */
   .dropdown-sheet { position:absolute !important; inset:unset !important; top:calc(100% + 6px) !important; left:0 !important; right:0 !important; background:transparent !important; backdrop-filter:none !important; display:none !important; align-items:flex-start !important; }
   .dropdown-sheet.open { display:block !important; }
   .dropdown-inner { border-radius:var(--radius) !important; border:1px solid var(--border) !important; box-shadow:0 12px 40px rgba(0,0,0,0.7) !important; max-height:320px !important; }
   .dropdown-handle { display:none !important; }
   .def-selector-wrap { position:relative; }
-
-  /* 모달 → 센터 팝업 */
   .modal-overlay { align-items:center !important; justify-content:center !important; }
   .modal-sheet { border-radius:20px !important; max-width:500px !important; padding:32px !important; max-height:80vh !important; }
   .modal-handle { display:none !important; }
@@ -266,27 +113,26 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding-top:8px; }
 .page-title { font-size:18px; font-weight:900; }
 .btn-icon { background:var(--surface2); border:1px solid var(--border); color:var(--text2); padding:8px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; transition:0.2s; }
-.btn-icon:active { transform:scale(0.96); }
+.section-title { font-size:12px; font-weight:700; color:var(--text3); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px; }
 
 /* 홈 */
 .home-greeting { margin-bottom:20px; }
 .home-greeting .hi { font-size:13px; color:var(--text3); }
 .home-greeting .name { font-size:22px; font-weight:900; }
 .home-greeting .name span { color:var(--accent); }
-.home-top-row { margin-bottom:0; }
+.home-top-row { margin-bottom:16px; }
 .home-stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; }
 .home-stat-card .stat-label { font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
 .home-stat-card .stat-value { font-size:22px; font-weight:900; }
 .home-stat-card .stat-value span { color:var(--accent); }
 .home-stat-card .stat-rank { font-size:13px; color:var(--text2); margin-top:2px; }
 .home-menu-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
-.home-menu-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 14px; cursor:pointer; font-family:inherit; text-align:center; transition:0.2s; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.home-menu-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 14px; cursor:pointer; font-family:inherit; text-align:center; transition:0.2s; display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--text); }
 .home-menu-btn:active { transform:scale(0.97); }
-.home-menu-btn.big { grid-column:span 2; background:linear-gradient(135deg,rgba(255,75,43,0.12),rgba(255,61,61,0.06)); border-color:rgba(255,61,61,0.25); }
+.home-menu-btn.big { grid-column:span 2; background:linear-gradient(135deg,rgba(255,75,43,0.12),rgba(255,61,61,0.06)); border-color:rgba(255,85,51,0.25); }
 .home-menu-btn .menu-icon { font-size:26px; }
-.home-menu-btn .menu-label { font-size:13px; font-weight:700; color:var(--text); }
+.home-menu-btn .menu-label { font-size:13px; font-weight:700; }
 .home-menu-btn .menu-desc { font-size:11px; color:var(--text3); }
-.section-title { font-size:12px; font-weight:700; color:var(--text3); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px; }
 
 /* 방어팀 선택 */
 .def-selector { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
@@ -294,16 +140,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .def-sel-value { font-size:15px; font-weight:700; }
 .def-arrow { font-size:16px; color:var(--accent); }
 
-/* 드롭다운 시트 */
+/* 드롭다운 */
 .dropdown-sheet { display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:flex-end; }
 .dropdown-sheet.open { display:flex; }
-.dropdown-inner { background:#2d1010; border-radius:20px 20px 0 0; width:100%; max-height:65vh; overflow:hidden; display:flex; flex-direction:column; padding-bottom:20px; }
+.dropdown-inner { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-height:65vh; overflow:hidden; display:flex; flex-direction:column; padding-bottom:20px; }
 .dropdown-handle { width:36px; height:4px; background:rgba(255,255,255,0.2); border-radius:2px; margin:12px auto 14px; }
 .dropdown-search { margin:0 14px 10px; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:12px 14px; border-radius:10px; font-size:15px; outline:none; font-family:inherit; }
 .dropdown-search:focus { border-color:var(--accent); }
 .dropdown-list-inner { overflow-y:auto; flex:1; }
 .dropdown-item { padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-.dropdown-item:active { background:rgba(255,85,51,0.12); }
+.dropdown-item:active { background:rgba(255,85,51,0.07); }
 .d-name { font-size:15px; font-weight:700; }
 .d-stat { font-size:11px; color:var(--text3); }
 
@@ -311,16 +157,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .atk-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
 .atk-btn { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 10px; cursor:pointer; text-align:center; transition:0.2s; }
 .atk-btn:active { transform:scale(0.97); }
-.atk-btn.active { background:rgba(255,61,61,0.1); border-color:var(--accent); box-shadow:0 0 12px rgba(255,61,61,0.2); }
+.atk-btn.active { background:rgba(255,85,51,0.1); border-color:var(--accent); box-shadow:0 0 12px rgba(255,85,51,0.2); }
 .a-name { font-size:13px; font-weight:700; margin-bottom:4px; }
 .a-stat { font-size:11px; color:var(--text3); }
 
-/* 공격 카드 */
+/* 카드 */
 .atk-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:14px; display:none; }
 .atk-card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .atk-card-name { font-size:19px; font-weight:900; }
 .atk-card-maker { font-size:11px; color:var(--text3); margin-top:3px; }
-.win-rate-badge { background:rgba(255,61,61,0.08); border:1px solid rgba(255,61,61,0.25); border-radius:10px; padding:8px 14px; text-align:center; flex-shrink:0; }
+.win-rate-badge { background:rgba(255,85,51,0.08); border:1px solid rgba(255,85,51,0.25); border-radius:10px; padding:8px 14px; text-align:center; flex-shrink:0; }
 .rate-num { font-size:20px; font-weight:900; color:var(--accent); }
 .rate-label { font-size:10px; color:var(--text3); }
 .info-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
@@ -354,25 +200,24 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .def-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
 .def-btn { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 12px; cursor:pointer; text-align:center; font-size:13px; font-weight:700; color:var(--text); transition:0.2s; }
 .def-btn:active { transform:scale(0.97); }
-.def-btn.active { background:rgba(255,61,61,0.1); border-color:var(--accent); }
+.def-btn.active { background:rgba(255,85,51,0.1); border-color:var(--accent); }
 
 /* PVE */
 .pve-tabs { display:flex; gap:8px; margin-bottom:14px; }
 .pve-tab-btn { flex:1; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text2); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:0.2s; }
-.pve-tab-btn.active { background:rgba(255,61,61,0.1); border-color:var(--accent); color:#fff; }
+.pve-tab-btn.active { background:rgba(255,85,51,0.1); border-color:var(--accent); color:#fff; }
 .pve-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
 .pve-btn { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 10px; cursor:pointer; text-align:center; font-size:13px; font-weight:700; color:var(--text); transition:0.2s; }
 .pve-btn:active { transform:scale(0.97); }
-.pve-btn.active { background:rgba(255,61,61,0.1); border-color:var(--accent); }
+.pve-btn.active { background:rgba(255,85,51,0.1); border-color:var(--accent); }
 .pve-btn.fire { background:linear-gradient(135deg,rgba(241,39,17,0.18),rgba(245,175,25,0.12)); border-color:#f5af19; color:#f5af19; animation:fireGlow 2s ease-in-out infinite alternate; }
 @keyframes fireGlow { 0%{box-shadow:0 0 8px rgba(241,39,17,0.3)} 100%{box-shadow:0 0 20px rgba(245,175,25,0.5)} }
-.pve-sel-row { display:flex; gap:10px; margin-bottom:14px; }
-.pve-sel { flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:11px 12px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; outline:none; }
+.pve-sel { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:11px 12px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; outline:none; }
 .pve-sel:focus { border-color:var(--accent); }
 
-/* 관리자 */
-.admin-wrap { margin-top:24px; padding-top:24px; border-top:2px solid var(--border); display:none; }
+/* 관리자 공통 */
 .admin-section { margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+.admin-section:last-child { border-bottom:none; }
 .admin-section-title { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px; }
 .form-input,.form-select,.form-textarea { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:11px 13px; border-radius:9px; font-size:14px; outline:none; margin-bottom:7px; font-family:inherit; }
 .form-textarea { resize:vertical; }
@@ -383,17 +228,27 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .btn-red { background:#c0392b; color:#fff; }
 .btn-gray { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
 .btn-green { background:#27ae60; color:#fff; }
-.user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
-.user-row-name { font-size:14px; font-weight:700; }
-.user-row-code { font-size:11px; color:var(--text3); letter-spacing:2px; margin-top:2px; }
-.score-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; }
-.score-row-name { font-size:13px; font-weight:700; min-width:60px; }
+.btn-xs { width:26px; height:26px; border-radius:6px; font-size:14px; font-weight:900; cursor:pointer; border:none; display:flex; align-items:center; justify-content:center; font-family:inherit; }
+.danger-btn { width:100%; background:linear-gradient(135deg,#7b0000,#c0392b); color:#fff; border:none; padding:15px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:8px; }
+
+/* 관리자 탭 전용 */
+.member-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.member-row:last-child { border-bottom:none; }
+.member-name { font-size:14px; font-weight:700; }
+.member-code { font-size:12px; color:var(--text3); margin-top:3px; letter-spacing:1px; }
+.report-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); }
+.report-row:last-child { border-bottom:none; }
+.report-name { font-size:13px; font-weight:700; }
+.report-sub { font-size:11px; color:var(--text3); margin-top:3px; }
+.score-row { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.score-row:last-child { border-bottom:none; }
+.score-row-name { font-size:13px; font-weight:700; min-width:70px; }
 .score-controls { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
-.score-val { font-size:12px; font-weight:700; min-width:28px; text-align:center; }
+.score-val { font-size:12px; font-weight:700; min-width:30px; text-align:center; }
 .score-val.win { color:#5cb85c; }
 .score-val.lose { color:#e55353; }
-.btn-xs { width:26px; height:26px; border-radius:6px; font-size:14px; font-weight:900; cursor:pointer; border:none; display:flex; align-items:center; justify-content:center; font-family:inherit; }
-.danger-btn { width:100%; background:linear-gradient(135deg,#7b0000,#c0392b); color:#fff; border:none; padding:15px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+.list-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.empty-state { text-align:center; padding:36px 20px; color:var(--text3); font-size:14px; }
 
 /* 모달 */
 .modal-overlay { display:none; position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,0.8); backdrop-filter:blur(4px); align-items:flex-end; }
@@ -409,10 +264,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .review-field { margin-bottom:10px; }
 .rf-label { font-size:10px; color:var(--accent); font-weight:700; margin-bottom:3px; }
 .rf-value { font-size:13px; color:var(--text); white-space:pre-wrap; }
-
-.empty-state { text-align:center; padding:36px 20px; color:var(--text3); font-size:14px; }
 ::-webkit-scrollbar { width:4px; }
-::-webkit-scrollbar-thumb { background:rgba(255,61,61,0.25); border-radius:2px; }
+::-webkit-scrollbar-thumb { background:rgba(255,85,51,0.25); border-radius:2px; }
 </style>
 </head>
 <body>
@@ -445,9 +298,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
-    <!-- 관리자 전용 -->
+    <!-- 관리자 전용 (기본 숨김) -->
     <div id="adminNavSection" style="display:none;">
-      <div style="padding:16px 20px 6px; font-size:10px; font-weight:700; color:var(--accent); letter-spacing:1px; text-transform:uppercase; opacity:0.7;">관리자</div>
+      <div class="sb-divider">관리자</div>
       <button class="sb-item" onclick="switchTab('adminMembers')"><span class="si-icon">👥</span> 길드원 관리</button>
       <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리</button>
       <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
@@ -455,7 +308,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   </nav>
   <div class="sb-bottom">
     <div class="sb-nick">접속 중: <b id="sidebarNick">-</b></div>
-    <button id="sbAdminBtn" onclick="tryAdminSwitch()" style="width:100%;background:rgba(255,85,51,0.1);border:1px solid rgba(255,85,51,0.3);color:var(--text3);padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;display:block;">🔐 관리자 전환</button>
+    <button id="sbAdminBtn" class="sb-admin-btn" onclick="tryAdminSwitch()">🔐 관리자 전환</button>
     <button class="sb-logout" onclick="doLogout()">로그아웃</button>
   </div>
 </div>
@@ -488,7 +341,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div class="stat-rank" id="homeStatRank">로딩중...</div>
       </div>
     </div>
-    <div class="section-title" style="margin-top:8px;">빠른 메뉴</div>
+    <div class="section-title" style="margin-top:4px;">빠른 메뉴</div>
     <div class="home-menu-grid">
       <button class="home-menu-btn big" onclick="switchTab('attack')">
         <div class="menu-icon">⚔️</div>
@@ -516,7 +369,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
     <div class="attack-2col">
       <div class="attack-left-col">
-        <!-- 방어팀 선택 -->
         <div class="def-selector-wrap">
           <div class="def-selector" onclick="openDefDropdown()">
             <div>
@@ -533,15 +385,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
             </div>
           </div>
         </div>
-        <!-- 공격팀 목록 -->
         <div id="attackList" class="atk-grid"></div>
-        <!-- 제보 버튼 -->
         <div id="atkSuggestBtn" style="display:none; margin-bottom:14px;">
           <button onclick="openModal('attack')" class="btn-icon" style="width:100%;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 공격덱 제보</button>
         </div>
       </div>
       <div>
-        <!-- 공격 카드 -->
         <div id="attackCard" class="atk-card">
           <div class="atk-card-header">
             <div>
@@ -574,7 +423,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
             <button onclick="resetRecord()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">[관리자] 기록 초기화</button>
           </div>
         </div>
-        <!-- 랭킹 -->
         <div style="margin-top:20px;">
           <div class="section-title">🏆 시즌 랭킹</div>
           <div id="rankingList" class="rank-card"></div>
@@ -582,14 +430,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
       </div>
     </div>
-
-    <!-- 관리자 패널 -->
-    <div id="attackAdminPanel" class="admin-wrap">
+    <!-- 공격 관리자 패널 (기존 유지) -->
+    <div id="attackAdminPanel" style="display:none; margin-top:24px; padding-top:24px; border-top:2px solid var(--border);">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 공격 관리자</div>
-      <div class="admin-section">
-        <div class="admin-section-title">🔔 공격덱 제보</div>
-        <div id="atkSuggestionList" style="color:var(--text3);font-size:13px;">(제보 없음)</div>
-      </div>
       <div class="admin-section">
         <div class="admin-section-title">🛡️ 방어팀 관리</div>
         <input class="form-input" id="newDefName" placeholder="새 방어팀 이름">
@@ -605,20 +448,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <textarea class="form-textarea" id="armorRec" rows="2" placeholder="장비/특이사항"></textarea>
         <textarea class="form-textarea" id="skillOrder" rows="2" placeholder="스킬"></textarea>
         <div class="btn-row"><button class="btn-sm btn-blue" onclick="addAttack()">추가</button><button class="btn-sm btn-blue" onclick="editAttack()">수정</button><button class="btn-sm btn-red" onclick="delAttack()">삭제</button></div>
-      </div>
-      <div class="admin-section">
-        <div class="admin-section-title">🔑 입장코드 관리</div>
-        <div style="display:flex;gap:8px;margin-bottom:7px;"><input class="form-input" id="newUserNick" placeholder="닉네임" style="margin:0;flex:1;"><button class="btn-sm btn-green" onclick="issueKey()">발급</button></div>
-        <input class="form-input" id="keySearchInput" placeholder="🔍 검색..." oninput="filterKeys()">
-        <div id="userKeyList" style="max-height:150px;overflow-y:auto;"></div>
-      </div>
-      <div class="admin-section">
-        <div class="admin-section-title">👥 승패 수정</div>
-        <div id="adminUserList" style="max-height:240px;overflow-y:auto;"></div>
-      </div>
-      <div>
-        <div class="admin-section-title" style="color:#c0392b;">⚠️ 위험</div>
-        <button class="danger-btn" onclick="resetSeason()">시즌 초기화 (모든 승패 삭제)</button>
       </div>
     </div>
   </div>
@@ -645,13 +474,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="rdSkill">-</div></div>
       <div class="info-block"><div class="ib-label">설명 · 팁</div><div class="ib-value" id="rdDesc">-</div></div>
     </div>
-    <div id="defenseAdminPanel" class="admin-wrap">
+    <div id="defenseAdminPanel" style="display:none; margin-top:24px; padding-top:24px; border-top:2px solid var(--border);">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 방어 관리자</div>
       <div class="admin-section">
-        <div class="admin-section-title">🔔 방어덱 제보</div>
-        <div id="defSuggestionList" style="color:var(--text3);font-size:13px;">(없음)</div>
-      </div>
-      <div>
         <div class="admin-section-title">📝 추천 방어팀 관리</div>
         <input class="form-input" id="rdInputName" placeholder="팀 이름">
         <input class="form-input" id="rdInputHeroes" placeholder="반지 추천">
@@ -699,6 +524,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <button onclick="copyPveData()" class="btn-sm btn-gray">📤 복사</button>
           <button onclick="pastePveData()" class="btn-sm btn-gray">📥 붙여넣기</button>
         </div>
+        <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">빌드 이름</div>
+        <input class="form-input" id="editBuildName" placeholder="예: 딜링 빌드, 탱커 빌드..." style="margin-bottom:12px;">
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">덱 조합</div>
         <textarea class="form-textarea" id="editPveDeck" rows="3"></textarea>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">스킬 순서</div>
@@ -711,50 +538,61 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
       </div>
     </div>
-  
-  <!-- 관리자: 길드원 관리 -->
+  </div>
+
+  <!-- ══ 관리자: 길드원 관리 ══ -->
   <div id="adminMembersScreen" class="screen">
     <div class="page-header">
       <div class="page-title">👥 길드원 관리</div>
     </div>
     <div class="admin-section">
       <div class="admin-section-title">🔑 입장코드 발급</div>
-      <div style="display:flex;gap:8px;margin-bottom:7px;">
-        <input class="form-input" id="newUserNick2" placeholder="닉네임" style="margin:0;flex:1;">
-        <button class="btn-sm btn-green" onclick="issueKey2()">발급</button>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="newUserNick2" placeholder="닉네임 입력" style="margin:0;flex:1;">
+        <button class="btn-sm btn-green" style="white-space:nowrap;" onclick="issueKey2()">발급</button>
       </div>
     </div>
     <div class="admin-section">
-      <div class="admin-section-title">🔍 길드원 검색</div>
-      <input class="form-input" id="keySearchInput2" placeholder="닉네임 검색..." oninput="filterKeys2()">
+      <div class="admin-section-title">🔍 검색</div>
+      <input class="form-input" id="keySearchInput2" placeholder="닉네임 검색..." oninput="filterKeys2()" style="margin:0;">
     </div>
-    <div class="admin-section-title" style="margin-bottom:10px;">전체 목록</div>
-    <div id="userKeyList2" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"></div>
+    <div class="admin-section-title">전체 길드원</div>
+    <div id="userKeyList2" class="list-card">
+      <div class="empty-state">로딩중...</div>
+    </div>
   </div>
 
-  <!-- 관리자: 제보 관리 -->
+  <!-- ══ 관리자: 제보 관리 ══ -->
   <div id="adminReportsScreen" class="screen">
     <div class="page-header">
       <div class="page-title">📋 제보 관리</div>
+      <button class="btn-icon" onclick="loadAdminReports()">새로고침</button>
     </div>
     <div class="admin-section">
       <div class="admin-section-title">⚔️ 공격덱 제보</div>
-      <div id="atkSuggestionList2" style="color:var(--text3);font-size:13px;">(없음)</div>
+      <div id="atkSuggestionList2" class="list-card">
+        <div class="empty-state">로딩중...</div>
+      </div>
     </div>
     <div>
       <div class="admin-section-title">🛡️ 방어덱 제보</div>
-      <div id="defSuggestionList2" style="color:var(--text3);font-size:13px;">(없음)</div>
+      <div id="defSuggestionList2" class="list-card">
+        <div class="empty-state">로딩중...</div>
+      </div>
     </div>
   </div>
 
-  <!-- 관리자: 승패 관리 -->
+  <!-- ══ 관리자: 승패 관리 ══ -->
   <div id="adminScoresScreen" class="screen">
     <div class="page-header">
       <div class="page-title">📊 승패 관리</div>
+      <button class="btn-icon" onclick="loadAdminScores()">새로고침</button>
     </div>
     <div class="admin-section">
       <div class="admin-section-title">👥 승패 수정</div>
-      <div id="adminUserList2" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 16px;"></div>
+      <div id="adminUserList2" class="list-card">
+        <div class="empty-state">로딩중...</div>
+      </div>
     </div>
     <div>
       <div class="admin-section-title" style="color:#c0392b;">⚠️ 위험</div>
@@ -836,17 +674,19 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
-  // 관리자 계정은 Firebase 조회 없이 바로 처리
   if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
-    if(snap.exists()&&String(snap.val().code)===key){ localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick; enterApp(); }
-    else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
+    if(snap.exists()&&String(snap.val().code)===key){
+      localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick; enterApp();
+    } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
   });
 }
 function adminLogin() {
   const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){ localStorage.setItem("nickname","관리자"); localStorage.setItem("accessKey","ADMIN"); myNick="관리자"; isAdminAuthenticated=true; enterApp(); }
-  else if(pw!==null) toast("비밀번호가 틀렸습니다");
+  if(pw===ADMIN_PW){
+    localStorage.setItem("nickname","관리자"); localStorage.setItem("accessKey","ADMIN");
+    myNick="관리자"; isAdminAuthenticated=true; enterApp();
+  } else if(pw!==null) toast("비밀번호가 틀렸습니다");
 }
 function checkPW() {
   if(isAdminAuthenticated) return true;
@@ -854,43 +694,62 @@ function checkPW() {
   if(pw===ADMIN_PW){ isAdminAuthenticated=true; return true; }
   return false;
 }
+
 function enterApp() {
   document.getElementById("loginScreen").style.display="none";
-  if(isPC()){ document.getElementById("tabBar").classList.add("hidden"); document.getElementById("mobileLogout").style.display="none"; }
-  else { document.getElementById("tabBar").classList.remove("hidden"); }
-  document.getElementById("homeNick").textContent=myNick;
-  if(document.getElementById("sidebarNick")) document.getElementById("sidebarNick").textContent=myNick;
-  // 관리자면 사이드바 관리자 섹션 표시 + 전환 버튼 숨기기
-  if(isAdminAuthenticated) {
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    const sbAdminBtn = document.getElementById("sbAdminBtn");
-    if(sbAdminBtn) sbAdminBtn.style.display="none";
+  if(isPC()){
+    document.getElementById("tabBar").classList.add("hidden");
+    document.getElementById("mobileLogout").style.display="none";
+  } else {
+    document.getElementById("tabBar").classList.remove("hidden");
   }
+  document.getElementById("homeNick").textContent=myNick;
+  const sidebarNick=document.getElementById("sidebarNick");
+  if(sidebarNick) sidebarNick.textContent=myNick;
+  // 관리자 탭 표시
+  if(isAdminAuthenticated) showAdminNav();
   switchTab("home");
   renderRanking();
   loadDefenseTeamsListener();
 }
+
+function showAdminNav() {
+  const adminNav=document.getElementById("adminNavSection");
+  if(adminNav) adminNav.style.display="block";
+  const sbAdminBtn=document.getElementById("sbAdminBtn");
+  if(sbAdminBtn) sbAdminBtn.style.display="none";
+}
+
+// ══ 관리자 전환 (앱 안에서) ══
+function tryAdminSwitch() {
+  if(isAdminAuthenticated){ showAdminNav(); toast("이미 관리자입니다"); return; }
+  const pw=prompt("관리자 비밀번호");
+  if(pw===ADMIN_PW){ isAdminAuthenticated=true; showAdminNav(); toast("🔐 관리자 모드 활성화!"); }
+  else if(pw!==null) toast("비밀번호가 틀렸습니다");
+}
+
 function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear(); location.reload(); }
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs = ["home","attack","defense","pve","adminMembers","adminReports","adminScores"];
+  const allTabs=["home","attack","defense","pve","adminMembers","adminReports","adminScores"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
-  document.getElementById(tab+"Screen").classList.add("active");
-  // 모바일 하단 탭
+  const screen=document.getElementById(tab+"Screen");
+  if(screen) screen.classList.add("active");
+  // 모바일 탭바
   document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
-  // PC 사이드바 - 모든 sb-item active 해제 후 현재 탭 활성화
+  // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabMap = {"home":0,"attack":1,"defense":2,"pve":3};
-  const sbItems = document.querySelectorAll(".sb-item");
-  if(tab in tabMap) sbItems[tabMap[tab]].classList.add("active");
-  if(tab==="adminMembers"){ loadAdminMembers(); sbItems[4]?.classList.add("active"); }
-  if(tab==="adminReports"){ loadAdminReports(); sbItems[5]?.classList.add("active"); }
-  if(tab==="adminScores"){ loadAdminScores(); sbItems[6]?.classList.add("active"); }
+  const tabToIdx={"home":0,"attack":1,"defense":2,"pve":3,"adminMembers":4,"adminReports":5,"adminScores":6};
+  const allSbItems=document.querySelectorAll(".sb-item");
+  if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
+  // 탭별 데이터 로드
   if(tab==="defense") loadRecDefenseList();
   if(tab==="pve") renderPveList(pveCurrentCategory||"siege");
   if(tab==="attack") renderRanking();
+  if(tab==="adminMembers") loadAdminMembers();
+  if(tab==="adminReports") loadAdminReports();
+  if(tab==="adminScores") loadAdminScores();
 }
 
 // ══ 방어팀 드롭다운 ══
@@ -933,7 +792,7 @@ function loadAttackTeams(dk) {
   db.ref(`defenseTeams/${dk}/attackTeams`).on("value",snap=>{
     list.innerHTML="";
     const d=snap.val();
-    if(!d){ list.innerHTML='<div class="empty-state" style="grid-column:span 2">등록된 공격덱 없음</div>'; return; }
+    if(!d){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>'; return; }
     Object.entries(d).forEach(([ak,av])=>{
       const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
       const btn=document.createElement("div"); btn.className="atk-btn";
@@ -942,7 +801,6 @@ function loadAttackTeams(dk) {
       list.appendChild(btn);
     });
   });
-  renderAtkSuggestions();
 }
 function selectAttack(dk,ak) {
   currentAttack=ak;
@@ -991,50 +849,27 @@ function writeLog(res) {
 }
 function addWin() { if(!confirm("승리를 기록할까요?")) return; const w=+document.getElementById("cardWin").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:w+1}); writeLog("win"); toast("🏆 승리!"); }
 function addLose() { if(!confirm("패배를 기록할까요?")) return; const l=+document.getElementById("cardLose").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1}); writeLog("lose"); toast("💀 패배"); }
-function resetRecord() { if(checkPW()) { db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
-function addDefense() { if(checkPW()) { db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
-function delDefense() { if(checkPW()&&currentDefense) { db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
+function resetRecord() { if(checkPW()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
+function addDefense() { if(checkPW()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
+function delDefense() { if(checkPW()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
 function addAttack() { if(!checkPW()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0}); toast("추가됨"); }
 function editAttack() { if(!checkPW()||!currentAttack) return; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value}); toast("수정됨"); }
-function delAttack() { if(checkPW()&&currentAttack) { db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
+function delAttack() { if(checkPW()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
 
-// ══ 관리자 패널 ══
+// ══ 관리자 패널 토글 (공격/방어 탭 내부) ══
 function toggleAttackAdmin() {
   const panel=document.getElementById("attackAdminPanel"), btn=document.getElementById("atkAdminBtn");
   const open=panel.style.display==="block";
-  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; renderUserKeys(); renderAtkSuggestions(); renderAdminUserList(); }
+  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; }
   else { panel.style.display="none"; btn.textContent="관리자"; }
   renderRanking();
 }
 function toggleDefenseAdmin() {
   const panel=document.getElementById("defenseAdminPanel"), btn=document.getElementById("defAdminBtn");
   const open=panel.style.display==="block";
-  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; renderDefSuggestions(); }
+  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; }
   else { panel.style.display="none"; btn.textContent="관리자"; }
 }
-function renderAtkSuggestions() {
-  db.ref("suggestions/attack").on("value",snap=>{
-    const div=document.getElementById("atkSuggestionList"); div.innerHTML="";
-    const all=snap.val();
-    if(!all){ div.innerHTML='<span style="color:var(--text3);font-size:13px">(없음)</span>'; return; }
-    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3)">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
-  });
-}
-function openAdminReview(type,k1,k2) {
-  document.getElementById("adminReviewModal").classList.add("open");
-  document.getElementById("adminReviewBody").innerHTML="로딩중...";
-  const path=type==="attack"?`suggestions/attack/${k1}/${k2}`:`suggestions/defense/${k1}`;
-  db.ref(path).get().then(snap=>{
-    const data=snap.val(); if(!data){ document.getElementById("adminReviewBody").innerHTML="데이터 없음"; return; }
-    const fields=type==="attack"?[["이름",data.name],["속공",data.type],["반지",data.ring],["펫",data.pet],["진형",data.formation||"-"],["장비",data.armor||"-"],["스킬",data.skill||"-"],["제보자",data.suggester]]:[["이름",data.name],["반지",data.heroes],["진형",data.formation||"-"],["펫",data.pet],["스킬",data.skill||"-"],["설명",data.desc||"-"],["제보자",data.suggester]];
-    document.getElementById("adminReviewBody").innerHTML=fields.map(([l,v])=>`<div class="review-field"><div class="rf-label">${l}</div><div class="rf-value">${v}</div></div>`).join("");
-    if(type==="attack"){ document.getElementById("btnReviewApprove").onclick=()=>{approveAtk(k1,k2);closeAdminReviewModal();}; document.getElementById("btnReviewReject").onclick=()=>{rejectAtk(k1,k2);closeAdminReviewModal();}; }
-    else { document.getElementById("btnReviewApprove").onclick=()=>{approveDef(k1);closeAdminReviewModal();}; document.getElementById("btnReviewReject").onclick=()=>{rejectDef(k1);closeAdminReviewModal();}; }
-  });
-}
-function closeAdminReviewModal(){ document.getElementById("adminReviewModal").classList.remove("open"); }
-function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:0,lose:0,maker:d.suggester}); db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("✅ 승인됨"); }); }
-function rejectAtk(dk,sk){ if(confirm("거절?")){ db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("거절됨"); } }
 
 // ══ 방어 ══
 function loadRecDefenseList() {
@@ -1042,7 +877,7 @@ function loadRecDefenseList() {
     const list=document.getElementById("recDefList"); list.innerHTML="";
     document.getElementById("recDefCard").style.display="none";
     const data=snap.val();
-    if(!data){ list.innerHTML='<div class="empty-state" style="grid-column:span 2">추천 방어팀 없음</div>'; return; }
+    if(!data){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">추천 방어팀 없음</div>'; return; }
     Object.entries(data).forEach(([key,val])=>{ const div=document.createElement("div"); div.className="def-btn"; div.textContent=val.name; div.onclick=()=>{ document.querySelectorAll(".def-btn").forEach(x=>x.classList.remove("active")); div.classList.add("active"); showRecDefDetail(key,val); }; list.appendChild(div); });
   });
 }
@@ -1050,12 +885,9 @@ function showRecDefDetail(key,val){ currentRecDef=key; document.getElementById("
 function addRecDefense(){ if(checkPW()){ db.ref("recommendedDefenses").push({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value,maker:"관리자"}); toast("추가됨"); } }
 function editRecDefense(){ if(!checkPW()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value}); toast("수정됨"); }
 function delRecDefense(){ if(checkPW()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); } }
-function renderDefSuggestions(){ db.ref("suggestions/defense").on("value",snap=>{ const div=document.getElementById("defSuggestionList"); div.innerHTML=""; const all=snap.val(); if(!all){ div.innerHTML='<span style="color:var(--text3);font-size:13px">(없음)</span>'; return; } Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3)">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); }); }); }
-function approveDef(key){ db.ref(`suggestions/defense/${key}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref("recommendedDefenses").push({name:d.name,heroes:d.heroes,formation:d.formation,pet:d.pet,skill:d.skill||"",desc:d.desc,maker:d.suggester}); db.ref(`suggestions/defense/${key}`).remove(); toast("✅ 승인됨"); }); }
-function rejectDef(key){ if(confirm("거절?")){ db.ref(`suggestions/defense/${key}`).remove(); toast("거절됨"); } }
 
 // ══ PVE ══
-const PVE_DATA_KEYS = {
+const PVE_DATA_KEYS={
   siege:[{id:"mon",name:"월요일"},{id:"tue",name:"화요일"},{id:"wed",name:"수요일"},{id:"thu",name:"목요일"},{id:"fri",name:"금요일"},{id:"sat",name:"토요일"},{id:"sun",name:"일요일"}],
   advent:[{id:"destruct1",name:"🔥 파괴신 1라",type:"turn_build",fire:true},{id:"destruct2",name:"🔥 파괴신 2라",type:"turn_build",fire:true},{id:"teo",name:"태오"},{id:"kyle",name:"카일"},{id:"yeonhee",name:"연희"},{id:"karma",name:"카르마"}]
 };
@@ -1063,12 +895,71 @@ function renderPveList(cat){ pveCurrentCategory=cat; document.getElementById("pv
 function loadPveData(cat,id,title,type){ pveCurrentId=id; pveCurrentType=type; document.getElementById("pveDetailCard").style.display="block"; document.getElementById("pveCardTitle").textContent=title; document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none"; document.getElementById("pveBuildArea").style.display="block"; if(type==="turn_build") document.getElementById("pveTurnSelect").value="8"; document.getElementById("pveBuildSelect").value="build1"; fetchPveRealData(); }
 function changePveTurn(){ fetchPveRealData(); }
 function changePveBuild(){ fetchPveRealData(); }
-function fetchPveRealData(){ ["viewPveDeck","viewPveSkill","viewPveEquip"].forEach(id=>document.getElementById(id).textContent="로딩중..."); let path=`pve/${pveCurrentCategory}/${pveCurrentId}`; if(pveCurrentType==="turn_build") path+=`/${document.getElementById("pveTurnSelect").value}/${document.getElementById("pveBuildSelect").value}`; else path+=`/${document.getElementById("pveBuildSelect").value}`; db.ref(path).once("value").then(snap=>{ const d=snap.val(); document.getElementById("viewPveDeck").textContent=d?.deck||"(등록된 공략 없음)"; document.getElementById("viewPveSkill").textContent=d?.skill||"-"; document.getElementById("viewPveEquip").textContent=d?.equip||"-"; }); }
-function enablePveEdit(){ if(!checkPW()) return; document.getElementById("pveViewMode").style.display="none"; document.getElementById("pveEditMode").style.display="block"; let deck=document.getElementById("viewPveDeck").textContent; if(deck==="(등록된 공략 없음)") deck=""; document.getElementById("editPveDeck").value=deck; document.getElementById("editPveSkill").value=document.getElementById("viewPveSkill").textContent; document.getElementById("editPveEquip").value=document.getElementById("viewPveEquip").textContent; }
+function fetchPveRealData(){
+  ["viewPveDeck","viewPveSkill","viewPveEquip"].forEach(id=>document.getElementById(id).textContent="로딩중...");
+  let basePath=`pve/${pveCurrentCategory}/${pveCurrentId}`;
+  const turn=pveCurrentType==="turn_build"?document.getElementById("pveTurnSelect").value:null;
+  const build=document.getElementById("pveBuildSelect").value;
+  let path=basePath+(turn?`/${turn}/${build}`:`/${build}`);
+  db.ref(path).once("value").then(snap=>{
+    const d=snap.val();
+    document.getElementById("viewPveDeck").textContent=d?.deck||"(등록된 공략 없음)";
+    document.getElementById("viewPveSkill").textContent=d?.skill||"-";
+    document.getElementById("viewPveEquip").textContent=d?.equip||"-";
+  });
+  // 빌드 이름들 불러와서 드롭다운 갱신
+  let namePath=basePath+(turn?`/${turn}`:"");
+  db.ref(namePath).once("value").then(snap=>{
+    const data=snap.val()||{};
+    const sel=document.getElementById("pveBuildSelect");
+    const defaultNames=["빌드 1","빌드 2","빌드 3","빌드 4"];
+    ["build1","build2","build3","build4"].forEach((bk,i)=>{
+      const opt=sel.querySelector(`option[value="${bk}"]`);
+      if(opt) opt.textContent=data[bk]?.buildName||defaultNames[i];
+    });
+  });
+}
+function enablePveEdit(){
+  if(!checkPW()) return;
+  document.getElementById("pveViewMode").style.display="none";
+  document.getElementById("pveEditMode").style.display="block";
+  let deck=document.getElementById("viewPveDeck").textContent;
+  if(deck==="(등록된 공략 없음)") deck="";
+  document.getElementById("editPveDeck").value=deck;
+  document.getElementById("editPveSkill").value=document.getElementById("viewPveSkill").textContent;
+  document.getElementById("editPveEquip").value=document.getElementById("viewPveEquip").textContent;
+  // 현재 빌드 이름 채우기
+  const sel=document.getElementById("pveBuildSelect");
+  const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
+  const defaultNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
+  const curText=curOpt?.textContent||defaultNames[sel.value]||"";
+  document.getElementById("editBuildName").value=curText.startsWith("빌드 ")?"":curText;
+}
 function cancelPveEdit(){ document.getElementById("pveViewMode").style.display="block"; document.getElementById("pveEditMode").style.display="none"; }
-function savePveData(){ const deck=document.getElementById("editPveDeck").value,skill=document.getElementById("editPveSkill").value,equip=document.getElementById("editPveEquip").value; let path=`pve/${pveCurrentCategory}/${pveCurrentId}`; if(pveCurrentType==="turn_build") path+=`/${document.getElementById("pveTurnSelect").value}/${document.getElementById("pveBuildSelect").value}`; else path+=`/${document.getElementById("pveBuildSelect").value}`; db.ref(path).update({deck,skill,equip,updatedAt:Date.now()}).then(()=>{ toast("저장됨 ✅"); document.getElementById("viewPveDeck").textContent=deck; document.getElementById("viewPveSkill").textContent=skill; document.getElementById("viewPveEquip").textContent=equip; cancelPveEdit(); }); }
+function savePveData(){
+  const deck=document.getElementById("editPveDeck").value;
+  const skill=document.getElementById("editPveSkill").value;
+  const equip=document.getElementById("editPveEquip").value;
+  const buildNameInput=document.getElementById("editBuildName").value.trim();
+  const build=document.getElementById("pveBuildSelect").value;
+  const defaultNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
+  const buildName=buildNameInput||defaultNames[build];
+  let path=`pve/${pveCurrentCategory}/${pveCurrentId}`;
+  if(pveCurrentType==="turn_build") path+=`/${document.getElementById("pveTurnSelect").value}/${build}`;
+  else path+=`/${build}`;
+  db.ref(path).update({deck,skill,equip,buildName,updatedAt:Date.now()}).then(()=>{
+    toast("저장됨 ✅");
+    document.getElementById("viewPveDeck").textContent=deck;
+    document.getElementById("viewPveSkill").textContent=skill;
+    document.getElementById("viewPveEquip").textContent=equip;
+    // 드롭다운 이름 즉시 반영
+    const opt=document.getElementById("pveBuildSelect").querySelector(`option[value="${build}"]`);
+    if(opt) opt.textContent=buildName;
+    cancelPveEdit();
+  });
+}
 function copyPveData(){ const data={deck:document.getElementById("editPveDeck").value,skill:document.getElementById("editPveSkill").value,equip:document.getElementById("editPveEquip").value}; navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data)))).then(()=>toast("복사됨 📋")); }
-function pastePveData(){ const c=prompt("공략 코드 붙여넣기:"); if(!c) return; try{ const d=JSON.parse(decodeURIComponent(atob(c))); document.getElementById("editPveDeck").value=d.deck||""; document.getElementById("editPveSkill").value=d.skill||""; document.getElementById("editPveEquip").value=d.equip||""; toast("불러오기 완료"); }catch{ toast("잘못된 코드"); } }
+function pastePveData(){ const c=prompt("공략 코드:"); if(!c) return; try{ const d=JSON.parse(decodeURIComponent(atob(c))); document.getElementById("editPveDeck").value=d.deck||""; document.getElementById("editPveSkill").value=d.skill||""; document.getElementById("editPveEquip").value=d.equip||""; toast("불러오기 완료"); }catch{ toast("잘못된 코드"); } }
 
 // ══ 제보 모달 ══
 function openModal(type){ document.getElementById("modalOverlay").classList.add("open"); const body=document.getElementById("modalBody"); if(type==="attack"){ if(!currentDefense){ toast("방어팀을 먼저 선택하세요"); closeModal(); return; } document.getElementById("modalTitle").textContent="⚔️ 공격덱 제보"; body.innerHTML=`<input class="form-input" id="mName" placeholder="공격팀 이름 (필수)"><select class="form-select" id="mType"><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select><input class="form-input" id="mRing" placeholder="반지"><input class="form-input" id="mPet" placeholder="펫"><input class="form-input" id="mFormation" placeholder="진형"><textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항"></textarea><textarea class="form-textarea" id="mSkill" rows="2" placeholder="스킬순서"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
@@ -1091,84 +982,111 @@ function renderRanking(){
     let hide=0;
     rankData.forEach((d,i)=>{ if(!adminOpen&&i>=10){ hide++; return; } const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0,rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0; const row=document.createElement("div"); row.className="rank-row"; const badges=["🥇","🥈","🥉"]; const badge=i<3?badges[i]:`${i+1}`; const isMe=d.nick===myNick; row.innerHTML=`<div class="rank-num" ${isMe?'style="color:var(--accent)"':''}>${badge}</div><div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div><div class="rank-stat"><div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div><div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div></div>`; list.appendChild(row); });
     document.getElementById("moreRankMsg").style.display=hide>0?"block":"none";
-    if(document.getElementById("adminUserList")?.children.length) renderAdminUserList();
   });
 }
 
-// ══ 코드 관리 ══
-function issueKey(){ const n=document.getElementById("newUserNick").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick").value=""; toast(`${n} → 코드: ${c}`); }
-function filterKeys(){ const f=document.getElementById("keySearchInput").value.toLowerCase(); for(let row of document.getElementById("userKeyList").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
-function renderUserKeys(){ db.ref("allowedUsers").on("value",snap=>{ const div=document.getElementById("userKeyList"); div.innerHTML=""; const d=snap.val(); if(!d) return; Object.entries(d).forEach(([n,v])=>{ const r=document.createElement("div"); r.className="user-row"; r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code">${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:6px 12px;">삭제</button>`; div.appendChild(r); }); filterKeys(); }); }
-function deleteUser(n){ if(confirm(`${n} 삭제?`)){ db.ref(`allowedUsers/${n}`).remove(); toast("삭제됨"); } }
-function adjustScore(nick,type,delta){ if(delta===1){ db.ref("logs").push({nick,result:type,defense:"admin",attack:"manual_adjust",attackName:"관리자수정",attackType:"",date:new Date().toISOString().slice(0,10),time:Date.now()}); }else{ db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const logs=Object.entries(snap.val()).map(([k,v])=>({...v,key:k})).filter(v=>v.nick===nick&&v.result===type).sort((a,b)=>b.time-a.time); if(!logs.length) return toast("기록 없음"); db.ref(`logs/${logs[0].key}`).remove(); }); } }
-function deleteUserLogs(nick){ if(!confirm(`${nick} 기록 삭제?`)) return; db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const p=[]; Object.entries(snap.val()).forEach(([k,v])=>{ if(v.nick===nick) p.push(db.ref(`logs/${k}`).remove()); }); Promise.all(p).then(()=>toast("삭제됨")); }); }
-function resetSeason(){ if(!confirm("⚠️ 모든 승패 기록을 삭제합니다. 계속할까요?")) return; db.ref("logs").remove().then(()=>toast("시즌 초기화 완료!")); }
-function renderAdminUserList(){ const listDiv=document.getElementById("adminUserList"); listDiv.innerHTML=""; const stat={}; Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; }); db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 7px;font-size:11px;margin-left:3px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); }); }
-
-// ══ 관리자 탭 전용 함수 ══
-function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
-function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
-
+// ══ 관리자: 길드원 관리 ══
+function issueKey2(){
+  const n=document.getElementById("newUserNick2").value.trim(); if(!n) return;
+  const c=Math.floor(100000+Math.random()*900000);
+  db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}).then(()=>{ document.getElementById("newUserNick2").value=""; toast(`✅ ${n} → 코드: ${c}`); loadAdminMembers(); });
+}
+function filterKeys2(){
+  const f=document.getElementById("keySearchInput2").value.toLowerCase();
+  for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".member-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; }
+}
 function loadAdminMembers(){
   db.ref("allowedUsers").get().then(snap=>{
     const div=document.getElementById("userKeyList2"); div.innerHTML="";
-    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
+    const d=snap.val();
+    if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
     Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
-      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
-      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
+      const r=document.createElement("div"); r.className="member-row";
+      r.innerHTML=`<div><div class="member-name">${n}</div><div class="member-code">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;flex-shrink:0;">삭제</button>`;
       div.appendChild(r);
     });
     filterKeys2();
   });
 }
+function deleteUser(n){ if(confirm(`${n} 삭제?`)){ db.ref(`allowedUsers/${n}`).remove().then(()=>{ toast("삭제됨"); loadAdminMembers(); }); } }
 
+// ══ 관리자: 제보 관리 ══
 function loadAdminReports(){
   // 공격덱 제보
   db.ref("suggestions/attack").get().then(snap=>{
     const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
     const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
+    if(!all){ div.innerHTML='<div class="empty-state">제보 없음</div>'; return; }
+    let count=0;
+    Object.entries(all).forEach(([dk,sub])=>{
+      const dName=defenseDataCache[dk]?.name||"(삭제된 방어팀)";
+      Object.entries(sub).forEach(([sk,v])=>{
+        count++;
+        const d=document.createElement("div"); d.className="report-row";
+        d.innerHTML=`<div><div class="report-name">[${dName}] ${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;flex-shrink:0;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`;
+        div.appendChild(d);
+      });
+    });
+    if(!count) div.innerHTML='<div class="empty-state">제보 없음</div>';
   });
   // 방어덱 제보
   db.ref("suggestions/defense").get().then(snap=>{
     const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
     const all=snap.val();
-    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
-    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
+    if(!all){ div.innerHTML='<div class="empty-state">제보 없음</div>'; return; }
+    Object.entries(all).forEach(([k,v])=>{
+      const d=document.createElement("div"); d.className="report-row";
+      d.innerHTML=`<div><div class="report-name">${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;flex-shrink:0;" onclick="openAdminReview('defense','${k}','')">검토</button>`;
+      div.appendChild(d);
+    });
   });
 }
 
+// ══ 관리자: 승패 관리 ══
 function loadAdminScores(){
   const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
   const stat={};
   Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
-  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+  db.ref("allowedUsers").get().then(snap=>{
+    const users=snap.val()||{};
+    Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; });
+    const sorted=Object.keys(stat).sort();
+    if(!sorted.length){ listDiv.innerHTML='<div class="empty-state">기록 없음</div>'; return; }
+    sorted.forEach(nick=>{
+      const val=stat[nick];
+      const div=document.createElement("div"); div.className="score-row";
+      div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`;
+      listDiv.appendChild(div);
+    });
+  });
 }
 
-
-// ══ 관리자 전환 (앱 내에서) ══
-function tryAdminSwitch() {
-  if(isAdminAuthenticated) {
-    // 이미 관리자면 탭만 보여주기
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("이미 관리자 상태입니다");
-    return;
-  }
-  const pw = prompt("관리자 비밀번호");
-  if(pw === ADMIN_PW) {
-    isAdminAuthenticated = true;
-    const adminNav = document.getElementById("adminNavSection");
-    if(adminNav) adminNav.style.display="block";
-    document.getElementById("sbAdminBtn").style.display="none";
-    toast("🔐 관리자 모드 활성화!");
-  } else if(pw !== null) {
-    toast("비밀번호가 틀렸습니다");
-  }
+// ══ 제보 검토 모달 ══
+function openAdminReview(type,k1,k2){
+  document.getElementById("adminReviewModal").classList.add("open");
+  document.getElementById("adminReviewBody").innerHTML="로딩중...";
+  const path=type==="attack"?`suggestions/attack/${k1}/${k2}`:`suggestions/defense/${k1}`;
+  db.ref(path).get().then(snap=>{
+    const data=snap.val(); if(!data){ document.getElementById("adminReviewBody").innerHTML="데이터 없음"; return; }
+    const fields=type==="attack"?[["이름",data.name],["속공",data.type],["반지",data.ring],["펫",data.pet],["진형",data.formation||"-"],["장비",data.armor||"-"],["스킬",data.skill||"-"],["제보자",data.suggester]]:[["이름",data.name],["반지",data.heroes],["진형",data.formation||"-"],["펫",data.pet],["스킬",data.skill||"-"],["설명",data.desc||"-"],["제보자",data.suggester]];
+    document.getElementById("adminReviewBody").innerHTML=fields.map(([l,v])=>`<div class="review-field"><div class="rf-label">${l}</div><div class="rf-value">${v}</div></div>`).join("");
+    if(type==="attack"){ document.getElementById("btnReviewApprove").onclick=()=>{approveAtk(k1,k2);closeAdminReviewModal();}; document.getElementById("btnReviewReject").onclick=()=>{rejectAtk(k1,k2);closeAdminReviewModal();}; }
+    else{ document.getElementById("btnReviewApprove").onclick=()=>{approveDef(k1);closeAdminReviewModal();}; document.getElementById("btnReviewReject").onclick=()=>{rejectDef(k1);closeAdminReviewModal();}; }
+  });
 }
+function closeAdminReviewModal(){ document.getElementById("adminReviewModal").classList.remove("open"); }
+function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:0,lose:0,maker:d.suggester}); db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
+function rejectAtk(dk,sk){ if(confirm("거절?")){ db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("거절됨"); loadAdminReports(); } }
+function approveDef(key){ db.ref(`suggestions/defense/${key}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref("recommendedDefenses").push({name:d.name,heroes:d.heroes,formation:d.formation,pet:d.pet,skill:d.skill||"",desc:d.desc,maker:d.suggester}); db.ref(`suggestions/defense/${key}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
+function rejectDef(key){ if(confirm("거절?")){ db.ref(`suggestions/defense/${key}`).remove(); toast("거절됨"); loadAdminReports(); } }
 
+// ══ 승패 조정 ══
+function adjustScore(nick,type,delta){
+  if(delta===1){ db.ref("logs").push({nick,result:type,defense:"admin",attack:"manual_adjust",attackName:"관리자수정",attackType:"",date:new Date().toISOString().slice(0,10),time:Date.now()}).then(()=>loadAdminScores()); }
+  else{ db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const logs=Object.entries(snap.val()).map(([k,v])=>({...v,key:k})).filter(v=>v.nick===nick&&v.result===type).sort((a,b)=>b.time-a.time); if(!logs.length) return toast("기록 없음"); db.ref(`logs/${logs[0].key}`).remove().then(()=>loadAdminScores()); }); }
+}
+function deleteUserLogs(nick){ if(!confirm(`${nick} 기록 삭제?`)) return; db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const p=[]; Object.entries(snap.val()).forEach(([k,v])=>{ if(v.nick===nick) p.push(db.ref(`logs/${k}`).remove()); }); Promise.all(p).then(()=>{ toast("삭제됨"); loadAdminScores(); }); }); }
+function resetSeason(){ if(!confirm("⚠️ 모든 승패 기록을 삭제합니다. 계속할까요?")) return; db.ref("logs").remove().then(()=>{ toast("시즌 초기화 완료!"); loadAdminScores(); }); }
 </script>
 </body>
 </html>
