@@ -5,8 +5,92 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🔥 불굴 길드 DB</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">
+// ══ 관리자 탭 전용 함수 ══
+function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
+function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
+
+function loadAdminMembers(){
+  db.ref("allowedUsers").get().then(snap=>{
+    const div=document.getElementById("userKeyList2"); div.innerHTML="";
+    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
+    Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
+      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
+      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
+      div.appendChild(r);
+    });
+    filterKeys2();
+  });
+}
+
+function loadAdminReports(){
+  // 공격덱 제보
+  db.ref("suggestions/attack").get().then(snap=>{
+    const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
+  });
+  // 방어덱 제보
+  db.ref("suggestions/defense").get().then(snap=>{
+    const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
+  });
+}
+
+function loadAdminScores(){
+  const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
+  const stat={};
+  Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
+  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+}
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js">
+// ══ 관리자 탭 전용 함수 ══
+function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
+function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
+
+function loadAdminMembers(){
+  db.ref("allowedUsers").get().then(snap=>{
+    const div=document.getElementById("userKeyList2"); div.innerHTML="";
+    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
+    Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
+      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
+      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
+      div.appendChild(r);
+    });
+    filterKeys2();
+  });
+}
+
+function loadAdminReports(){
+  // 공격덱 제보
+  db.ref("suggestions/attack").get().then(snap=>{
+    const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
+  });
+  // 방어덱 제보
+  db.ref("suggestions/defense").get().then(snap=>{
+    const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
+  });
+}
+
+function loadAdminScores(){
+  const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
+  const stat={};
+  Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
+  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+}
+
+</script>
 <style>
 :root {
   --bg: #1c0a0a;
@@ -315,6 +399,13 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
+    <!-- 관리자 전용 -->
+    <div id="adminNavSection" style="display:none;">
+      <div style="padding:16px 20px 6px; font-size:10px; font-weight:700; color:var(--accent); letter-spacing:1px; text-transform:uppercase; opacity:0.7;">관리자</div>
+      <button class="sb-item" onclick="switchTab('adminMembers')"><span class="si-icon">👥</span> 길드원 관리</button>
+      <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리</button>
+      <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
+    </div>
   </nav>
   <div class="sb-bottom">
     <div class="sb-nick">접속 중: <b id="sidebarNick">-</b></div>
@@ -573,6 +664,55 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
       </div>
     </div>
+  
+  <!-- 관리자: 길드원 관리 -->
+  <div id="adminMembersScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">👥 길드원 관리</div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-section-title">🔑 입장코드 발급</div>
+      <div style="display:flex;gap:8px;margin-bottom:7px;">
+        <input class="form-input" id="newUserNick2" placeholder="닉네임" style="margin:0;flex:1;">
+        <button class="btn-sm btn-green" onclick="issueKey2()">발급</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-section-title">🔍 길드원 검색</div>
+      <input class="form-input" id="keySearchInput2" placeholder="닉네임 검색..." oninput="filterKeys2()">
+    </div>
+    <div class="admin-section-title" style="margin-bottom:10px;">전체 목록</div>
+    <div id="userKeyList2" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"></div>
+  </div>
+
+  <!-- 관리자: 제보 관리 -->
+  <div id="adminReportsScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">📋 제보 관리</div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-section-title">⚔️ 공격덱 제보</div>
+      <div id="atkSuggestionList2" style="color:var(--text3);font-size:13px;">(없음)</div>
+    </div>
+    <div>
+      <div class="admin-section-title">🛡️ 방어덱 제보</div>
+      <div id="defSuggestionList2" style="color:var(--text3);font-size:13px;">(없음)</div>
+    </div>
+  </div>
+
+  <!-- 관리자: 승패 관리 -->
+  <div id="adminScoresScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">📊 승패 관리</div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-section-title">👥 승패 수정</div>
+      <div id="adminUserList2" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 16px;"></div>
+    </div>
+    <div>
+      <div class="admin-section-title" style="color:#c0392b;">⚠️ 위험</div>
+      <button class="danger-btn" onclick="resetSeason()">시즌 초기화 (모든 승패 삭제)</button>
+    </div>
   </div>
 
 </div><!-- /mainContent -->
@@ -668,6 +808,11 @@ function enterApp() {
   else { document.getElementById("tabBar").classList.remove("hidden"); }
   document.getElementById("homeNick").textContent=myNick;
   if(document.getElementById("sidebarNick")) document.getElementById("sidebarNick").textContent=myNick;
+  // 관리자면 사이드바 관리자 섹션 표시
+  if(isAdminAuthenticated) {
+    const adminNav = document.getElementById("adminNavSection");
+    if(adminNav) adminNav.style.display="block";
+  }
   switchTab("home");
   renderRanking();
   loadDefenseTeamsListener();
@@ -676,12 +821,19 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  ["home","attack","defense","pve"].forEach(t=>document.getElementById(t+"Screen").classList.remove("active"));
+  const allTabs = ["home","attack","defense","pve","adminMembers","adminReports","adminScores"];
+  allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   document.getElementById(tab+"Screen").classList.add("active");
   // 모바일 하단 탭
   document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
-  // PC 사이드바
-  document.querySelectorAll(".sb-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
+  // PC 사이드바 - 모든 sb-item active 해제 후 현재 탭 활성화
+  document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
+  const tabMap = {"home":0,"attack":1,"defense":2,"pve":3};
+  const sbItems = document.querySelectorAll(".sb-item");
+  if(tab in tabMap) sbItems[tabMap[tab]].classList.add("active");
+  if(tab==="adminMembers"){ loadAdminMembers(); sbItems[4]?.classList.add("active"); }
+  if(tab==="adminReports"){ loadAdminReports(); sbItems[5]?.classList.add("active"); }
+  if(tab==="adminScores"){ loadAdminScores(); sbItems[6]?.classList.add("active"); }
   if(tab==="defense") loadRecDefenseList();
   if(tab==="pve") renderPveList(pveCurrentCategory||"siege");
   if(tab==="attack") renderRanking();
@@ -898,6 +1050,48 @@ function adjustScore(nick,type,delta){ if(delta===1){ db.ref("logs").push({nick,
 function deleteUserLogs(nick){ if(!confirm(`${nick} 기록 삭제?`)) return; db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const p=[]; Object.entries(snap.val()).forEach(([k,v])=>{ if(v.nick===nick) p.push(db.ref(`logs/${k}`).remove()); }); Promise.all(p).then(()=>toast("삭제됨")); }); }
 function resetSeason(){ if(!confirm("⚠️ 모든 승패 기록을 삭제합니다. 계속할까요?")) return; db.ref("logs").remove().then(()=>toast("시즌 초기화 완료!")); }
 function renderAdminUserList(){ const listDiv=document.getElementById("adminUserList"); listDiv.innerHTML=""; const stat={}; Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; }); db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 7px;font-size:11px;margin-left:3px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); }); }
+
+// ══ 관리자 탭 전용 함수 ══
+function issueKey2(){ const n=document.getElementById("newUserNick2").value.trim(); if(!n) return; const c=Math.floor(100000+Math.random()*900000); db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}); document.getElementById("newUserNick2").value=""; toast(`${n} → 코드: ${c}`); loadAdminMembers(); }
+function filterKeys2(){ const f=document.getElementById("keySearchInput2").value.toLowerCase(); for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".user-row-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; } }
+
+function loadAdminMembers(){
+  db.ref("allowedUsers").get().then(snap=>{
+    const div=document.getElementById("userKeyList2"); div.innerHTML="";
+    const d=snap.val(); if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
+    Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
+      const r=document.createElement("div"); r.className="user-row"; r.style.cssText="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
+      r.innerHTML=`<div><div class="user-row-name">${n}</div><div class="user-row-code" style="font-size:12px;color:var(--text3);margin-top:3px;">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;">삭제</button>`;
+      div.appendChild(r);
+    });
+    filterKeys2();
+  });
+}
+
+function loadAdminReports(){
+  // 공격덱 제보
+  db.ref("suggestions/attack").get().then(snap=>{
+    const div=document.getElementById("atkSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([dk,sub])=>{ const dName=defenseDataCache[dk]?.name||"삭제된방어팀"; Object.entries(sub).forEach(([sk,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">[${dName}] ${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`; div.appendChild(d); }); });
+  });
+  // 방어덱 제보
+  db.ref("suggestions/defense").get().then(snap=>{
+    const div=document.getElementById("defSuggestionList2"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px 0;">(없음)</div>'; return; }
+    Object.entries(all).forEach(([k,v])=>{ const d=document.createElement("div"); d.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"; d.innerHTML=`<div><div style="font-size:13px;font-weight:700;">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;" onclick="openAdminReview('defense','${k}','')">검토</button>`; div.appendChild(d); });
+  });
+}
+
+function loadAdminScores(){
+  const listDiv=document.getElementById("adminUserList2"); listDiv.innerHTML="";
+  const stat={};
+  Object.values(allLogsCache).forEach(v=>{ if(!stat[v.nick]) stat[v.nick]={w:0,l:0}; if(v.result==="win") stat[v.nick].w++; else stat[v.nick].l++; });
+  db.ref("allowedUsers").get().then(snap=>{ const users=snap.val()||{}; Object.keys(users).forEach(u=>{ if(!stat[u]) stat[u]={w:0,l:0}; }); Object.keys(stat).sort().forEach(nick=>{ const val=stat[nick]; const div=document.createElement("div"); div.className="score-row"; div.style.cssText="padding:12px 0;border-bottom:1px solid var(--border);"; div.innerHTML=`<span class="score-row-name">${nick}</span><div class="score-controls"><span class="score-val win">${val.w}승</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','win',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','win',-1)">−</button><span class="score-val lose" style="margin-left:4px">${val.l}패</span><button class="btn-xs btn-blue" onclick="adjustScore('${nick}','lose',1)">+</button><button class="btn-xs btn-red" onclick="adjustScore('${nick}','lose',-1)">−</button><button class="btn-xs btn-gray" style="width:auto;padding:0 8px;font-size:11px;margin-left:4px;" onclick="deleteUserLogs('${nick}')">삭제</button></div>`; listDiv.appendChild(div); }); });
+}
+
 </script>
 </body>
 </html>
