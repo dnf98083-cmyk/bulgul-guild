@@ -214,6 +214,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 @keyframes fireGlow { 0%{box-shadow:0 0 8px rgba(241,39,17,0.3)} 100%{box-shadow:0 0 20px rgba(245,175,25,0.5)} }
 .pve-sel { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:11px 12px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; outline:none; }
 .pve-sel:focus { border-color:var(--accent); }
+.pve-detail-wrap { margin-bottom:14px; }
+.pve-detail-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.pve-detail-chip { background:var(--surface2); border:1px solid var(--border); color:var(--text2); padding:8px 12px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.pve-detail-chip.active { background:rgba(255,85,51,0.12); border-color:var(--accent); color:#fff; }
+.pve-manage-box { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; }
+.pve-manage-title { font-size:11px; color:var(--accent); font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
+.pve-detail-list-admin { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.pve-detail-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(0,0,0,0.12); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:9px 10px; }
+.pve-detail-row.active { border-color:var(--accent); background:rgba(255,85,51,0.08); }
+.pve-detail-row-name { font-size:12px; font-weight:700; flex:1; }
 
 /* 관리자 공통 */
 .admin-section { margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border); }
@@ -513,6 +523,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <option value="build1">빌드 1</option><option value="build2">빌드 2</option><option value="build3">빌드 3</option><option value="build4">빌드 4</option>
         </select>
       </div>
+      <div id="pveDetailArea" class="pve-detail-wrap" style="display:none;">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px;">📌 세부사항</div>
+        <div id="pveDetailList" class="pve-detail-chips"></div>
+      </div>
       <div id="pveViewMode">
         <div class="info-block"><div class="ib-label">⚔️ 덱 조합</div><div class="ib-value" id="viewPveDeck">-</div></div>
         <div class="info-block"><div class="ib-label">📜 스킬 순서</div><div class="ib-value" id="viewPveSkill">-</div></div>
@@ -526,6 +540,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">빌드 이름</div>
         <input class="form-input" id="editBuildName" placeholder="예: 딜링 빌드, 탱커 빌드..." style="margin-bottom:12px;">
+        <div class="pve-manage-box">
+          <div class="pve-manage-title">세부사항 등록</div>
+          <input class="form-input" id="editDetailName" placeholder="세부사항 이름 입력 (예: 카일 있음, 속공용, 안정형)">
+          <div class="btn-row">
+            <button onclick="addPveDetail()" class="btn-sm btn-blue">세부사항 등록</button>
+            <button onclick="clearPveDetailSelection()" class="btn-sm btn-gray">기본 빌드 편집</button>
+            <button onclick="deleteCurrentPveDetail()" class="btn-sm btn-red">현재 세부사항 삭제</button>
+          </div>
+          <div id="pveDetailAdminList" class="pve-detail-list-admin"></div>
+        </div>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">덱 조합</div>
         <textarea class="form-textarea" id="editPveDeck" rows="3"></textarea>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">스킬 순서</div>
@@ -645,7 +669,7 @@ const ADMIN_PW = "0204";
 
 let myNick="", currentDefense="", currentAttack="", currentRecDef="";
 let isAdminAuthenticated=false, allLogsCache={}, defenseDataCache={};
-let pveCurrentCategory="siege", pveCurrentId="", pveCurrentType="";
+let pveCurrentCategory="siege", pveCurrentId="", pveCurrentType="", pveCurrentDetail="";
 
 // ══ 토스트 ══
 function toast(msg) {
@@ -891,24 +915,26 @@ const PVE_DATA_KEYS={
   siege:[{id:"mon",name:"월요일"},{id:"tue",name:"화요일"},{id:"wed",name:"수요일"},{id:"thu",name:"목요일"},{id:"fri",name:"금요일"},{id:"sat",name:"토요일"},{id:"sun",name:"일요일"}],
   advent:[{id:"destruct1",name:"🔥 파괴신 1라",type:"turn_build",fire:true},{id:"destruct2",name:"🔥 파괴신 2라",type:"turn_build",fire:true},{id:"teo",name:"태오"},{id:"kyle",name:"카일"},{id:"yeonhee",name:"연희"},{id:"karma",name:"카르마"}]
 };
-function renderPveList(cat){ pveCurrentCategory=cat; document.getElementById("pveDetailCard").style.display="none"; document.getElementById("tabSiege").className=cat==="siege"?"pve-tab-btn active":"pve-tab-btn"; document.getElementById("tabAdvent").className=cat==="advent"?"pve-tab-btn active":"pve-tab-btn"; const list=document.getElementById("pveList"); list.innerHTML=""; PVE_DATA_KEYS[cat].forEach(item=>{ const div=document.createElement("div"); div.className=item.fire?"pve-btn fire":"pve-btn"; div.textContent=item.name; div.onclick=()=>{ document.querySelectorAll(".pve-btn").forEach(b=>{ if(!b.classList.contains("fire")) b.classList.remove("active"); }); if(!item.fire) div.classList.add("active"); loadPveData(cat,item.id,item.name,item.type||"build"); }; list.appendChild(div); }); }
-function loadPveData(cat,id,title,type){ pveCurrentId=id; pveCurrentType=type; document.getElementById("pveDetailCard").style.display="block"; document.getElementById("pveCardTitle").textContent=title; document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none"; document.getElementById("pveBuildArea").style.display="block"; if(type==="turn_build") document.getElementById("pveTurnSelect").value="8"; document.getElementById("pveBuildSelect").value="build1"; fetchPveRealData(); }
-function changePveTurn(){ fetchPveRealData(); }
-function changePveBuild(){ fetchPveRealData(); }
+function renderPveList(cat){ pveCurrentCategory=cat; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="none"; document.getElementById("tabSiege").className=cat==="siege"?"pve-tab-btn active":"pve-tab-btn"; document.getElementById("tabAdvent").className=cat==="advent"?"pve-tab-btn active":"pve-tab-btn"; const list=document.getElementById("pveList"); list.innerHTML=""; PVE_DATA_KEYS[cat].forEach(item=>{ const div=document.createElement("div"); div.className=item.fire?"pve-btn fire":"pve-btn"; div.textContent=item.name; div.onclick=()=>{ document.querySelectorAll(".pve-btn").forEach(b=>{ if(!b.classList.contains("fire")) b.classList.remove("active"); }); if(!item.fire) div.classList.add("active"); loadPveData(cat,item.id,item.name,item.type||"build"); }; list.appendChild(div); }); }
+function loadPveData(cat,id,title,type){ pveCurrentId=id; pveCurrentType=type; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="block"; document.getElementById("pveCardTitle").textContent=title; document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none"; document.getElementById("pveBuildArea").style.display="block"; if(type==="turn_build") document.getElementById("pveTurnSelect").value="8"; document.getElementById("pveBuildSelect").value="build1"; fetchPveRealData(); }
+function changePveTurn(){ pveCurrentDetail=""; fetchPveRealData(); }
+function changePveBuild(){ pveCurrentDetail=""; fetchPveRealData(); }
+// 경로 헬퍼
+function getPveBasePath(){ return `pve/${pveCurrentCategory}/${pveCurrentId}`; }
+function getPveBuildPath(){
+  const build=document.getElementById("pveBuildSelect").value;
+  if(pveCurrentType==="turn_build") return `${getPveBasePath()}/${document.getElementById("pveTurnSelect").value}/${build}`;
+  return `${getPveBasePath()}/${build}`;
+}
+function getPveCurrentDataPath(){
+  return pveCurrentDetail ? `${getPveBuildPath()}/details/${pveCurrentDetail}` : getPveBuildPath();
+}
+
 function fetchPveRealData(){
   ["viewPveDeck","viewPveSkill","viewPveEquip"].forEach(id=>document.getElementById(id).textContent="로딩중...");
-  let basePath=`pve/${pveCurrentCategory}/${pveCurrentId}`;
-  const turn=pveCurrentType==="turn_build"?document.getElementById("pveTurnSelect").value:null;
-  const build=document.getElementById("pveBuildSelect").value;
-  let path=basePath+(turn?`/${turn}/${build}`:`/${build}`);
-  db.ref(path).once("value").then(snap=>{
-    const d=snap.val();
-    document.getElementById("viewPveDeck").textContent=d?.deck||"(등록된 공략 없음)";
-    document.getElementById("viewPveSkill").textContent=d?.skill||"-";
-    document.getElementById("viewPveEquip").textContent=d?.equip||"-";
-  });
-  // 빌드 이름들 불러와서 드롭다운 갱신
-  let namePath=basePath+(turn?`/${turn}`:"");
+  const buildPath=getPveBuildPath();
+  // 빌드 이름 드롭다운 갱신
+  let namePath=getPveBasePath()+(pveCurrentType==="turn_build"?`/${document.getElementById("pveTurnSelect").value}`:"");
   db.ref(namePath).once("value").then(snap=>{
     const data=snap.val()||{};
     const sel=document.getElementById("pveBuildSelect");
@@ -918,44 +944,137 @@ function fetchPveRealData(){
       if(opt) opt.textContent=data[bk]?.buildName||defaultNames[i];
     });
   });
+  // 빌드 데이터 + 세부사항 로드
+  db.ref(buildPath).once("value").then(snap=>{
+    const buildData=snap.val()||{};
+    const details=buildData.details||{};
+    if(pveCurrentDetail && !details[pveCurrentDetail]) pveCurrentDetail="";
+    const currentData=(pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
+    document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
+    document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
+    document.getElementById("viewPveEquip").textContent=currentData?.equip||"-";
+    renderPveDetailTabs(details);
+    if(document.getElementById("pveEditMode").style.display==="block") fillPveEditForm(buildData, details);
+  });
 }
+
+function renderPveDetailTabs(details){
+  const area=document.getElementById("pveDetailArea");
+  const list=document.getElementById("pveDetailList"); list.innerHTML="";
+  const baseBtn=document.createElement("button");
+  baseBtn.className=`pve-detail-chip ${!pveCurrentDetail?"active":""}`;
+  baseBtn.textContent="기본";
+  baseBtn.onclick=()=>{ pveCurrentDetail=""; fetchPveRealData(); };
+  list.appendChild(baseBtn);
+  Object.entries(details||{}).forEach(([key,val])=>{
+    const btn=document.createElement("button");
+    btn.className=`pve-detail-chip ${pveCurrentDetail===key?"active":""}`;
+    btn.textContent=val.name||"세부사항";
+    btn.onclick=()=>{ pveCurrentDetail=key; fetchPveRealData(); };
+    list.appendChild(btn);
+  });
+  area.style.display="block";
+}
+
+function fillPveEditForm(buildData={}, details={}){
+  const currentData=(pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
+  let deck=currentData?.deck||""; if(deck==="(등록된 공략 없음)") deck="";
+  document.getElementById("editPveDeck").value=deck;
+  document.getElementById("editPveSkill").value=(currentData?.skill&&currentData.skill!=="-")?currentData.skill:"";
+  document.getElementById("editPveEquip").value=(currentData?.equip&&currentData.equip!=="-")?currentData.equip:"";
+  const sel=document.getElementById("pveBuildSelect");
+  const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
+  const defNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
+  const curText=curOpt?.textContent||defNames[sel.value]||"";
+  document.getElementById("editBuildName").value=curText.startsWith("빌드 ")?"":curText;
+  // ✅ 버그2 수정: 기본빌드 편집 시 세부사항 이름칸 비워주기
+  document.getElementById("editDetailName").value=pveCurrentDetail?(details[pveCurrentDetail]?.name||""):"";
+  renderPveDetailAdminList(details);
+}
+
+function renderPveDetailAdminList(details={}){
+  const list=document.getElementById("pveDetailAdminList"); list.innerHTML="";
+  const baseRow=document.createElement("div");
+  baseRow.className=`pve-detail-row ${!pveCurrentDetail?"active":""}`;
+  baseRow.innerHTML=`<div class="pve-detail-row-name">기본 빌드 본문</div><button class="btn-sm btn-gray" style="padding:6px 10px;" onclick="clearPveDetailSelection()">선택</button>`;
+  list.appendChild(baseRow);
+  Object.entries(details).forEach(([key,val])=>{
+    const row=document.createElement("div");
+    row.className=`pve-detail-row ${pveCurrentDetail===key?"active":""}`;
+    row.innerHTML=`<div class="pve-detail-row-name">${val.name||"세부사항"}</div><div class="btn-row" style="gap:6px;"><button class="btn-sm btn-gray" style="padding:6px 10px;" onclick="selectAdminPveDetail('${key}')">선택</button><button class="btn-sm btn-red" style="padding:6px 10px;" onclick="deletePveDetailByKey('${key}')">삭제</button></div>`;
+    list.appendChild(row);
+  });
+}
+
 function enablePveEdit(){
   if(!checkPW()) return;
   document.getElementById("pveViewMode").style.display="none";
   document.getElementById("pveEditMode").style.display="block";
-  let deck=document.getElementById("viewPveDeck").textContent;
-  if(deck==="(등록된 공략 없음)") deck="";
-  document.getElementById("editPveDeck").value=deck;
-  document.getElementById("editPveSkill").value=document.getElementById("viewPveSkill").textContent;
-  document.getElementById("editPveEquip").value=document.getElementById("viewPveEquip").textContent;
-  // 현재 빌드 이름 채우기
-  const sel=document.getElementById("pveBuildSelect");
-  const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
-  const defaultNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
-  const curText=curOpt?.textContent||defaultNames[sel.value]||"";
-  document.getElementById("editBuildName").value=curText.startsWith("빌드 ")?"":curText;
+  db.ref(getPveBuildPath()).once("value").then(snap=>{
+    const buildData=snap.val()||{};
+    fillPveEditForm(buildData, buildData.details||{});
+  });
 }
 function cancelPveEdit(){ document.getElementById("pveViewMode").style.display="block"; document.getElementById("pveEditMode").style.display="none"; }
+
+// ✅ 버그1 수정: 세부사항 이름 비워도 기존 이름 보존
 function savePveData(){
   const deck=document.getElementById("editPveDeck").value;
   const skill=document.getElementById("editPveSkill").value;
   const equip=document.getElementById("editPveEquip").value;
   const buildNameInput=document.getElementById("editBuildName").value.trim();
+  const detailNameInput=document.getElementById("editDetailName").value.trim();
   const build=document.getElementById("pveBuildSelect").value;
   const defaultNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
   const buildName=buildNameInput||defaultNames[build];
-  let path=`pve/${pveCurrentCategory}/${pveCurrentId}`;
-  if(pveCurrentType==="turn_build") path+=`/${document.getElementById("pveTurnSelect").value}/${build}`;
-  else path+=`/${build}`;
-  db.ref(path).update({deck,skill,equip,buildName,updatedAt:Date.now()}).then(()=>{
-    toast("저장됨 ✅");
-    document.getElementById("viewPveDeck").textContent=deck;
-    document.getElementById("viewPveSkill").textContent=skill;
-    document.getElementById("viewPveEquip").textContent=equip;
-    // 드롭다운 이름 즉시 반영
-    const opt=document.getElementById("pveBuildSelect").querySelector(`option[value="${build}"]`);
-    if(opt) opt.textContent=buildName;
-    cancelPveEdit();
+
+  const doSave=(existingDetailName)=>{
+    const updates=[];
+    updates.push(db.ref(getPveBuildPath()).update({buildName,updatedAt:Date.now()}));
+    const payload={deck,skill,equip,updatedAt:Date.now()};
+    if(pveCurrentDetail) payload.name=detailNameInput||existingDetailName||"세부사항";
+    updates.push(db.ref(getPveCurrentDataPath()).update(payload));
+    Promise.all(updates).then(()=>{
+      toast("저장됨 ✅");
+      document.getElementById("viewPveDeck").textContent=deck||"(등록된 공략 없음)";
+      document.getElementById("viewPveSkill").textContent=skill||"-";
+      document.getElementById("viewPveEquip").textContent=equip||"-";
+      const opt=document.getElementById("pveBuildSelect").querySelector(`option[value="${build}"]`);
+      if(opt) opt.textContent=buildName;
+      fetchPveRealData();
+      cancelPveEdit();
+    });
+  };
+
+  if(pveCurrentDetail && !detailNameInput){
+    db.ref(`${getPveBuildPath()}/details/${pveCurrentDetail}/name`).once("value").then(snap=>{ doSave(snap.val()||"세부사항"); });
+  } else {
+    doSave(detailNameInput);
+  }
+}
+
+function addPveDetail(){
+  if(!checkPW()) return;
+  const name=document.getElementById("editDetailName").value.trim();
+  if(!name) return toast("세부사항 이름을 입력하세요");
+  const ref=db.ref(`${getPveBuildPath()}/details`).push();
+  ref.set({name,deck:"",skill:"",equip:"",createdAt:Date.now(),updatedAt:Date.now()}).then(()=>{
+    pveCurrentDetail=ref.key; toast("세부사항 등록 완료"); fetchPveRealData();
+  });
+}
+// ✅ 버그2 수정: 기본빌드로 돌아갈 때 editDetailName 초기화
+function clearPveDetailSelection(){ pveCurrentDetail=""; document.getElementById("editDetailName").value=""; fetchPveRealData(); }
+function selectAdminPveDetail(key){ pveCurrentDetail=key; fetchPveRealData(); }
+function deleteCurrentPveDetail(){
+  if(!pveCurrentDetail) return toast("삭제할 세부사항을 먼저 선택하세요");
+  if(!confirm("현재 세부사항을 삭제할까요?")) return;
+  deletePveDetailByKey(pveCurrentDetail);
+}
+function deletePveDetailByKey(key){
+  if(!key) return;
+  db.ref(`${getPveBuildPath()}/details/${key}`).remove().then(()=>{
+    if(pveCurrentDetail===key) pveCurrentDetail="";
+    toast("세부사항 삭제됨"); fetchPveRealData();
   });
 }
 function copyPveData(){ const data={deck:document.getElementById("editPveDeck").value,skill:document.getElementById("editPveSkill").value,equip:document.getElementById("editPveEquip").value}; navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data)))).then(()=>toast("복사됨 📋")); }
