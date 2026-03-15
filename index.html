@@ -195,6 +195,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .rs-main { font-size:13px; font-weight:700; }
 .rs-sub { font-size:11px; color:var(--text3); margin-top:1px; }
 .more-rank-msg { text-align:center; font-size:12px; color:var(--text3); padding:10px; display:none; }
+.ranking-box { margin-top:16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.ranking-scroll { max-height:260px; overflow-y:auto; margin-top:8px; }
 
 /* 방어 */
 .def-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
@@ -399,6 +401,11 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div id="atkSuggestBtn" style="display:none; margin-bottom:14px;">
           <button onclick="openModal('attack')" class="btn-icon" style="width:100%;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 공격덱 제보</button>
         </div>
+        <div class="ranking-box">
+          <div class="section-title">🏆 시즌 랭킹</div>
+          <div id="rankingList" class="rank-card ranking-scroll"></div>
+          <div id="moreRankMsg" class="more-rank-msg">* 11위 이하는 관리자만 볼 수 있습니다</div>
+        </div>
       </div>
       <div>
         <div id="attackCard" class="atk-card">
@@ -432,11 +439,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <div style="text-align:right;margin-top:10px;">
             <button onclick="resetRecord()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">[관리자] 기록 초기화</button>
           </div>
-        </div>
-        <div style="margin-top:20px;">
-          <div class="section-title">🏆 시즌 랭킹</div>
-          <div id="rankingList" class="rank-card"></div>
-          <div id="moreRankMsg" class="more-rank-msg">* 11위 이하는 관리자만 볼 수 있습니다</div>
         </div>
       </div>
     </div>
