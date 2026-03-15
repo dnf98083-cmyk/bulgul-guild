@@ -1028,26 +1028,35 @@ function savePveData(){
   const defaultNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
   const buildName=buildNameInput||defaultNames[build];
 
+  const savedDetail = pveCurrentDetail; // 저장 시점의 세부사항 키 고정
+  const buildPath = getPveBuildPath();
+  const dataPath = savedDetail ? `${buildPath}/details/${savedDetail}` : buildPath;
+
   const doSave=(existingDetailName)=>{
-    const updates=[];
-    updates.push(db.ref(getPveBuildPath()).update({buildName,updatedAt:Date.now()}));
-    const payload={deck,skill,equip,updatedAt:Date.now()};
-    if(pveCurrentDetail) payload.name=detailNameInput||existingDetailName||"세부사항";
-    updates.push(db.ref(getPveCurrentDataPath()).update(payload));
-    Promise.all(updates).then(()=>{
+    const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now()});
+    let p2;
+    if(savedDetail){
+      // 세부사항: set으로 덮어쓰기 (이름 보존)
+      const finalName = detailNameInput || existingDetailName || "세부사항";
+      p2 = db.ref(dataPath).update({name:finalName, deck, skill, equip, updatedAt:Date.now()});
+    } else {
+      // 기본 빌드: buildName 등 기존 필드 보존하며 update
+      p2 = db.ref(dataPath).update({deck, skill, equip, updatedAt:Date.now()});
+    }
+    Promise.all([p1, p2]).then(()=>{
       toast("저장됨 ✅");
       document.getElementById("viewPveDeck").textContent=deck||"(등록된 공략 없음)";
       document.getElementById("viewPveSkill").textContent=skill||"-";
       document.getElementById("viewPveEquip").textContent=equip||"-";
       const opt=document.getElementById("pveBuildSelect").querySelector(`option[value="${build}"]`);
       if(opt) opt.textContent=buildName;
-      fetchPveRealData();
       cancelPveEdit();
+      fetchPveRealData();
     });
   };
 
-  if(pveCurrentDetail && !detailNameInput){
-    db.ref(`${getPveBuildPath()}/details/${pveCurrentDetail}/name`).once("value").then(snap=>{ doSave(snap.val()||"세부사항"); });
+  if(savedDetail && !detailNameInput){
+    db.ref(`${buildPath}/details/${savedDetail}/name`).once("value").then(snap=>{ doSave(snap.val()||"세부사항"); });
   } else {
     doSave(detailNameInput);
   }
