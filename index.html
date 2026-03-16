@@ -414,7 +414,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <button class="btn-icon" id="mobileLogout" onclick="doLogout()">로그아웃</button>
       </div>
     </div>
-    <div id="homeBanner"></div>
     <div class="home-greeting">
       <div class="hi">안녕하세요,</div>
       <div class="name"><span id="homeNick">길드원</span>님 👋</div>
@@ -424,6 +423,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div class="stat-label">내 시즌 전적</div>
         <div class="stat-value" id="homeStatValue"><span>0</span>승 0패</div>
         <div class="stat-rank" id="homeStatRank">로딩중...</div>
+      </div>
+      <div class="home-stat-card" id="homeNoticeCard" onclick="switchTab('notice')" style="cursor:pointer;position:relative;overflow:hidden;">
+        <div class="stat-label">📢 최신 공지</div>
+        <div id="homeNoticeTitle" style="font-size:14px;font-weight:700;margin-top:4px;color:var(--text);">없음</div>
+        <div id="homeNoticeDate" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
+        <div style="font-size:11px;color:var(--accent);margin-top:6px;">탭하여 보기 →</div>
       </div>
     </div>
     <div class="section-title" style="margin-top:4px;">빠른 메뉴</div>
@@ -1411,10 +1416,12 @@ function openCardExtra(){
 // ══ 공지사항 ══
 let selectedNoticeKey="";
 function loadNotices(){
-  showLoader();
+  const list=document.getElementById("noticeList");
+  list.innerHTML='<div class="empty-state" style="color:var(--accent);">⏳ 불러오는 중...</div>';
+  const panel=document.getElementById("noticeAdminPanel");
+  if(panel) panel.style.display=isAdminAuthenticated?"block":"none";
   db.ref("notices").orderByChild("createdAt").once("value").then(snap=>{
-    hideLoader();
-    const list=document.getElementById("noticeList"); list.innerHTML="";
+    list.innerHTML="";
     const data=snap.val();
     if(!data){ list.innerHTML='<div class="empty-state">공지사항이 없습니다</div>'; return; }
     const entries=Object.entries(data).reverse();
@@ -1429,14 +1436,12 @@ function loadNotices(){
             ${isAdminAuthenticated?`<button class="btn-sm btn-red" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();deleteNotice('${key}')">삭제</button>`:""}
           </div>
         </div>
-        <div class="notice-banner-body" id="noticeBody_${key}">${(val.body||"").replace(/
-/g,"<br>")}</div>`;
+        <div style="font-size:11px;color:var(--text3);padding:6px 0 2px;">작성자: ${val.author||"관리자"}</div>
+        <div class="notice-banner-body" id="noticeBody_${key}">${(val.body||"").split("\n").join("<br>")}</div>`;
       list.appendChild(div);
     });
-    if(isAdminAuthenticated){
-      const panel=document.getElementById("noticeAdminPanel");
-      if(panel) panel.style.display="block";
-    }
+  }).catch(()=>{
+    list.innerHTML='<div class="empty-state">불러오기 실패. 새로고침 해주세요.</div>';
   });
 }
 function toggleNotice(key){
@@ -1450,32 +1455,31 @@ function addNotice(){
   if(!title) return toast("제목을 입력하세요");
   const now=new Date();
   const date=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
-  db.ref("notices").push({title,body,date,createdAt:Date.now()}).then(()=>{
+  db.ref("notices").push({title,body,date,author:myNick,createdAt:Date.now()}).then(()=>{
     toast("공지 등록됨 📢");
     document.getElementById("noticeTitle").value="";
     document.getElementById("noticeBody").value="";
     loadNotices();
+    loadHomeNotice();
   });
 }
 function deleteNotice(key){
   if(!confirm("공지를 삭제할까요?")) return;
-  db.ref("notices/"+key).remove().then(()=>{ toast("삭제됨"); loadNotices(); });
+  db.ref("notices/"+key).remove().then(()=>{ toast("삭제됨"); loadNotices(); loadHomeNotice(); });
 }
 
-// ══ 홈 배너 (최신 공지) ══
-function loadHomeBanner(){
+// ══ 홈 공지 카드 ══
+function loadHomeBanner(){ loadHomeNotice(); }
+function loadHomeNotice(){
   db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
-    const banner=document.getElementById("homeBanner"); if(!banner) return;
+    const titleEl=document.getElementById("homeNoticeTitle");
+    const dateEl=document.getElementById("homeNoticeDate");
+    if(!titleEl) return;
     const data=snap.val();
-    if(!data){ banner.innerHTML=""; return; }
-    const [key,val]=Object.entries(data)[0];
-    banner.innerHTML=`<div class="notice-banner anim-fade-up" style="margin-bottom:16px;" onclick="switchTab('notice')">
-      <div class="notice-banner-header">
-        <div class="notice-banner-title">📢 ${val.title}</div>
-        <div class="notice-banner-date">${val.date||""}</div>
-      </div>
-      <div style="font-size:12px;color:var(--text3);margin-top:4px;">탭하여 공지 보기 →</div>
-    </div>`;
+    if(!data){ titleEl.textContent="공지 없음"; if(dateEl) dateEl.textContent=""; return; }
+    const val=Object.values(data)[0];
+    titleEl.textContent=val.title||"(제목 없음)";
+    if(dateEl) dateEl.textContent=(val.date||"")+(val.author?" · "+val.author:"");
   });
 }
 
