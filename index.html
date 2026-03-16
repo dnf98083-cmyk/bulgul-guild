@@ -385,7 +385,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   </nav>
   <div class="sb-bottom">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="sb-nick" style="margin-bottom:0;">접속 중: <b id="sidebarNick">-</b></div>
+      <div class="sb-nick" style="margin-bottom:0;">접속 중: <b id="sidebarNick">-</b> <span id="roleBadge" style="display:none;font-size:10px;padding:2px 7px;border-radius:20px;color:#fff;font-weight:700;margin-left:4px;"></span></div>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtnSb" style="font-size:13px;padding:5px 10px;">🌙</button>
     </div>
     <button id="sbAdminBtn" class="sb-admin-btn" onclick="tryAdminSwitch()">🔐 관리자 전환</button>
@@ -684,6 +684,19 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="page-title">👥 길드원 관리</div>
     </div>
     <div class="admin-section">
+      <div class="admin-section-title">🎖️ 역할 부여</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input class="form-input" id="roleNickInput" placeholder="닉네임" style="margin:0;flex:1;min-width:120px;">
+        <select class="form-select" id="roleSelect" style="margin:0;flex:1;min-width:100px;">
+          <option value="길드원">길드원</option>
+          <option value="연구원">연구원</option>
+          <option value="관리자">관리자</option>
+        </select>
+        <button class="btn-sm btn-blue" onclick="assignRole()">부여</button>
+      </div>
+      <div id="roleList" style="margin-top:12px;"></div>
+    </div>
+    <div class="admin-section">
       <div class="admin-section-title">🔑 입장코드 발급</div>
       <div style="display:flex;gap:8px;">
         <input class="form-input" id="newUserNick2" placeholder="닉네임 입력" style="margin:0;flex:1;">
@@ -782,7 +795,7 @@ const db = firebase.database();
 const ADMIN_PW = "0204";
 
 let myNick="", currentDefense="", currentAttack="", currentRecDef="";
-let isAdminAuthenticated=false, allLogsCache={}, defenseDataCache={};
+let isAdminAuthenticated=false, myRole="길드원", allLogsCache={}, defenseDataCache={};
 let pveCurrentCategory="siege", pveCurrentId="", pveCurrentType="", pveCurrentDetail="";
 
 // ══ 토스트 ══
@@ -812,10 +825,16 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
-  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick=nick; enterApp(); return; }
+  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myRole="관리자"; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
-      localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick; enterApp();
+      localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick;
+      // 역할 확인
+      db.ref(`roles/${nick}`).get().then(roleSnap=>{
+        myRole = roleSnap.exists() ? roleSnap.val() : "길드원";
+        if(myRole==="관리자") isAdminAuthenticated=true;
+        enterApp();
+      });
     } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
   });
 }
@@ -829,8 +848,18 @@ function adminLogin() {
 function checkPW() {
   if(isAdminAuthenticated) return true;
   const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){ isAdminAuthenticated=true; return true; }
+  if(pw===ADMIN_PW){ isAdminAuthenticated=true; myRole="관리자"; return true; }
   return false;
+}
+// 연구원 이상 권한 체크 (관리자 + 연구원)
+function checkResearcher() {
+  if(myRole==="관리자"||myRole==="연구원") return true;
+  toast("권한이 없습니다"); return false;
+}
+// 관리자 전용 권한 체크
+function checkAdmin() {
+  if(myRole==="관리자") return true;
+  toast("관리자 전용 기능입니다"); return false;
 }
 
 function enterApp() {
@@ -845,7 +874,7 @@ function enterApp() {
   const sidebarNick=document.getElementById("sidebarNick");
   if(sidebarNick) sidebarNick.textContent=myNick;
   // 관리자 탭 표시
-  if(isAdminAuthenticated) showAdminNav();
+  if(myRole==="관리자"||myRole==="연구원") showAdminNav();
   if(localStorage.getItem("theme")==="light"){ document.body.classList.add("light-mode"); }
   updateThemeBtn();
   switchTab("home");
@@ -859,13 +888,28 @@ function showAdminNav() {
   if(adminNav) adminNav.style.display="block";
   const sbAdminBtn=document.getElementById("sbAdminBtn");
   if(sbAdminBtn) sbAdminBtn.style.display="none";
+  // 역할 뱃지 표시
+  const badge=document.getElementById("roleBadge");
+  if(badge){
+    const colors={"관리자":"#ff5533","연구원":"#3498db"};
+    badge.textContent=myRole;
+    badge.style.background=colors[myRole]||"var(--surface2)";
+    badge.style.display="inline-block";
+  }
+  // 연구원은 길드원/승패관리 탭 숨기기
+  if(myRole==="연구원"){
+    const allSbItems=document.querySelectorAll(".sb-item");
+    // adminMembers(index 5), adminScores(index 7) 숨기기
+    if(allSbItems[5]) allSbItems[5].style.display="none";
+    if(allSbItems[7]) allSbItems[7].style.display="none";
+  }
 }
 
 // ══ 관리자 전환 (앱 안에서) ══
 function tryAdminSwitch() {
   if(isAdminAuthenticated){ showAdminNav(); toast("이미 관리자입니다"); return; }
   const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){ isAdminAuthenticated=true; showAdminNav(); toast("🔐 관리자 모드 활성화!"); }
+  if(pw===ADMIN_PW){ isAdminAuthenticated=true; myRole="관리자"; showAdminNav(); toast("🔐 관리자 모드 활성화!"); }
   else if(pw!==null) toast("비밀번호가 틀렸습니다");
 }
 
@@ -889,7 +933,7 @@ function switchTab(tab) {
   if(tab==="pve") renderPveList(pveCurrentCategory||"siege");
   if(tab==="attack") renderRanking();
   if(tab==="notice") loadNotices();
-  if(tab==="adminMembers") loadAdminMembers();
+  if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports") loadAdminReports();
   if(tab==="adminScores") loadAdminScores();
 }
@@ -918,9 +962,24 @@ function openDefDropdown() {
 function closeDefDropdown(e) {
   if(!e||e.target===document.getElementById("defDropdownSheet")) document.getElementById("defDropdownSheet").classList.remove("open");
 }
+// 퍼지 검색 - 입력한 글자들이 순서대로 포함되면 매칭
+function fuzzyMatch(text, query) {
+  if(!query) return true;
+  text=text.toLowerCase(); query=query.toLowerCase();
+  if(text.includes(query)) return true; // 일반 포함 검색 우선
+  let ti=0;
+  for(let qi=0;qi<query.length;qi++){
+    let found=false;
+    while(ti<text.length){ if(text[ti]===query[qi]){ti++;found=true;break;} ti++; }
+    if(!found) return false;
+  }
+  return true;
+}
 function filterDefense() {
-  const f=document.getElementById("defSearchInput").value.toLowerCase();
-  for(let item of document.getElementById("defRealList").children) item.style.display=item.textContent.toLowerCase().includes(f)?"":"none";
+  const f=document.getElementById("defSearchInput").value.trim();
+  for(let item of document.getElementById("defRealList").children){
+    item.style.display=fuzzyMatch(item.textContent,f)?"":"none";
+  }
 }
 
 // ══ 공격팀 ══
@@ -998,25 +1057,25 @@ function writeLog(res) {
 }
 function addWin() { if(!confirm("승리를 기록할까요?")) return; const w=+document.getElementById("cardWin").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:w+1}); writeLog("win"); toast("🏆 승리!"); }
 function addLose() { if(!confirm("패배를 기록할까요?")) return; const l=+document.getElementById("cardLose").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1}); writeLog("lose"); toast("💀 패배"); }
-function resetRecord() { if(checkPW()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
-function addDefense() { if(checkPW()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
-function delDefense() { if(checkPW()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
-function addAttack() { if(!checkPW()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0}); toast("추가됨"); }
-function editAttack() { if(!checkPW()||!currentAttack) return; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value}); toast("수정됨"); }
-function delAttack() { if(checkPW()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
+function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
+function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
+function delDefense() { if(checkResearcher()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
+function addAttack() { if(!checkResearcher()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0}); toast("추가됨"); }
+function editAttack() { if(!checkResearcher()||!currentAttack) return; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value}); toast("수정됨"); }
+function delAttack() { if(checkResearcher()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
 
 // ══ 관리자 패널 토글 (공격/방어 탭 내부) ══
 function toggleAttackAdmin() {
   const panel=document.getElementById("attackAdminPanel"), btn=document.getElementById("atkAdminBtn");
   const open=panel.style.display==="block";
-  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; }
+  if(!open){ if(!checkResearcher()) return; panel.style.display="block"; btn.textContent="닫기"; }
   else { panel.style.display="none"; btn.textContent="관리자"; }
   renderRanking();
 }
 function toggleDefenseAdmin() {
   const panel=document.getElementById("defenseAdminPanel"), btn=document.getElementById("defAdminBtn");
   const open=panel.style.display==="block";
-  if(!open){ if(!checkPW()) return; panel.style.display="block"; btn.textContent="닫기"; }
+  if(!open){ if(!checkResearcher()) return; panel.style.display="block"; btn.textContent="닫기"; }
   else { panel.style.display="none"; btn.textContent="관리자"; }
 }
 
@@ -1033,9 +1092,9 @@ function loadRecDefenseList() {
   });
 }
 function showRecDefDetail(key,val){ currentRecDef=key; document.getElementById("recDefCard").style.display="block"; document.getElementById("rdName").textContent=val.name; document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:""; document.getElementById("rdHeroes").textContent=val.heroes||"-"; document.getElementById("rdFormation").textContent=val.formation||"-"; document.getElementById("rdPet").textContent=val.pet||"-"; document.getElementById("rdSkill").textContent=val.skill||"-"; document.getElementById("rdDesc").textContent=val.desc||"-"; document.getElementById("rdInputName").value=val.name; document.getElementById("rdInputHeroes").value=val.heroes||""; document.getElementById("rdInputFormation").value=val.formation||""; document.getElementById("rdInputPet").value=val.pet||""; document.getElementById("rdInputSkill").value=val.skill||""; document.getElementById("rdInputDesc").value=val.desc||""; document.getElementById("recDefCard").scrollIntoView({behavior:"smooth",block:"nearest"}); }
-function addRecDefense(){ if(checkPW()){ db.ref("recommendedDefenses").push({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value,maker:"관리자"}); toast("추가됨"); } }
-function editRecDefense(){ if(!checkPW()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value}); toast("수정됨"); }
-function delRecDefense(){ if(checkPW()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); } }
+function addRecDefense(){ if(checkResearcher()){ db.ref("recommendedDefenses").push({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value,maker:"관리자"}); toast("추가됨"); } }
+function editRecDefense(){ if(!checkResearcher()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value}); toast("수정됨"); }
+function delRecDefense(){ if(checkResearcher()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); } }
 
 // ══ PVE ══
 const PVE_DATA_KEYS={
@@ -1151,7 +1210,7 @@ function renderPveDetailAdminList(details={}){
 }
 
 function enablePveEdit(){
-  if(!checkPW()) return;
+  if(!checkResearcher()) return;
   document.getElementById("pveViewMode").style.display="none";
   document.getElementById("pveEditMode").style.display="block";
   db.ref(getPveBuildPath()).once("value").then(snap=>{
@@ -1281,8 +1340,11 @@ function issueKey2(){
   db.ref(`allowedUsers/${n}`).set({code:c.toString(),createdAt:Date.now()}).then(()=>{ document.getElementById("newUserNick2").value=""; toast(`✅ ${n} → 코드: ${c}`); loadAdminMembers(); });
 }
 function filterKeys2(){
-  const f=document.getElementById("keySearchInput2").value.toLowerCase();
-  for(let row of document.getElementById("userKeyList2").children){ const name=row.querySelector(".member-name")?.textContent.toLowerCase()||""; row.style.display=name.includes(f)?"":"none"; }
+  const f=document.getElementById("keySearchInput2").value.trim();
+  for(let row of document.getElementById("userKeyList2").children){
+    const name=row.querySelector(".member-name")?.textContent||"";
+    row.style.display=fuzzyMatch(name,f)?"":"none";
+  }
 }
 function loadAdminMembers(){
   db.ref("allowedUsers").get().then(snap=>{
@@ -1485,19 +1547,53 @@ function loadHomeNotice(){
 
 // ══ 검색 기능 강화 ══
 function filterRecDefList(){
-  const f=document.getElementById("defSearchBar")?.value.toLowerCase()||"";
-  const items=document.getElementById("recDefList")?.children||[];
-  let found=0;
-  for(let item of items){
-    const show=item.textContent.toLowerCase().includes(f);
-    item.style.display=show?"":"none";
-    if(show) found++;
+  const f=document.getElementById("defSearchBar")?.value.trim()||"";
+  for(let item of document.getElementById("recDefList")?.children||[]){
+    item.style.display=fuzzyMatch(item.textContent,f)?"":"none";
   }
 }
 function filterPveList(){
-  const f=document.getElementById("pveSearchBar")?.value.toLowerCase()||"";
-  const items=document.getElementById("pveList")?.children||[];
-  for(let item of items){ item.style.display=item.textContent.toLowerCase().includes(f)?"":"none"; }
+  const f=document.getElementById("pveSearchBar")?.value.trim()||"";
+  for(let item of document.getElementById("pveList")?.children||[]){
+    item.style.display=fuzzyMatch(item.textContent,f)?"":"none";
+  }
+}
+
+
+// ══ 역할 관리 ══
+function assignRole(){
+  if(!checkAdmin()) return;
+  const nick=document.getElementById("roleNickInput").value.trim();
+  const role=document.getElementById("roleSelect").value;
+  if(!nick) return toast("닉네임을 입력하세요");
+  if(role==="길드원"){
+    db.ref(`roles/${nick}`).remove().then(()=>{ toast(`${nick} → 길드원`); loadRoleList(); });
+  } else {
+    db.ref(`roles/${nick}`).set(role).then(()=>{ toast(`${nick} → ${role} 부여됨`); loadRoleList(); });
+  }
+  document.getElementById("roleNickInput").value="";
+}
+function loadRoleList(){
+  db.ref("roles").get().then(snap=>{
+    const div=document.getElementById("roleList"); if(!div) return;
+    const data=snap.val();
+    if(!data){ div.innerHTML='<div style="font-size:12px;color:var(--text3);">역할 부여된 길드원 없음</div>'; return; }
+    div.innerHTML=Object.entries(data).map(([nick,role])=>{
+      const colors={"관리자":"#ff5533","연구원":"#3498db"};
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:13px;font-weight:700;">${nick}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="background:${colors[role]||"var(--surface2)"};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">${role}</span>
+          <button class="btn-sm btn-red" style="padding:5px 10px;" onclick="removeRole('${nick}')">해제</button>
+        </div>
+      </div>`;
+    }).join("");
+  });
+}
+function removeRole(nick){
+  if(!checkAdmin()) return;
+  if(!confirm(`${nick}의 역할을 해제할까요?`)) return;
+  db.ref(`roles/${nick}`).remove().then(()=>{ toast("역할 해제됨"); loadRoleList(); });
 }
 
 </script>
