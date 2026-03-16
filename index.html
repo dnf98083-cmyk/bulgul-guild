@@ -929,9 +929,25 @@ function switchTab(tab) {
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
-  if(tab==="defense") loadRecDefenseList();
+  if(tab==="defense"){
+    loadRecDefenseList();
+    if(myRole==="관리자"||myRole==="연구원"){
+      const dp=document.getElementById("defenseAdminPanel");
+      const db2=document.getElementById("defAdminBtn");
+      if(dp) dp.style.display="block";
+      if(db2) db2.textContent="닫기";
+    }
+  }
   if(tab==="pve") renderPveList(pveCurrentCategory||"siege");
-  if(tab==="attack") renderRanking();
+  if(tab==="attack"){
+    renderRanking();
+    if(myRole==="관리자"||myRole==="연구원"){
+      const ap=document.getElementById("attackAdminPanel");
+      const ab=document.getElementById("atkAdminBtn");
+      if(ap) ap.style.display="block";
+      if(ab) ab.textContent="닫기";
+    }
+  }
   if(tab==="notice") loadNotices();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports") loadAdminReports();
