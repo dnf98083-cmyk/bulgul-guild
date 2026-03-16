@@ -22,6 +22,21 @@
   --sidebar-w: 230px;
   --tab-h: 64px;
 }
+body.light-mode {
+  --bg: #fff5f3;
+  --surface: #ffffff;
+  --surface2: #fff0ed;
+  --border: rgba(255,100,80,0.2);
+  --accent: #ff5533;
+  --glow: 0 0 20px rgba(255,85,51,0.3);
+  --text: #1a0a0a;
+  --text2: #5a2020;
+  --text3: #a05040;
+}
+body.light-mode { background: linear-gradient(160deg,#fff5f3 0%,#ffe8e2 40%,#fff5f3 100%); }
+body.light-mode::before { background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,85,51,0.08) 0%, transparent 65%); }
+body.light-mode #sidebar { background: rgba(255,245,243,0.98) !important; }
+body.light-mode #tabBar { background: rgba(255,245,243,0.97) !important; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 html, body { background: linear-gradient(160deg,#1c0a0a 0%,#2e1010 40%,#1c0a0a 100%); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; overflow-x: hidden; }
 body::before { content:''; position:fixed; inset:0; z-index:0; background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,85,51,0.18) 0%, transparent 65%); pointer-events:none; }
@@ -46,7 +61,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
 /* ── 모바일 하단 탭바 ── */
-#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(4,1fr); }
+#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(5,1fr); }
 #tabBar.hidden { display:none; }
 .tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:8px 4px; color:var(--text3); border:none; background:none; font-family:inherit; }
 .tab-item .tab-icon { font-size:22px; transition:0.2s; }
@@ -95,7 +110,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   .attack-left-col { position:sticky; top:20px; }
   .atk-grid { grid-template-columns:repeat(2,1fr) !important; }
   .def-grid { grid-template-columns:repeat(3,1fr) !important; }
-  .pve-grid { grid-template-columns:repeat(4,1fr) !important; }
+  .pve-grid { grid-template-columns:repeat(5,1fr) !important; }
   .admin-2col { display:grid !important; grid-template-columns:1fr 1fr; gap:24px; }
   .atk-btn:hover,.def-btn:hover,.pve-btn:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.4); }
   .home-menu-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
@@ -278,10 +293,59 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .rf-value { font-size:13px; color:var(--text); white-space:pre-wrap; }
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:rgba(255,85,51,0.25); border-radius:2px; }
+
+/* ── 애니메이션 ── */
+@keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes scaleIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+@keyframes spin { to { transform:rotate(360deg); } }
+.anim-fade-up { animation: fadeInUp 0.3s ease forwards; }
+.anim-fade { animation: fadeIn 0.25s ease forwards; }
+.anim-scale { animation: scaleIn 0.25s ease forwards; }
+.atk-btn { transition:0.2s cubic-bezier(0.34,1.56,0.64,1); }
+.atk-btn:active { transform:scale(0.93) !important; }
+.btn-win:active { transform:scale(0.96) !important; box-shadow:0 0 20px rgba(39,174,96,0.5); }
+.btn-lose:active { transform:scale(0.96) !important; box-shadow:0 0 20px rgba(192,57,43,0.5); }
+.btn-primary:active { transform:scale(0.97); }
+.home-menu-btn { transition:0.2s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ── 로딩 스피너 ── */
+#globalLoader { display:none; position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+#globalLoader.show { display:flex; }
+.spinner { width:44px; height:44px; border:3px solid rgba(255,85,51,0.2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+.spinner-text { font-size:13px; color:var(--text2); font-weight:700; }
+
+/* ── 공지사항 ── */
+.notice-banner { background:linear-gradient(135deg,rgba(255,85,51,0.12),rgba(255,61,61,0.06)); border:1px solid rgba(255,85,51,0.3); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; cursor:pointer; position:relative; overflow:hidden; }
+.notice-banner::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),transparent); }
+.notice-banner-header { display:flex; align-items:center; justify-content:space-between; }
+.notice-banner-title { font-size:13px; font-weight:900; color:var(--accent); }
+.notice-banner-date { font-size:11px; color:var(--text3); }
+.notice-banner-body { font-size:13px; color:var(--text2); margin-top:8px; line-height:1.7; display:none; }
+.notice-banner-body.open { display:block; animation:fadeInUp 0.2s ease; }
+.notice-list { display:flex; flex-direction:column; gap:10px; }
+
+/* ── 더보기/접기 ── */
+.card-collapse-btn { width:100%; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; padding:8px 0 0; text-align:center; display:flex; align-items:center; justify-content:center; gap:4px; }
+.card-collapse-btn:hover { color:var(--text2); }
+.collapsible { overflow:hidden; transition:max-height 0.3s ease; }
+
+/* ── 테마 토글 버튼 ── */
+.theme-toggle { background:none; border:1px solid var(--border); border-radius:20px; padding:6px 12px; cursor:pointer; font-size:14px; color:var(--text2); font-family:inherit; transition:0.2s; }
+.theme-toggle:hover { background:var(--surface2); }
+
+/* ── 검색바 강화 ── */
+.search-bar-wrap { position:relative; margin-bottom:14px; }
+.search-bar-wrap input { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:12px 40px 12px 16px; border-radius:12px; font-size:14px; outline:none; font-family:inherit; transition:0.2s; }
+.search-bar-wrap input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,85,51,0.1); }
+.search-bar-wrap .search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+.search-empty { text-align:center; padding:24px; color:var(--text3); font-size:13px; }
+
 </style>
 </head>
 <body>
 <div id="toast"></div>
+<div id="globalLoader"><div class="spinner"></div><div class="spinner-text">불러오는 중...</div></div>
 
 <!-- ══ 로그인 ══ -->
 <div id="loginScreen">
@@ -307,6 +371,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   </div>
   <nav class="sb-nav">
     <button class="sb-item active" onclick="switchTab('home')"><span class="si-icon">🏠</span> 홈</button>
+    <button class="sb-item" onclick="switchTab('notice')"><span class="si-icon">📢</span> 공지사항</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
@@ -319,7 +384,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
   </nav>
   <div class="sb-bottom">
-    <div class="sb-nick">접속 중: <b id="sidebarNick">-</b></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="sb-nick" style="margin-bottom:0;">접속 중: <b id="sidebarNick">-</b></div>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtnSb" style="font-size:13px;padding:5px 10px;">🌙</button>
+    </div>
     <button id="sbAdminBtn" class="sb-admin-btn" onclick="tryAdminSwitch()">🔐 관리자 전환</button>
     <button class="sb-logout" onclick="doLogout()">로그아웃</button>
   </div>
@@ -331,6 +399,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <!-- 모바일 하단 탭바 -->
   <div id="tabBar" class="hidden">
     <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
+    <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
     <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
     <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
     <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
@@ -340,8 +409,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div id="homeScreen" class="screen">
     <div class="page-header">
       <div class="page-title">🔥 홈</div>
-      <button class="btn-icon" id="mobileLogout" onclick="doLogout()">로그아웃</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+        <button class="btn-icon" id="mobileLogout" onclick="doLogout()">로그아웃</button>
+      </div>
     </div>
+    <div id="homeBanner"></div>
     <div class="home-greeting">
       <div class="hi">안녕하세요,</div>
       <div class="name"><span id="homeNick">길드원</span>님 👋</div>
@@ -427,11 +500,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           </div>
           <div class="info-block"><div class="ib-label">진형</div><div class="ib-value" id="cardFormation">-</div></div>
           <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="cardSkill">-</div></div>
-          <div class="info-block"><div class="ib-label">장비 · 특이사항</div><div class="ib-value" id="cardArmor">-</div></div>
-          <div class="info-block">
-            <div class="ib-label">최근 5경기</div>
-            <div id="recentRecord" class="recent-record"></div>
+          <div id="cardExtraInfo" class="collapsible" style="max-height:0;">
+            <div class="info-block"><div class="ib-label">장비 · 특이사항</div><div class="ib-value" id="cardArmor">-</div></div>
+            <div class="info-block">
+              <div class="ib-label">최근 5경기</div>
+              <div id="recentRecord" class="recent-record"></div>
+            </div>
           </div>
+          <button class="card-collapse-btn" onclick="toggleCardExtra()" id="cardCollapseBtn">
+            <span id="cardCollapseBtnText">▼ 상세정보 보기</span>
+          </button>
           <div class="wl-btns">
             <button class="btn-win" onclick="addWin()">🏆 승리</button>
             <button class="btn-lose" onclick="addLose()">💀 패배</button>
@@ -470,6 +548,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="page-title">🛡️ 추천 방어</div>
       <button class="btn-icon" id="defAdminBtn" onclick="toggleDefenseAdmin()">관리자</button>
     </div>
+    <div class="search-bar-wrap">
+      <input type="text" id="defSearchBar" placeholder="방어덱 검색..." oninput="filterRecDefList()">
+      <span class="search-icon">🔍</span>
+    </div>
     <div id="recDefList" class="def-grid"></div>
     <div style="margin-bottom:14px;">
       <button onclick="openModal('defense')" class="btn-icon" style="width:100%;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 방어덱 제보</button>
@@ -504,6 +586,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <!-- PVE -->
   <div id="pveScreen" class="screen">
     <div class="page-header"><div class="page-title">🏰 PVE 공략</div></div>
+    <div class="search-bar-wrap">
+      <input type="text" id="pveSearchBar" placeholder="PVE 공략 검색..." oninput="filterPveList()">
+      <span class="search-icon">🔍</span>
+    </div>
     <div class="pve-tabs">
       <button id="tabSiege" class="pve-tab-btn active" onclick="renderPveList('siege')">공성전</button>
       <button id="tabAdvent" class="pve-tab-btn" onclick="renderPveList('advent')">강림원정대</button>
@@ -567,6 +653,27 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   </div>
 
   <!-- ══ 관리자: 길드원 관리 ══ -->
+  <!-- 공지사항 -->
+  <div id="noticeScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">📢 공지사항</div>
+    </div>
+    <div id="noticeList" class="notice-list">
+      <div class="empty-state">공지사항이 없습니다</div>
+    </div>
+    <div id="noticeAdminPanel" style="display:none;margin-top:24px;padding-top:24px;border-top:2px solid var(--border);">
+      <div style="font-size:15px;font-weight:900;margin-bottom:16px;">📢 공지 관리</div>
+      <div class="admin-section">
+        <input class="form-input" id="noticeTitle" placeholder="공지 제목">
+        <textarea class="form-textarea" id="noticeBody" rows="4" placeholder="공지 내용"></textarea>
+        <div class="btn-row">
+          <button class="btn-sm btn-blue" onclick="addNotice()">공지 등록</button>
+          <button class="btn-sm btn-red" onclick="delNotice()">선택 삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="adminMembersScreen" class="screen">
     <div class="page-header">
       <div class="page-title">👥 길드원 관리</div>
@@ -734,9 +841,12 @@ function enterApp() {
   if(sidebarNick) sidebarNick.textContent=myNick;
   // 관리자 탭 표시
   if(isAdminAuthenticated) showAdminNav();
+  if(localStorage.getItem("theme")==="light"){ document.body.classList.add("light-mode"); }
+  updateThemeBtn();
   switchTab("home");
   renderRanking();
   loadDefenseTeamsListener();
+  loadHomeBanner();
 }
 
 function showAdminNav() {
@@ -758,7 +868,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","attack","defense","pve","adminMembers","adminReports","adminScores"];
+  const allTabs=["home","notice","attack","defense","pve","adminMembers","adminReports","adminScores"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -766,13 +876,14 @@ function switchTab(tab) {
   document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"attack":1,"defense":2,"pve":3,"adminMembers":4,"adminReports":5,"adminScores":6};
+  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"adminMembers":5,"adminReports":6,"adminScores":7};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
   if(tab==="defense") loadRecDefenseList();
   if(tab==="pve") renderPveList(pveCurrentCategory||"siege");
   if(tab==="attack") renderRanking();
+  if(tab==="notice") loadNotices();
   if(tab==="adminMembers") loadAdminMembers();
   if(tab==="adminReports") loadAdminReports();
   if(tab==="adminScores") loadAdminScores();
@@ -855,6 +966,13 @@ function selectAttack(dk,ak) {
     document.getElementById("armorRec").value=d.armor||"";
     document.getElementById("skillOrder").value=d.skill||"";
     document.getElementById("attackCard").scrollIntoView({behavior:"smooth",block:"nearest"});
+    document.getElementById("attackCard").classList.remove("anim-scale");
+    void document.getElementById("attackCard").offsetWidth;
+    document.getElementById("attackCard").classList.add("anim-scale");
+    // 더보기 초기화
+    cardExtraOpen=false;
+    const ex=document.getElementById("cardExtraInfo"); if(ex) ex.style.maxHeight="0";
+    const bt=document.getElementById("cardCollapseBtnText"); if(bt) bt.textContent="▼ 상세정보 보기";
   });
 }
 function loadRecentRecord(dk,ak) {
@@ -899,7 +1017,9 @@ function toggleDefenseAdmin() {
 
 // ══ 방어 ══
 function loadRecDefenseList() {
+  showLoader();
   db.ref("recommendedDefenses").on("value",snap=>{
+    hideLoader();
     const list=document.getElementById("recDefList"); list.innerHTML="";
     document.getElementById("recDefCard").style.display="none";
     const data=snap.val();
@@ -1251,6 +1371,131 @@ function adjustScore(nick,type,delta){
 }
 function deleteUserLogs(nick){ if(!confirm(`${nick} 기록 삭제?`)) return; db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const p=[]; Object.entries(snap.val()).forEach(([k,v])=>{ if(v.nick===nick) p.push(db.ref(`logs/${k}`).remove()); }); Promise.all(p).then(()=>{ toast("삭제됨"); loadAdminScores(); }); }); }
 function resetSeason(){ if(!confirm("⚠️ 모든 승패 기록을 삭제합니다. 계속할까요?")) return; db.ref("logs").remove().then(()=>{ toast("시즌 초기화 완료!"); loadAdminScores(); }); }
+
+// ══ 로딩 스피너 ══
+function showLoader(){ document.getElementById("globalLoader").classList.add("show"); }
+function hideLoader(){ document.getElementById("globalLoader").classList.remove("show"); }
+
+// ══ 다크/라이트 테마 ══
+function toggleTheme(){
+  document.body.classList.toggle("light-mode");
+  const isLight=document.body.classList.contains("light-mode");
+  localStorage.setItem("theme", isLight?"light":"dark");
+  updateThemeBtn();
+}
+function updateThemeBtn(){
+  const isLight=document.body.classList.contains("light-mode");
+  const icon=isLight?"☀️":"🌙";
+  const btn1=document.getElementById("themeBtn"); if(btn1) btn1.textContent=icon;
+  const btn2=document.getElementById("themeBtnSb"); if(btn2) btn2.textContent=icon;
+}
+
+// ══ 카드 더보기/접기 ══
+let cardExtraOpen=false;
+function toggleCardExtra(){
+  cardExtraOpen=!cardExtraOpen;
+  const el=document.getElementById("cardExtraInfo");
+  const btn=document.getElementById("cardCollapseBtnText");
+  if(cardExtraOpen){
+    el.style.maxHeight=el.scrollHeight+"px";
+    btn.textContent="▲ 상세정보 접기";
+  } else {
+    el.style.maxHeight="0";
+    btn.textContent="▼ 상세정보 보기";
+  }
+}
+function openCardExtra(){
+  cardExtraOpen=false; toggleCardExtra();
+}
+
+// ══ 공지사항 ══
+let selectedNoticeKey="";
+function loadNotices(){
+  showLoader();
+  db.ref("notices").orderByChild("createdAt").once("value").then(snap=>{
+    hideLoader();
+    const list=document.getElementById("noticeList"); list.innerHTML="";
+    const data=snap.val();
+    if(!data){ list.innerHTML='<div class="empty-state">공지사항이 없습니다</div>'; return; }
+    const entries=Object.entries(data).reverse();
+    entries.forEach(([key,val])=>{
+      const div=document.createElement("div");
+      div.className="notice-banner anim-fade-up";
+      div.innerHTML=`
+        <div class="notice-banner-header" onclick="toggleNotice('${key}')">
+          <div class="notice-banner-title">📢 ${val.title}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="notice-banner-date">${val.date||""}</div>
+            ${isAdminAuthenticated?`<button class="btn-sm btn-red" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();deleteNotice('${key}')">삭제</button>`:""}
+          </div>
+        </div>
+        <div class="notice-banner-body" id="noticeBody_${key}">${(val.body||"").replace(/
+/g,"<br>")}</div>`;
+      list.appendChild(div);
+    });
+    if(isAdminAuthenticated){
+      const panel=document.getElementById("noticeAdminPanel");
+      if(panel) panel.style.display="block";
+    }
+  });
+}
+function toggleNotice(key){
+  const body=document.getElementById("noticeBody_"+key);
+  if(!body) return;
+  body.classList.toggle("open");
+}
+function addNotice(){
+  const title=document.getElementById("noticeTitle").value.trim();
+  const body=document.getElementById("noticeBody").value.trim();
+  if(!title) return toast("제목을 입력하세요");
+  const now=new Date();
+  const date=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
+  db.ref("notices").push({title,body,date,createdAt:Date.now()}).then(()=>{
+    toast("공지 등록됨 📢");
+    document.getElementById("noticeTitle").value="";
+    document.getElementById("noticeBody").value="";
+    loadNotices();
+  });
+}
+function deleteNotice(key){
+  if(!confirm("공지를 삭제할까요?")) return;
+  db.ref("notices/"+key).remove().then(()=>{ toast("삭제됨"); loadNotices(); });
+}
+
+// ══ 홈 배너 (최신 공지) ══
+function loadHomeBanner(){
+  db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
+    const banner=document.getElementById("homeBanner"); if(!banner) return;
+    const data=snap.val();
+    if(!data){ banner.innerHTML=""; return; }
+    const [key,val]=Object.entries(data)[0];
+    banner.innerHTML=`<div class="notice-banner anim-fade-up" style="margin-bottom:16px;" onclick="switchTab('notice')">
+      <div class="notice-banner-header">
+        <div class="notice-banner-title">📢 ${val.title}</div>
+        <div class="notice-banner-date">${val.date||""}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">탭하여 공지 보기 →</div>
+    </div>`;
+  });
+}
+
+// ══ 검색 기능 강화 ══
+function filterRecDefList(){
+  const f=document.getElementById("defSearchBar")?.value.toLowerCase()||"";
+  const items=document.getElementById("recDefList")?.children||[];
+  let found=0;
+  for(let item of items){
+    const show=item.textContent.toLowerCase().includes(f);
+    item.style.display=show?"":"none";
+    if(show) found++;
+  }
+}
+function filterPveList(){
+  const f=document.getElementById("pveSearchBar")?.value.toLowerCase()||"";
+  const items=document.getElementById("pveList")?.children||[];
+  for(let item of items){ item.style.display=item.textContent.toLowerCase().includes(f)?"":"none"; }
+}
+
 </script>
 </body>
 </html>
