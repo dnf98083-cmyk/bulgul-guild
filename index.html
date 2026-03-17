@@ -1070,6 +1070,24 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
         <!-- 관리자: 점수 입력 -->
         <div id="rankSiegeAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+          <!-- 주차 이동 -->
+          <div style="background:rgba(255,85,51,0.06);border:1px solid rgba(255,85,51,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:8px;">📅 주차 이동</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">이번주 데이터를 저번주로 이동하고 이번주를 초기화해요<br>매주 새 시즌 시작 전에 눌러주세요</div>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="siegeMoveDay" style="margin:0;flex:1;font-size:12px;">
+                <option value="all">전체 요일</option>
+                <option value="월">월요일</option>
+                <option value="화">화요일</option>
+                <option value="수">수요일</option>
+                <option value="목">목요일</option>
+                <option value="금">금요일</option>
+                <option value="토">토요일</option>
+                <option value="일">일요일</option>
+              </select>
+              <button class="btn-sm btn-red" onclick="moveSiegeWeek()" style="white-space:nowrap;">이번주→저번주</button>
+            </div>
+          </div>
           <div class="admin-section-title">📝 점수 입력</div>
 
           <!-- 이번주/저번주 선택 -->
@@ -3092,6 +3110,37 @@ async function applyAiResult(type){
 }
 function applySiegeAiResult(){ applyAiResult("siege"); }
 function applyAdventAiResult(){ applyAiResult("advent"); }
+
+
+// ══ 공성전 주차 이동 (이번주 → 저번주) ══
+async function moveSiegeWeek(){
+  if(!checkAdmin()) return;
+  const daySelect = document.getElementById("siegeMoveDay").value;
+  const days = daySelect==="all" ? ["월","화","수","목","금","토","일"] : [daySelect];
+  const label = daySelect==="all" ? "전체 요일" : daySelect+"요일";
+
+  if(!confirm(`${label}의 이번주 데이터를 저번주로 이동하고 이번주를 초기화할까요?\n\n이 작업은 되돌릴 수 없어요!`)) return;
+
+  toast("⏳ 이동 중...");
+  let movedDays=0;
+
+  for(const day of days){
+    const thisSnap = await db.ref(`pveScores/siege/${day}/this`).once("value");
+    const thisData = thisSnap.val();
+
+    // 저번주 기존 데이터 삭제 후 이번주 데이터로 덮어쓰기
+    await db.ref(`pveScores/siege/${day}/last`).remove();
+    if(thisData){
+      await db.ref(`pveScores/siege/${day}/last`).set(thisData);
+    }
+    // 이번주 초기화
+    await db.ref(`pveScores/siege/${day}/this`).remove();
+    movedDays++;
+  }
+
+  toast(`✅ ${label} 이동 완료! (${movedDays}개 요일)`);
+  loadSiegeRanking();
+}
 
 </script>
 </body>
