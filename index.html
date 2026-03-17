@@ -685,8 +685,11 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
     <div class="admin-section">
       <div class="admin-section-title">🎖️ 역할 부여</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <input class="form-input" id="roleNickInput" placeholder="닉네임" style="margin:0;flex:1;min-width:120px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="flex:1;min-width:120px;position:relative;">
+          <input class="form-input" id="roleNickInput" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterRoleNickSuggest()" autocomplete="off">
+          <div id="roleNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);"></div>
+        </div>
         <select class="form-select" id="roleSelect" style="margin:0;flex:1;min-width:100px;">
           <option value="길드원">길드원</option>
           <option value="연구원">연구원</option>
@@ -1582,12 +1585,17 @@ function assignRole(){
   const nick=document.getElementById("roleNickInput").value.trim();
   const role=document.getElementById("roleSelect").value;
   if(!nick) return toast("닉네임을 입력하세요");
-  if(role==="길드원"){
-    db.ref(`roles/${nick}`).remove().then(()=>{ toast(`${nick} → 길드원`); loadRoleList(); });
-  } else {
-    db.ref(`roles/${nick}`).set(role).then(()=>{ toast(`${nick} → ${role} 부여됨`); loadRoleList(); });
-  }
-  document.getElementById("roleNickInput").value="";
+  // allowedUsers에 존재하는 닉네임인지 확인
+  db.ref(`allowedUsers/${nick}`).get().then(snap=>{
+    if(!snap.exists()) return toast("존재하지 않는 길드원입니다");
+    if(role==="길드원"){
+      db.ref(`roles/${nick}`).remove().then(()=>{ toast(`${nick} → 길드원`); loadRoleList(); });
+    } else {
+      db.ref(`roles/${nick}`).set(role).then(()=>{ toast(`${nick} → ${role} 부여됨`); loadRoleList(); });
+    }
+    document.getElementById("roleNickInput").value="";
+    document.getElementById("roleNickSuggest").style.display="none";
+  });
 }
 function loadRoleList(){
   db.ref("roles").get().then(snap=>{
@@ -1611,6 +1619,41 @@ function removeRole(nick){
   if(!confirm(`${nick}의 역할을 해제할까요?`)) return;
   db.ref(`roles/${nick}`).remove().then(()=>{ toast("역할 해제됨"); loadRoleList(); });
 }
+
+
+// ══ 역할 부여 닉네임 자동완성 ══
+function filterRoleNickSuggest(){
+  const input=document.getElementById("roleNickInput");
+  const suggest=document.getElementById("roleNickSuggest");
+  const f=input.value.trim().toLowerCase();
+  if(!f){ suggest.style.display="none"; return; }
+  db.ref("allowedUsers").get().then(snap=>{
+    const data=snap.val()||{};
+    const matches=Object.keys(data).filter(n=>n.toLowerCase().startsWith(f));
+    if(!matches.length){ suggest.style.display="none"; return; }
+    suggest.innerHTML="";
+    matches.forEach(nick=>{
+      const item=document.createElement("div");
+      item.style.cssText="padding:11px 14px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.05);";
+      item.textContent=nick;
+      item.onmousedown=()=>{
+        input.value=nick;
+        suggest.style.display="none";
+      };
+      item.onmouseover=()=>item.style.background="rgba(255,85,51,0.08)";
+      item.onmouseout=()=>item.style.background="";
+      suggest.appendChild(item);
+    });
+    suggest.style.display="block";
+  });
+}
+// 외부 클릭 시 드롭다운 닫기
+document.addEventListener("click",(e)=>{
+  const suggest=document.getElementById("roleNickSuggest");
+  if(suggest&&!suggest.contains(e.target)&&e.target.id!=="roleNickInput"){
+    suggest.style.display="none";
+  }
+});
 
 </script>
 </body>
