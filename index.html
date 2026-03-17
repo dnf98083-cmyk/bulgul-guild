@@ -480,6 +480,46 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div class="menu-desc">공성전 · 강림원정대</div>
       </button>
     </div>
+
+    <!-- 홈 통합 랭킹 -->
+    <div style="margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;gap:6px;">
+          <button id="hrtab_guild" class="pve-tab-btn active" onclick="switchHomeRankTab('guild')" style="font-size:12px;padding:6px 14px;">⚔️ 길드전</button>
+          <button id="hrtab_siege" class="pve-tab-btn"        onclick="switchHomeRankTab('siege')" style="font-size:12px;padding:6px 14px;">🏯 공성전</button>
+        </div>
+        <button style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;" onclick="switchTab('ranking')">전체보기 →</button>
+      </div>
+
+      <!-- 길드전 -->
+      <div id="hrPanel_guild">
+        <div id="homeRankingList" class="rank-card" style="max-height:280px;overflow-y:auto;">
+          <div class="empty-state">로딩중...</div>
+        </div>
+      </div>
+
+      <!-- 공성전 -->
+      <div id="hrPanel_siege" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:10px;">
+          <button class="rank-day-btn active" id="hrday_월" onclick="switchHomeRankDay('월')" style="font-size:12px;padding:7px 4px;">월</button>
+          <button class="rank-day-btn" id="hrday_화" onclick="switchHomeRankDay('화')" style="font-size:12px;padding:7px 4px;">화</button>
+          <button class="rank-day-btn" id="hrday_수" onclick="switchHomeRankDay('수')" style="font-size:12px;padding:7px 4px;">수</button>
+          <button class="rank-day-btn" id="hrday_목" onclick="switchHomeRankDay('목')" style="font-size:12px;padding:7px 4px;">목</button>
+          <button class="rank-day-btn" id="hrday_금" onclick="switchHomeRankDay('금')" style="font-size:12px;padding:7px 4px;">금</button>
+          <button class="rank-day-btn" id="hrday_토" onclick="switchHomeRankDay('토')" style="font-size:12px;padding:7px 4px;">토</button>
+          <button class="rank-day-btn" id="hrday_일" onclick="switchHomeRankDay('일')" style="font-size:12px;padding:7px 4px;">일</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <button id="hrweek_this"   class="pve-tab-btn active" onclick="switchHomeRankWeek('this')"   style="flex:1;font-size:11px;">이번주</button>
+          <button id="hrweek_last"   class="pve-tab-btn"        onclick="switchHomeRankWeek('last')"   style="flex:1;font-size:11px;">저번주</button>
+          <button id="hrweek_growth" class="pve-tab-btn"        onclick="switchHomeRankWeek('growth')" style="flex:1;font-size:11px;">📈 성장률</button>
+        </div>
+        <div id="homeSiegeRankList" class="rank-card" style="max-height:280px;overflow-y:auto;">
+          <div class="empty-state">요일을 선택하세요</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 공격 -->
@@ -2703,6 +2743,131 @@ document.addEventListener("click", e=>{
     }
   });
 });
+
+
+// ══ 홈 통합 랭킹 ══
+let homeRankDay = "월";
+let homeRankWeek = "this";
+
+function switchHomeRankTab(tab){
+  ["guild","siege"].forEach(t=>{
+    const btn=document.getElementById("hrtab_"+t);
+    if(btn) btn.className=t===tab?"pve-tab-btn active":"pve-tab-btn";
+    const panel=document.getElementById("hrPanel_"+t);
+    if(panel) panel.style.display=t===tab?"block":"none";
+  });
+  if(tab==="guild") loadHomeRanking();
+}
+
+function switchHomeRankDay(day){
+  homeRankDay=day;
+  ["월","화","수","목","금","토","일"].forEach(d=>{
+    const btn=document.getElementById("hrday_"+d);
+    if(btn) btn.className=d===day?"rank-day-btn active":"rank-day-btn";
+  });
+  loadHomeSiegeRanking();
+}
+
+function switchHomeRankWeek(week){
+  homeRankWeek=week;
+  ["this","last","growth"].forEach(w=>{
+    const btn=document.getElementById("hrweek_"+w);
+    if(btn) btn.className=w===week?"pve-tab-btn active":"pve-tab-btn";
+  });
+  loadHomeSiegeRanking();
+}
+
+function loadHomeSiegeRanking(){
+  const list=document.getElementById("homeSiegeRankList");
+  if(!list) return;
+  list.innerHTML="<div class='empty-state'>로딩중...</div>";
+  const day=homeRankDay;
+  const badges=["🥇","🥈","🥉"];
+
+  if(homeRankWeek==="growth"){
+    Promise.all([
+      db.ref(`pveScores/siege/${day}/this`).once("value"),
+      db.ref(`pveScores/siege/${day}/last`).once("value")
+    ]).then(([thisSnap,lastSnap])=>{
+      const thisMap={}, lastMap={};
+      Object.values(thisSnap.val()||{}).forEach(d=>{ if(d.nick) thisMap[d.nick]=d.score; });
+      Object.values(lastSnap.val()||{}).forEach(d=>{ if(d.nick) lastMap[d.nick]=d.score; });
+      const growthList=Object.keys(thisMap).filter(n=>lastMap[n]).map(nick=>{
+        const t=thisMap[nick],l=lastMap[nick];
+        return{nick,thisScore:t,lastScore:l,growth:Math.round((t-l)/l*100)};
+      }).sort((a,b)=>b.growth-a.growth);
+      if(!growthList.length){list.innerHTML="<div class='empty-state'>데이터 부족</div>";return;}
+      list.innerHTML=growthList.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        const c=d.growth>=0?"#27ae60":"#e74c3c";
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${i<3?badges[i]:i+1}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main" style="color:${c}">${d.growth>=0?"+":""}${d.growth}%</div>
+            <div class="rs-sub">${Number(d.lastScore).toLocaleString()} → ${Number(d.thisScore).toLocaleString()}</div>
+          </div>
+        </div>`;
+      }).join("");
+    });
+  } else {
+    db.ref(`pveScores/siege/${day}/${homeRankWeek}`).once("value").then(snap=>{
+      const data=snap.val();
+      if(!data){list.innerHTML="<div class='empty-state'>등록된 점수 없음</div>";return;}
+      const sorted=Object.values(data).sort((a,b)=>b.score-a.score);
+      const label=homeRankWeek==="this"?"이번주":"저번주";
+      list.innerHTML=sorted.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${i<3?badges[i]:i+1}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main">${Number(d.score).toLocaleString()}</div>
+            <div class="rs-sub">${label} · ${d.date||""}</div>
+          </div>
+        </div>`;
+      }).join("");
+    });
+  }
+}
+
+function loadHomeRanking(){
+  const list=document.getElementById("homeRankingList");
+  if(!list) return;
+  db.ref("logs").once("value").then(snap=>{
+    const raw=snap.val()||{};
+    const stats={};
+    Object.values(raw).forEach(log=>{
+      if(!log.nick) return;
+      if(!stats[log.nick]) stats[log.nick]={logs:[]};
+      stats[log.nick].logs.push({result:log.result,time:log.time||0});
+    });
+    const rankData=Object.entries(stats).map(([nick,d])=>{
+      d.logs.sort((a,b)=>b.time-a.time);
+      const w=d.logs.filter(l=>l.result==="win").length;
+      const l=d.logs.filter(l=>l.result==="lose").length;
+      const recent=d.logs.slice(0,30);
+      const rw=recent.filter(l=>l.result==="win").length;
+      const rl=recent.filter(l=>l.result==="lose").length;
+      return{nick,w,l,rw,rl};
+    }).sort((a,b)=>b.w-a.w);
+    if(!rankData.length){list.innerHTML="<div class='empty-state'>전적 없음</div>";return;}
+    const badges=["🥇","🥈","🥉"];
+    list.innerHTML=rankData.map((d,i)=>{
+      const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0;
+      const rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0;
+      const isMe=d.nick===myNick;
+      return `<div class="rank-row${isMe?" rank-me":""}">
+        <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${i<3?badges[i]:i+1}</div>
+        <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+        <div class="rank-stat">
+          <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
+          <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
+        </div>
+      </div>`;
+    }).join("");
+  });
+}
 
 </script>
 </body>
