@@ -1218,6 +1218,19 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div id="roleList" style="margin-top:12px;"></div>
     </div>
     <div class="admin-section">
+      <div class="admin-section-title">✏️ 닉네임 변경</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="flex:1;min-width:120px;position:relative;">
+          <input class="form-input" id="renameOldNick" placeholder="기존 닉네임" style="margin:0;width:100%;" oninput="filterRenameNick()" autocomplete="off">
+          <div id="renameNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);"></div>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--text3);font-size:18px;padding-top:8px;">→</div>
+        <input class="form-input" id="renameNewNick" placeholder="새 닉네임" style="margin:0;flex:1;min-width:120px;">
+        <button class="btn-sm btn-blue" onclick="renameGuildMember()" style="white-space:nowrap;">변경</button>
+      </div>
+      <div id="renameStatus" style="font-size:12px;color:var(--text3);margin-top:6px;display:none;"></div>
+    </div>
+    <div class="admin-section">
       <div class="admin-section-title">🔑 입장코드 발급</div>
       <div style="display:flex;gap:8px;">
         <input class="form-input" id="newUserNick2" placeholder="닉네임 입력" style="margin:0;flex:1;">
@@ -3140,6 +3153,116 @@ async function moveSiegeWeek(){
 
   toast(`✅ ${label} 이동 완료! (${movedDays}개 요일)`);
   loadSiegeRanking();
+}
+
+
+// ══ 닉네임 변경 ══
+function filterRenameNick(){
+  const input   = document.getElementById("renameOldNick");
+  const suggest = document.getElementById("renameNickSuggest");
+  const val = input.value.trim().toLowerCase();
+  if(!val){ suggest.style.display="none"; return; }
+  const matches = loginNickList.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){ suggest.style.display="none"; return; }
+  suggest.innerHTML = matches.map(nick=>`
+    <div onmousedown="document.getElementById('renameOldNick').value='${nick}';document.getElementById('renameNickSuggest').style.display='none';document.getElementById('renameNewNick').focus();"
+      onmouseover="this.style.background='rgba(255,85,51,0.1)'"
+      onmouseout="this.style.background=''"
+      style="padding:11px 14px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.05);">
+      ${nick}
+    </div>`).join("");
+  suggest.style.display="block";
+}
+
+async function renameGuildMember(){
+  if(!checkAdmin()) return;
+  const oldNick = document.getElementById("renameOldNick").value.trim();
+  const newNick = document.getElementById("renameNewNick").value.trim();
+  const statusEl = document.getElementById("renameStatus");
+
+  if(!oldNick||!newNick) return toast("기존 닉네임과 새 닉네임을 입력하세요");
+  if(oldNick===newNick) return toast("같은 닉네임이에요");
+  if(!loginNickList.includes(oldNick)) return toast("존재하지 않는 길드원입니다");
+  if(loginNickList.includes(newNick)) return toast("이미 사용 중인 닉네임입니다");
+  if(!confirm(`"${oldNick}" → "${newNick}" 으로 변경할까요?\n기존 전적, 로그, 역할 데이터가 모두 변경돼요!`)) return;
+
+  statusEl.style.display="block";
+  statusEl.style.color="var(--text3)";
+  statusEl.textContent="⏳ 변경 중...";
+
+  try {
+    let steps = [];
+
+    // 1. allowedUsers 복사 후 삭제
+    const userSnap = await db.ref(`allowedUsers/${oldNick}`).once("value");
+    if(userSnap.exists()){
+      await db.ref(`allowedUsers/${newNick}`).set(userSnap.val());
+      await db.ref(`allowedUsers/${oldNick}`).remove();
+      steps.push("입장코드");
+    }
+
+    // 2. roles 변경
+    const roleSnap = await db.ref(`roles/${oldNick}`).once("value");
+    if(roleSnap.exists()){
+      await db.ref(`roles/${newNick}`).set(roleSnap.val());
+      await db.ref(`roles/${oldNick}`).remove();
+      steps.push("역할");
+    }
+
+    // 3. logs - nick 필드 변경
+    const logsSnap = await db.ref("logs").orderByChild("nick").equalTo(oldNick).once("value");
+    const logsData = logsSnap.val()||{};
+    const logUpdates = {};
+    Object.keys(logsData).forEach(k=>{ logUpdates[`logs/${k}/nick`]=newNick; });
+    if(Object.keys(logUpdates).length){
+      await db.ref().update(logUpdates);
+      steps.push(`전적 ${Object.keys(logUpdates).length}건`);
+    }
+
+    // 4. pveScores - nick 필드 변경 (공성전)
+    const days=["월","화","수","목","금","토","일"];
+    const weeks=["this","last"];
+    let pveSiegeCount=0;
+    for(const day of days){
+      for(const week of weeks){
+        const snap=await db.ref(`pveScores/siege/${day}/${week}`).orderByChild("nick").equalTo(oldNick).once("value");
+        const data=snap.val()||{};
+        for(const k of Object.keys(data)){
+          await db.ref(`pveScores/siege/${day}/${week}/${k}/nick`).set(newNick);
+          pveSiegeCount++;
+        }
+      }
+    }
+    if(pveSiegeCount) steps.push(`공성전 점수 ${pveSiegeCount}건`);
+
+    // 5. pveScores - 강림
+    const bosses=["태오","카일","연희","카르마","파괴신"];
+    let pveAdventCount=0;
+    for(const boss of bosses){
+      const snap=await db.ref(`pveScores/advent/${boss}`).orderByChild("nick").equalTo(oldNick).once("value");
+      const data=snap.val()||{};
+      for(const k of Object.keys(data)){
+        await db.ref(`pveScores/advent/${boss}/${k}/nick`).set(newNick);
+        pveAdventCount++;
+      }
+    }
+    if(pveAdventCount) steps.push(`강림 점수 ${pveAdventCount}건`);
+
+    // 6. loginNickList 갱신
+    loginNickList=loginNickList.map(n=>n===oldNick?newNick:n);
+
+    statusEl.style.color="#27ae60";
+    statusEl.textContent=`✅ 변경 완료! (${steps.join(", ")})`;
+    document.getElementById("renameOldNick").value="";
+    document.getElementById("renameNewNick").value="";
+    toast(`✅ ${oldNick} → ${newNick} 변경 완료!`);
+    loadAdminMembers();
+    loadRoleList();
+
+  } catch(e){
+    statusEl.style.color="#e74c3c";
+    statusEl.textContent="❌ 오류: "+e.message;
+  }
 }
 
 </script>
