@@ -61,7 +61,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
 /* ── 모바일 하단 탭바 ── */
-#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(5,1fr); }
+#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(6,1fr); }
 #tabBar.hidden { display:none; }
 .tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:8px 4px; color:var(--text3); border:none; background:none; font-family:inherit; }
 .tab-item .tab-icon { font-size:22px; transition:0.2s; }
@@ -110,7 +110,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   .attack-left-col { position:sticky; top:20px; }
   .atk-grid { grid-template-columns:repeat(2,1fr) !important; }
   .def-grid { grid-template-columns:repeat(3,1fr) !important; }
-  .pve-grid { grid-template-columns:repeat(5,1fr) !important; }
+  .pve-grid { grid-template-columns:repeat(6,1fr) !important; }
   .admin-2col { display:grid !important; grid-template-columns:1fr 1fr; gap:24px; }
   .atk-btn:hover,.def-btn:hover,.pve-btn:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.4); }
   .home-menu-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
@@ -293,6 +293,14 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .rf-value { font-size:13px; color:var(--text); white-space:pre-wrap; }
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:rgba(255,85,51,0.25); border-radius:2px; }
+.calc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+.calc-field { display:flex; flex-direction:column; gap:4px; }
+.calc-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; }
+.calc-hint { font-size:11px; color:var(--text3); }
+.calc-result-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.calc-result-card { background:var(--surface2); border-radius:10px; padding:12px 14px; }
+.calc-result-label { font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.calc-result-val { font-size:18px; font-weight:900; color:var(--text); }
 
 /* ── 애니메이션 ── */
 @keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
@@ -375,6 +383,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
+    <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
     <!-- 관리자 전용 (기본 숨김) -->
     <div id="adminNavSection" style="display:none;">
       <div class="sb-divider">관리자</div>
@@ -403,6 +412,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
     <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
     <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
+    <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
   </div>
 
   <!-- 홈 -->
@@ -679,6 +689,263 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
   </div>
 
+
+  <!-- ══ 딜 계산기 ══ -->
+  <div id="calcScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">🧮 딜 계산기</div>
+    </div>
+
+    <!-- 캐릭터 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div class="section-title">⚔️ 캐릭터</div>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label class="calc-label">프로필 공격력</label>
+          <input class="form-input" type="number" id="c_profileatk" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">태생 공격력 (도감)</label>
+          <input class="form-input" type="number" id="c_baseatk" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">진형 보너스 %</label>
+          <input class="form-input" type="number" id="c_formpct" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 펫 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div class="section-title">🐾 펫</div>
+      <div class="calc-grid" style="margin-bottom:8px;">
+        <div class="calc-field">
+          <label class="calc-label">펫 선택</label>
+          <select class="form-select" id="c_pettype" onchange="onPetChange()" style="margin:0;">
+            <option value="none">없음</option>
+            <option value="windi">윈디</option>
+            <option value="yenji">연지</option>
+            <option value="irin">이린</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">성급</label>
+          <select class="form-select" id="c_petstar" onchange="onPetChange()" style="margin:0;">
+            <option value="5">5성</option>
+            <option value="6">6성</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">펫 깡공</label>
+          <input class="form-input" type="number" id="c_petflat" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">펫 잠재력 %</label>
+          <input class="form-input" type="number" id="c_potentialpct" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">태생공 × 잠재력% 적용</span>
+        </div>
+      </div>
+      <div id="c_pet_effect" style="display:none;background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);">
+        <span id="c_pet_effect_text"></span>
+      </div>
+    </div>
+
+    <!-- 장비 세트 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div class="section-title">🎽 장비 세트 (4세트 효과)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
+        <button id="set_없음" class="calc-set-btn active" onclick="selectSet('없음')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:var(--text2);">없음</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">-</div>
+        </button>
+        <button id="set_복수자" class="calc-set-btn" onclick="selectSet('복수자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:#e05555;">복수자</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">피해+30% 보스+40%</div>
+        </button>
+        <button id="set_선봉장" class="calc-set-btn" onclick="selectSet('선봉장')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:#4a9ae0;">선봉장</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">공격력+45%</div>
+        </button>
+        <button id="set_추적자" class="calc-set-btn" onclick="selectSet('추적자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:#40c080;">추적자</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">약점피해+35%</div>
+        </button>
+        <button id="set_암살자" class="calc-set-btn" onclick="selectSet('암살자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:#9b59b6;">암살자</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">치타율+30% 방무+15%</div>
+        </button>
+      </div>
+      <div id="c_set_effect" style="font-size:12px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:8px 12px;display:none;"></div>
+    </div>
+
+    <!-- 버프 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div class="section-title">✨ 버프</div>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label class="calc-label">공격력 버프 % (펫·세트 제외)</label>
+          <input class="form-input" type="number" id="c_buffpct" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">피증 %</label>
+          <input class="form-input" type="number" id="c_dmginc" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 스킬 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div class="section-title">💥 스킬</div>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label class="calc-label">스킬 계수 %</label>
+          <input class="form-input" type="number" id="c_skillcoef" value="100" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">치명타 확률</label>
+          <div style="display:flex;gap:8px;margin-top:2px;">
+            <button id="crit_0" onclick="setCritChance(0)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,85,51,0.15);color:var(--accent);font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;">0%</button>
+            <button id="crit_100" onclick="setCritChance(100)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;">100%</button>
+          </div>
+          <input type="hidden" id="c_critchance" value="0">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">치명타 피해 %</label>
+          <input class="form-input" type="number" id="c_critdmg" value="150" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">치타율 기반 기대딜 계산</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">약공계수 기본값</label>
+          <input class="form-input" type="number" id="c_weakcoef" value="1.3" step="0.1" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">기본 1.3 / 추적4셋 1.5</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">약점공격 피해증가 %</label>
+          <input class="form-input" type="number" id="c_weakbuff" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">예: 23 입력 → 1.3+0.23=1.53</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">공격 횟수</label>
+          <input class="form-input" type="number" id="c_hitCount" value="1" oninput="runCalc()" style="margin:0;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 상대 정보 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">👾 상대 정보</div>
+        <div style="display:flex;gap:6px;">
+          <button id="c_boss_on" onclick="toggleBoss(true)" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,85,51,0.4);background:rgba(255,85,51,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">보스 ✓</button>
+          <button id="c_boss_off" onclick="toggleBoss(false)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">일반</button>
+        </div>
+      </div>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label class="calc-label">방어력</label>
+          <input class="form-input" type="number" id="c_defval" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">방증 % (진형버프)</label>
+          <input class="form-input" type="number" id="c_defboostpct" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">방감 %</label>
+          <input class="form-input" type="number" id="c_defreducepct" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">방무 %</label>
+          <input class="form-input" type="number" id="c_defignpct" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">마법 취약 %</label>
+          <input class="form-input" type="number" id="c_magicvuln" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">마법 캐릭터일 때</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">물리 취약 %</label>
+          <input class="form-input" type="number" id="c_physvuln" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">물리 캐릭터일 때</span>
+        </div>
+        <div class="calc-field" id="c_bossrate_field">
+          <label class="calc-label">보스 피해증가 %</label>
+          <input class="form-input" type="number" id="c_bossrate" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">반지·버프 합산</span>
+        </div>
+        <div class="calc-field" id="c_bossresist_field">
+          <label class="calc-label">보스 저항 %</label>
+          <input class="form-input" type="number" id="c_bossresist" value="0" oninput="runCalc()" style="margin:0;">
+          <span class="calc-hint">보스 속성 저항</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">최대 HP <span style="color:var(--text3);font-weight:400;">(0=미입력)</span></label>
+          <input class="form-input" type="number" id="c_targetHP" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">현재 HP %</label>
+          <input class="form-input" type="number" id="c_targetHPpct" value="100" oninput="runCalc()" style="margin:0;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 결과 카드 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;">
+
+      <!-- 딜 결과 3종 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:var(--surface2);border-radius:10px;padding:10px 8px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:4px;">일반 딜</div>
+          <div style="font-size:14px;font-weight:900;color:var(--text2);" id="c_r_normaldmg">-</div>
+        </div>
+        <div style="background:rgba(255,85,51,0.08);border:1px solid rgba(255,85,51,0.25);border-radius:10px;padding:10px 8px;text-align:center;">
+          <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">치명타 딜</div>
+          <div style="font-size:14px;font-weight:900;color:var(--accent);" id="c_r_dmg">-</div>
+        </div>
+        <div style="background:rgba(232,213,163,0.06);border:1px solid rgba(232,213,163,0.15);border-radius:10px;padding:10px 8px;text-align:center;">
+          <div style="font-size:10px;color:#e8d5a3;font-weight:700;margin-bottom:4px;">기대 딜</div>
+          <div style="font-size:14px;font-weight:900;color:#e8d5a3;" id="c_r_avgdmg">-</div>
+        </div>
+      </div>
+
+      <div id="c_r_total_wrap" style="display:none;text-align:center;margin-bottom:12px;font-size:13px;color:var(--text2);">
+        <span id="c_r_hitcount">1</span>회 합산: <b id="c_r_totaldmg" style="color:var(--accent);"></b>
+      </div>
+
+      <!-- 부가 수치 -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;background:var(--surface2);border-radius:10px;padding:10px 12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px;">최종 공격력</div>
+          <div style="font-size:15px;font-weight:900;" id="c_r_finalatk">-</div>
+        </div>
+        <div style="flex:1;background:var(--surface2);border-radius:10px;padding:10px 12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px;">방어 계수</div>
+          <div style="font-size:15px;font-weight:900;" id="c_r_def">-</div>
+        </div>
+        <div style="flex:1;background:var(--surface2);border-radius:10px;padding:10px 12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px;">합산 배율</div>
+          <div style="font-size:15px;font-weight:900;" id="c_r_totalmult">-</div>
+        </div>
+      </div>
+
+      <!-- HP 결과 -->
+      <div id="c_hp_result" style="display:none;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:3px;">
+          <span>딜 전 HP</span><span id="c_r_hplabel">-</span>
+        </div>
+        <div style="background:var(--surface2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:6px;">
+          <div id="c_r_hpbar_before" style="height:100%;border-radius:99px;background:#c0392b;transition:width 0.4s;width:100%;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:3px;">
+          <span>딜 후 HP</span><span id="c_r_hpafter_label">-</span>
+        </div>
+        <div style="background:var(--surface2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:10px;">
+          <div id="c_r_hpbar_after" style="height:100%;border-radius:99px;background:#27ae60;transition:width 0.4s;width:0%;"></div>
+        </div>
+        <div id="c_r_verdict" style="border-radius:var(--radius);padding:12px 16px;text-align:center;font-weight:900;font-size:15px;"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="adminMembersScreen" class="screen">
     <div class="page-header">
       <div class="page-title">👥 길드원 관리</div>
@@ -920,7 +1187,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","notice","attack","defense","pve","adminMembers","adminReports","adminScores"];
+  const allTabs=["home","notice","attack","defense","pve","calc","adminMembers","adminReports","adminScores"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -928,7 +1195,7 @@ function switchTab(tab) {
   document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"adminMembers":5,"adminReports":6,"adminScores":7};
+  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"adminMembers":6,"adminReports":7,"adminScores":8};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -1654,6 +1921,248 @@ document.addEventListener("click",(e)=>{
     suggest.style.display="none";
   }
 });
+
+
+// ══ 딜 계산기 ══
+function cv(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+function cfmt(n){ return Math.round(n).toLocaleString(); }
+// 세트 데이터
+const SET_DATA = {
+  없음:  { atkBuff:0,  dmg:0,  bossDmg:0, weakDmg:0, critRate:0, defPen:0 },
+  복수자:{ atkBuff:0,  dmg:30, bossDmg:40,weakDmg:0, critRate:0, defPen:0 },
+  선봉장:{ atkBuff:45, dmg:0,  bossDmg:0, weakDmg:0, critRate:0, defPen:0 },
+  추적자:{ atkBuff:0,  dmg:0,  bossDmg:0, weakDmg:35,critRate:0, defPen:0 },
+  암살자:{ atkBuff:0,  dmg:0,  bossDmg:0, weakDmg:0, critRate:30,defPen:15 },
+};
+let currentSet = "없음";
+let isBossMode = true;
+
+function selectSet(name){
+  currentSet = name;
+  document.querySelectorAll(".calc-set-btn").forEach(b=>{
+    const sn = b.id.replace("set_","");
+    const colors = {복수자:"#e05555",선봉장:"#4a9ae0",추적자:"#40c080",암살자:"#9b59b6"};
+    const c = colors[sn]||"var(--accent)";
+    if(sn===name){
+      b.style.border=`1px solid ${c}`;
+      b.style.background=`${c}20`;
+    } else {
+      b.style.border="1px solid var(--border)";
+      b.style.background="var(--surface2)";
+    }
+  });
+  const sd = SET_DATA[name];
+  const eff = document.getElementById("c_set_effect");
+  if(sd && (sd.atkBuff||sd.dmg||sd.bossDmg||sd.weakDmg||sd.critRate||sd.defPen)){
+    let parts=[];
+    if(sd.atkBuff) parts.push(`공격력 +${sd.atkBuff}%`);
+    if(sd.dmg)     parts.push(`피해량 +${sd.dmg}%`);
+    if(sd.bossDmg) parts.push(`보스피해 +${sd.bossDmg}%`);
+    if(sd.weakDmg) parts.push(`약점피해 +${sd.weakDmg}%`);
+    if(sd.critRate)parts.push(`치타율 +${sd.critRate}%`);
+    if(sd.defPen)  parts.push(`방무 +${sd.defPen}%`);
+    eff.textContent="4세트 효과: "+parts.join(" · ");
+    eff.style.display="block";
+  } else {
+    eff.style.display="none";
+  }
+  runCalc();
+}
+
+function toggleBoss(on){
+  isBossMode = on;
+  const onBtn=document.getElementById("c_boss_on");
+  const offBtn=document.getElementById("c_boss_off");
+  if(on){
+    onBtn.style.background="rgba(255,85,51,0.15)"; onBtn.style.border="1px solid rgba(255,85,51,0.4)"; onBtn.style.color="var(--accent)";
+    offBtn.style.background="var(--surface2)"; offBtn.style.border="1px solid var(--border)"; offBtn.style.color="var(--text3)";
+  } else {
+    offBtn.style.background="rgba(74,154,224,0.15)"; offBtn.style.border="1px solid rgba(74,154,224,0.4)"; offBtn.style.color="#4a9ae0";
+    onBtn.style.background="var(--surface2)"; onBtn.style.border="1px solid var(--border)"; onBtn.style.color="var(--text3)";
+  }
+  runCalc();
+}
+
+// 펫 데이터
+const PET_DATA = {
+  windi: {
+    name:"윈디",
+    5: { buffAtk:10, dmgInc:20 },
+    6: { buffAtk:12, dmgInc:26 }
+  },
+  yenji: {
+    name:"연지",
+    5: { buffAtk:19, dmgInc:0 },
+    6: { buffAtk:21, dmgInc:0 }
+  },
+  irin: {
+    name:"이린",
+    5: { buffAtk:19, dmgInc:0 },
+    6: { buffAtk:21, dmgInc:0 }
+  }
+};
+
+function onPetChange(){
+  const petType = document.getElementById('c_pettype').value;
+  const petStar = parseInt(document.getElementById('c_petstar').value);
+  const effectDiv = document.getElementById('c_pet_effect');
+  const effectText = document.getElementById('c_pet_effect_text');
+  if(petType==='none'){ effectDiv.style.display='none'; runCalc(); return; }
+  const p = PET_DATA[petType][petStar];
+  const petName = PET_DATA[petType].name;
+  let lines = [];
+  if(p.buffAtk) lines.push(`공격력 버프 +${p.buffAtk}%`);
+  if(p.dmgInc)  lines.push(`피해증가(보스취약) +${p.dmgInc}%`);
+  effectText.innerHTML = lines.join('<br>');
+  effectDiv.style.display='block';
+  runCalc();
+}
+
+function runCalc(){
+  const profileAtk  = cv('c_profileatk');
+  const baseAtk     = cv('c_baseatk');
+  const formPct     = cv('c_formpct')      / 100;
+  const potentialPct= cv('c_potentialpct') / 100;
+  const petFlat     = cv('c_petflat');
+  const buffPctAdd  = cv('c_buffpct')      / 100;
+  const critRatePct = Math.min(100, cv('c_critchance') + (SET_DATA[currentSet]?.critRate||0));
+  const petType     = document.getElementById('c_pettype')?.value || 'none';
+  const petStar     = parseInt(document.getElementById('c_petstar')?.value || '6');
+  const defVal      = cv('c_defval');
+  const defBoost    = cv('c_defboostpct')  / 100;
+  const defReduce   = cv('c_defreducepct') / 100;
+  const defIgn      = cv('c_defignpct')    / 100;
+  const skillCoef   = cv('c_skillcoef')    / 100;
+  const critDmgVal  = cv('c_critdmg') / 100;
+  const critDmg     = critRatePct >= 100 ? critDmgVal : 1.0; // 치명타 확정시만 치피 적용
+  const weakCoef    = cv('c_weakcoef') + cv('c_weakbuff') / 100;
+  const magicVuln   = 1 + cv('c_magicvuln') / 100;
+  const physVuln    = 1 + cv('c_physvuln')  / 100;
+  const vulnCoef    = magicVuln * physVuln;
+  const bossRate    = 1 + cv('c_bossrate')  / 100;
+  const dmgIncAdd   = cv('c_dmginc')       / 100;
+  const targetMaxHP = cv('c_targetHP');
+  const targetHPpct = cv('c_targetHPpct');
+  const hitCount    = Math.max(1, Math.round(cv('c_hitCount')));
+
+  // 펫 효과 적용
+  let petBuffAtk = 0, petDmgInc = 0;
+  if(petType !== 'none' && PET_DATA[petType]){
+    petBuffAtk = (PET_DATA[petType][petStar]?.buffAtk || 0) / 100;
+    petDmgInc  = (PET_DATA[petType][petStar]?.dmgInc  || 0) / 100;
+  }
+
+  // 세트 효과
+  const sd = SET_DATA[currentSet] || SET_DATA["없음"];
+  const setAtkBuff  = sd.atkBuff  / 100;
+  const setDmg      = sd.dmg      / 100;
+  const setBossDmg  = sd.bossDmg  / 100;
+  const setWeakDmg  = sd.weakDmg  / 100;
+  const setDefPen   = sd.defPen   / 100;
+
+  // 공격력 계산
+  const totalBuffAtk = buffPctAdd + petBuffAtk + setAtkBuff;
+  const finalAtk = (profileAtk + petFlat + baseAtk * (formPct + potentialPct)) * (1 + totalBuffAtk);
+
+  // 방어계수 (암살자 세트 방무 포함)
+  const totalDefIgn = defIgn + setDefPen;
+  const defCoef    = 1 + defVal * (1 + defBoost - defReduce) * (1 - totalDefIgn) * 0.00214;
+
+  // 피증계수
+  const dmgIncCoef = 1 + dmgIncAdd + petDmgInc + setDmg;
+
+  // 보스 관련
+  const bossResist  = cv('c_bossresist') / 100;
+  const bossMult    = isBossMode ? bossRate * (1 + setBossDmg) * (1 - bossResist) : 1;
+  const weakDmgCoef = 1 + setWeakDmg + cv('c_weakbuff2')/100; // 세트 약점피해 포함 (weakbuff는 따로)
+
+  // 합산 배율
+  const totalMult = dmgIncCoef * bossMult * vulnCoef;
+
+  // 기본 딜 (치명타 없음)
+  const baseDmg    = (finalAtk / defCoef) * skillCoef * weakCoef * totalMult;
+  const normalDmg  = Math.round(baseDmg);
+  // 치명타 딜
+  const critDmgFinal = Math.round(baseDmg * critDmgVal);
+  // 기대 딜
+  const avgDmg     = Math.round(baseDmg * (1 + (critRatePct/100) * (critDmgVal - 1)));
+
+  const finalDmg   = critRatePct >= 100 ? critDmgFinal : avgDmg;
+  const totalDmg   = finalDmg * hitCount;
+
+  // 결과 표시
+  const a=document.getElementById('c_r_finalatk'); if(a) a.textContent=cfmt(finalAtk);
+  const d=document.getElementById('c_r_def');      if(d) d.textContent=defCoef.toFixed(3);
+  const tm=document.getElementById('c_r_totalmult'); if(tm) tm.textContent="×"+totalMult.toFixed(3);
+  const nd=document.getElementById('c_r_normaldmg'); if(nd) nd.textContent=cfmt(normalDmg);
+  const r=document.getElementById('c_r_dmg');      if(r) r.textContent=cfmt(critDmgFinal);
+  const av=document.getElementById('c_r_avgdmg');  if(av) av.textContent=cfmt(avgDmg);
+
+  // 멀티히트 표시
+  const totalWrap=document.getElementById('c_r_total_wrap');
+  if(totalWrap){
+    if(hitCount>1){
+      totalWrap.style.display="block";
+      document.getElementById('c_r_hitcount').textContent=hitCount;
+      document.getElementById('c_r_totaldmg').textContent=cfmt(totalDmg);
+    } else { totalWrap.style.display="none"; }
+  }
+
+  // HP 결과
+  const hpResult=document.getElementById('c_hp_result');
+  if(!hpResult) return;
+  if(!targetMaxHP){ hpResult.style.display="none"; return; }
+  hpResult.style.display="block";
+
+  const currentHP = targetMaxHP * (targetHPpct / 100);
+  const afterHP   = Math.max(0, currentHP - totalDmg);
+  const afterPct  = (afterHP / targetMaxHP) * 100;
+  const isDead    = afterHP <= 0;
+  const diff      = totalDmg - currentHP;
+
+  // HP 라벨
+  document.getElementById('c_r_hplabel').textContent =
+    cfmt(currentHP) + " / " + cfmt(targetMaxHP) + " (" + targetHPpct + "%)";
+  document.getElementById('c_r_hpafter_label').textContent =
+    isDead ? "0 (사망)" : cfmt(afterHP) + " (" + afterPct.toFixed(1) + "%)";
+
+  // HP 바
+  const barBefore = document.getElementById('c_r_hpbar_before');
+  const barAfter  = document.getElementById('c_r_hpbar_after');
+  if(barBefore) barBefore.style.width = Math.min(100, targetHPpct) + "%";
+  if(barAfter)  barAfter.style.width  = Math.max(0, afterPct) + "%";
+
+  // 판정
+  const verdict = document.getElementById('c_r_verdict');
+  if(verdict){
+    if(isDead){
+      verdict.style.background = "rgba(39,174,96,0.12)";
+      verdict.style.border     = "1px solid rgba(39,174,96,0.35)";
+      verdict.style.color      = "#5cb85c";
+      verdict.textContent      = "💀 처치! (" + cfmt(diff) + " 초과)";
+    } else {
+      verdict.style.background = "rgba(192,57,43,0.1)";
+      verdict.style.border     = "1px solid rgba(192,57,43,0.3)";
+      verdict.style.color      = "#e55353";
+      verdict.textContent      = "❌ 부족! " + cfmt(afterHP) + " HP 남음 (" + cfmt(diff * -1) + " 모자람)";
+    }
+  }
+}
+
+
+function setCritChance(val){
+  document.getElementById("c_critchance").value = val;
+  const btn0 = document.getElementById("crit_0");
+  const btn100 = document.getElementById("crit_100");
+  if(val === 0){
+    btn0.style.border="1px solid var(--accent)"; btn0.style.background="rgba(255,85,51,0.15)"; btn0.style.color="var(--accent)";
+    btn100.style.border="1px solid var(--border)"; btn100.style.background="var(--surface2)"; btn100.style.color="var(--text3)";
+  } else {
+    btn100.style.border="1px solid var(--accent)"; btn100.style.background="rgba(255,85,51,0.15)"; btn100.style.color="var(--accent)";
+    btn0.style.border="1px solid var(--border)"; btn0.style.background="var(--surface2)"; btn0.style.color="var(--text3)";
+  }
+  runCalc();
+}
 
 </script>
 </body>
