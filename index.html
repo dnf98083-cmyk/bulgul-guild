@@ -1103,8 +1103,14 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
           <!-- 일괄 텍스트 입력 -->
           <div id="siegeMode_bulk" style="display:none;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력<br>예) 파멸 150000</div>
-            <textarea class="form-textarea" id="siegeBulkText" rows="5" placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"></textarea>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력 (예: 파멸 150000)</div>
+            <div style="position:relative;">
+              <textarea class="form-textarea" id="siegeBulkText" rows="7"
+                placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"
+                oninput="onBulkTextInput(event,'siege')"
+                onkeydown="onBulkTextKeyDown(event,'siege')"></textarea>
+              <div id="siegeBulkSuggest" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;min-width:160px;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);"></div>
+            </div>
             <button class="btn-sm btn-blue" style="margin-top:8px;width:100%;" onclick="addSiegeBulk()">일괄 등록</button>
           </div>
 
@@ -1160,8 +1166,14 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
           <!-- 일괄 텍스트 입력 -->
           <div id="adventMode_bulk" style="display:none;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력<br>예) 파멸 150000</div>
-            <textarea class="form-textarea" id="adventBulkText" rows="5" placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"></textarea>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력 (예: 파멸 150000)</div>
+            <div style="position:relative;">
+              <textarea class="form-textarea" id="adventBulkText" rows="7"
+                placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"
+                oninput="onBulkTextInput(event,'advent')"
+                onkeydown="onBulkTextKeyDown(event,'advent')"></textarea>
+              <div id="adventBulkSuggest" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;min-width:160px;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);"></div>
+            </div>
             <button class="btn-sm btn-blue" style="margin-top:8px;width:100%;" onclick="addAdventBulk()">일괄 등록</button>
           </div>
 
@@ -2961,6 +2973,10 @@ function switchSiegeMode(mode){
     const div=document.getElementById("siegeMode_"+m);
     if(div) div.style.display=m===mode?"block":"none";
   });
+  if(mode==="bulk"){
+    const rows=document.getElementById("siegeBulkRows");
+    if(rows&&rows.children.length===0) addBulkRow("siege");
+  }
 }
 function switchAdventMode(mode){
   ["single","bulk","ai"].forEach(m=>{
@@ -2969,6 +2985,10 @@ function switchAdventMode(mode){
     const div=document.getElementById("adventMode_"+m);
     if(div) div.style.display=m===mode?"block":"none";
   });
+  if(mode==="bulk"){
+    const rows=document.getElementById("adventBulkRows");
+    if(rows&&rows.children.length===0) addBulkRow("advent");
+  }
 }
 
 // ══ 일괄 텍스트 등록 ══
@@ -3018,11 +3038,93 @@ async function addBulkScores(type, textId, listId, key){
   else loadPveScoreList("advent", key, listId);
 }
 
+// ══ 텍스트에리어 자동완성 ══
+function onBulkTextInput(e, type){
+  const ta = e.target;
+  const suggest = document.getElementById(type+"BulkSuggest");
+  const val = ta.value;
+  const pos = ta.selectionStart;
+
+  // 현재 커서가 있는 줄 추출
+  const lineStart = val.lastIndexOf("\n", pos-1)+1;
+  const lineEnd   = val.indexOf("\n", pos);
+  const curLine   = val.slice(lineStart, lineEnd===-1?val.length:lineEnd);
+
+  // 줄의 첫 번째 단어(닉네임 부분)만 자동완성
+  const parts = curLine.trimStart().split(/\s+/);
+  const nickPart = parts[0] || "";
+
+  if(!nickPart || parts.length > 1){
+    suggest.style.display="none"; return;
+  }
+
+  const matches = loginNickList.filter(n=>n.toLowerCase().includes(nickPart.toLowerCase()));
+  if(!matches.length){ suggest.style.display="none"; return; }
+
+  // 드롭다운 위치 계산 (textarea 기준)
+  const lineNum = val.slice(0, lineStart).split("\n").length;
+  const lineH = 22;
+  suggest.style.top = (lineNum * lineH + 4) + "px";
+  suggest.style.left = "4px";
+
+  suggest.innerHTML = matches.map(nick=>`
+    <div onmousedown="selectBulkSuggest(event,'${type}','${nick}')"
+      onmouseover="this.style.background='rgba(255,85,51,0.1)'"
+      onmouseout="this.style.background=''"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
+      ${nick}
+    </div>`).join("");
+  suggest.style.display="block";
+}
+
+function selectBulkSuggest(e, type, nick){
+  e.preventDefault();
+  const ta = document.getElementById(type+"BulkText");
+  const suggest = document.getElementById(type+"BulkSuggest");
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  const lineStart = val.lastIndexOf("\n", pos-1)+1;
+  const lineEnd   = val.indexOf("\n", pos);
+  const curLine   = val.slice(lineStart, lineEnd===-1?val.length:lineEnd);
+  const parts     = curLine.trimStart().split(/\s+/);
+  // 닉네임 부분만 교체
+  const afterNick = parts.slice(1).join(" ");
+  const newLine   = afterNick ? `${nick} ${afterNick}` : nick+" ";
+  ta.value = val.slice(0, lineStart) + newLine + (lineEnd===-1?"":val.slice(lineEnd));
+  // 커서를 점수 입력 위치로
+  const newPos = lineStart + nick.length + 1;
+  ta.setSelectionRange(newPos, newPos);
+  ta.focus();
+  suggest.style.display="none";
+}
+
+function onBulkTextKeyDown(e, type){
+  const suggest = document.getElementById(type+"BulkSuggest");
+  if(suggest.style.display==="none") return;
+  if(e.key==="Escape"){ suggest.style.display="none"; return; }
+  const items = suggest.querySelectorAll("div");
+  if(!items.length) return;
+  // Tab/Enter로 첫번째 선택
+  if(e.key==="Tab"||e.key==="Enter"){
+    e.preventDefault();
+    items[0].dispatchEvent(new MouseEvent("mousedown"));
+  }
+}
+
+// 텍스트에리어 외부 클릭시 닫기
+document.addEventListener("click", e=>{
+  ["siege","advent"].forEach(type=>{
+    const s=document.getElementById(type+"BulkSuggest");
+    const t=document.getElementById(type+"BulkText");
+    if(s&&t&&!s.contains(e.target)&&e.target!==t) s.style.display="none";
+  });
+});
+
 function addSiegeBulk(){
-  addBulkScores("siege", "siegeBulkText", "rankSiegeList", `${currentRankDay}/${currentSiegeInput}`);
+  addBulkScores("siege","siegeBulkText","rankSiegeList",`${currentRankDay}/${currentSiegeInput}`);
 }
 function addAdventBulk(){
-  addBulkScores("advent", "adventBulkText", "rankAdventList", currentRankBoss);
+  addBulkScores("advent","adventBulkText","rankAdventList",currentRankBoss);
 }
 
 // ══ AI 스캔 (공통 로직) ══
