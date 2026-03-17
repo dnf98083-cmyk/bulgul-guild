@@ -3002,7 +3002,13 @@ async function addBulkScores(type, textId, listId, key){
 
   const lines = raw.split("\n").map(l=>l.trim()).filter(Boolean);
   const date = new Date().toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"});
-  let ok=0, fail=[];
+  let ok=0, fail=[], skip=[];
+
+  // 이미 등록된 닉네임 목록 미리 조회
+  const existSnap = await db.ref(`pveScores/${type}/${key}`).once("value");
+  const existData = existSnap.val()||{};
+  const existNicks = new Set(Object.values(existData).map(d=>d.nick).filter(Boolean));
+
   for(const line of lines){
     const parts = line.split(/\s+/);
     if(parts.length < 2){ fail.push(line); continue; }
@@ -3010,10 +3016,15 @@ async function addBulkScores(type, textId, listId, key){
     const score = parseInt(parts[parts.length-1].replace(/,/g,""));
     if(!nick||isNaN(score)){ fail.push(line); continue; }
     if(!loginNickList.includes(nick)){ fail.push(`${nick}(없는 길드원)`); continue; }
+    if(existNicks.has(nick)){ skip.push(nick); continue; }
     await db.ref(`pveScores/${type}/${key}`).push({nick,score,date,createdAt:Date.now()});
+    existNicks.add(nick);
     ok++;
   }
-  toast(`✅ ${ok}명 등록${fail.length?` / ❌ 실패: ${fail.join(", ")}`:""}`, fail.length?5000:2000);
+  let msg = `✅ ${ok}명 등록`;
+  if(skip.length) msg += ` / ⏭️ 중복 스킵: ${skip.join(", ")}`;
+  if(fail.length) msg += ` / ❌ 실패: ${fail.join(", ")}`;
+  toast(msg, (skip.length||fail.length)?5000:2000);
   document.getElementById(textId).value="";
   if(btn){ btn.disabled=false; btn.textContent="일괄 등록"; }
   bulkScoresRunning = false;
