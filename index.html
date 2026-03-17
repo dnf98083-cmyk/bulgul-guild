@@ -481,42 +481,28 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       </button>
     </div>
 
-    <!-- 홈 통합 랭킹 -->
+    <!-- 홈 공성전 랭킹 -->
     <div style="margin-top:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="display:flex;gap:6px;">
-          <button id="hrtab_guild" class="pve-tab-btn active" onclick="switchHomeRankTab('guild')" style="font-size:12px;padding:6px 14px;">⚔️ 길드전</button>
-          <button id="hrtab_siege" class="pve-tab-btn"        onclick="switchHomeRankTab('siege')" style="font-size:12px;padding:6px 14px;">🏯 공성전</button>
-        </div>
+        <div class="section-title" style="margin:0;">🏯 공성전 랭킹</div>
         <button style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;" onclick="switchTab('ranking')">전체보기 →</button>
       </div>
-
-      <!-- 길드전 -->
-      <div id="hrPanel_guild">
-        <div id="homeRankingList" class="rank-card" style="max-height:280px;overflow-y:auto;">
-          <div class="empty-state">로딩중...</div>
-        </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:10px;">
+        <button class="rank-day-btn active" id="hrday_월" onclick="switchHomeRankDay('월')" style="font-size:12px;padding:7px 4px;">월</button>
+        <button class="rank-day-btn" id="hrday_화" onclick="switchHomeRankDay('화')" style="font-size:12px;padding:7px 4px;">화</button>
+        <button class="rank-day-btn" id="hrday_수" onclick="switchHomeRankDay('수')" style="font-size:12px;padding:7px 4px;">수</button>
+        <button class="rank-day-btn" id="hrday_목" onclick="switchHomeRankDay('목')" style="font-size:12px;padding:7px 4px;">목</button>
+        <button class="rank-day-btn" id="hrday_금" onclick="switchHomeRankDay('금')" style="font-size:12px;padding:7px 4px;">금</button>
+        <button class="rank-day-btn" id="hrday_토" onclick="switchHomeRankDay('토')" style="font-size:12px;padding:7px 4px;">토</button>
+        <button class="rank-day-btn" id="hrday_일" onclick="switchHomeRankDay('일')" style="font-size:12px;padding:7px 4px;">일</button>
       </div>
-
-      <!-- 공성전 -->
-      <div id="hrPanel_siege" style="display:none;">
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:10px;">
-          <button class="rank-day-btn active" id="hrday_월" onclick="switchHomeRankDay('월')" style="font-size:12px;padding:7px 4px;">월</button>
-          <button class="rank-day-btn" id="hrday_화" onclick="switchHomeRankDay('화')" style="font-size:12px;padding:7px 4px;">화</button>
-          <button class="rank-day-btn" id="hrday_수" onclick="switchHomeRankDay('수')" style="font-size:12px;padding:7px 4px;">수</button>
-          <button class="rank-day-btn" id="hrday_목" onclick="switchHomeRankDay('목')" style="font-size:12px;padding:7px 4px;">목</button>
-          <button class="rank-day-btn" id="hrday_금" onclick="switchHomeRankDay('금')" style="font-size:12px;padding:7px 4px;">금</button>
-          <button class="rank-day-btn" id="hrday_토" onclick="switchHomeRankDay('토')" style="font-size:12px;padding:7px 4px;">토</button>
-          <button class="rank-day-btn" id="hrday_일" onclick="switchHomeRankDay('일')" style="font-size:12px;padding:7px 4px;">일</button>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
-          <button id="hrweek_this"   class="pve-tab-btn active" onclick="switchHomeRankWeek('this')"   style="flex:1;font-size:11px;">이번주</button>
-          <button id="hrweek_last"   class="pve-tab-btn"        onclick="switchHomeRankWeek('last')"   style="flex:1;font-size:11px;">저번주</button>
-          <button id="hrweek_growth" class="pve-tab-btn"        onclick="switchHomeRankWeek('growth')" style="flex:1;font-size:11px;">📈 성장률</button>
-        </div>
-        <div id="homeSiegeRankList" class="rank-card" style="max-height:280px;overflow-y:auto;">
-          <div class="empty-state">요일을 선택하세요</div>
-        </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button id="hrweek_this"   class="pve-tab-btn active" onclick="switchHomeRankWeek('this')"   style="flex:1;font-size:11px;">이번주</button>
+        <button id="hrweek_last"   class="pve-tab-btn"        onclick="switchHomeRankWeek('last')"   style="flex:1;font-size:11px;">저번주</button>
+        <button id="hrweek_growth" class="pve-tab-btn"        onclick="switchHomeRankWeek('growth')" style="flex:1;font-size:11px;">📈 성장률</button>
+      </div>
+      <div id="homeSiegeRankList" class="rank-card" style="max-height:280px;overflow-y:auto;">
+        <div class="empty-state">요일을 선택하세요</div>
       </div>
     </div>
 
