@@ -1071,17 +1071,51 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <!-- 관리자: 점수 입력 -->
         <div id="rankSiegeAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
           <div class="admin-section-title">📝 점수 입력</div>
-          <div style="display:flex;gap:8px;margin-bottom:8px;">
+
+          <!-- 이번주/저번주 선택 -->
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
             <button id="sinput_this" onclick="switchSiegeInput('this')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,85,51,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">이번주</button>
             <button id="sinput_last" onclick="switchSiegeInput('last')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">저번주</button>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <div style="position:relative;flex:1;min-width:100px;">
-              <input class="form-input" id="siegeScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('siege')" autocomplete="off">
-              <div id="siegeNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+
+          <!-- 입력 방식 탭 -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button id="smode_single" class="pve-tab-btn active" onclick="switchSiegeMode('single')" style="font-size:11px;">개별 입력</button>
+            <button id="smode_bulk"   class="pve-tab-btn"        onclick="switchSiegeMode('bulk')"   style="font-size:11px;">📋 일괄 입력</button>
+            <button id="smode_ai"     class="pve-tab-btn"        onclick="switchSiegeMode('ai')"     style="font-size:11px;">✨ AI 스캔</button>
+          </div>
+
+          <!-- 개별 입력 -->
+          <div id="siegeMode_single">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="position:relative;flex:1;min-width:100px;">
+                <input class="form-input" id="siegeScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('siege')" autocomplete="off">
+                <div id="siegeNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+              </div>
+              <input class="form-input" type="number" id="siegeScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
+              <button class="btn-sm btn-blue" onclick="addSiegeScore()">등록</button>
             </div>
-            <input class="form-input" type="number" id="siegeScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
-            <button class="btn-sm btn-blue" onclick="addSiegeScore()">등록</button>
+          </div>
+
+          <!-- 일괄 텍스트 입력 -->
+          <div id="siegeMode_bulk" style="display:none;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력<br>예) 파멸 150000</div>
+            <textarea class="form-textarea" id="siegeBulkText" rows="5" placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"></textarea>
+            <button class="btn-sm btn-blue" style="margin-top:8px;width:100%;" onclick="addSiegeBulk()">일괄 등록</button>
+          </div>
+
+          <!-- AI 스캔 -->
+          <div id="siegeMode_ai" style="display:none;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">랭킹 화면 캡처를 업로드하면 AI가 자동으로 닉네임·점수를 읽어서 등록해요</div>
+            <div id="siegeAiPreview" style="display:none;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+              <img id="siegeAiImg" style="width:100%;max-height:200px;object-fit:contain;"></div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <button class="btn-sm btn-blue" style="flex:1;" onclick="document.getElementById('siegeAiFile').click()">📷 이미지 선택</button>
+              <button class="btn-sm btn-blue" id="siegeAiScanBtn" style="flex:1;display:none;" onclick="runSiegeAiScan()">✨ AI 분석</button>
+            </div>
+            <input type="file" id="siegeAiFile" accept="image/*" style="display:none;" onchange="siegeAiFileLoad(event)">
+            <div id="siegeAiResult" style="display:none;background:var(--surface2);border-radius:8px;padding:10px;font-size:12px;"></div>
+            <button id="siegeAiApplyBtn" class="btn-sm btn-blue" style="display:none;width:100%;margin-top:8px;" onclick="applySiegeAiResult()">✅ 결과 일괄 등록</button>
           </div>
         </div>
       </div>
@@ -1100,13 +1134,45 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <!-- 관리자: 점수 입력 -->
         <div id="rankAdventAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
           <div class="admin-section-title">📝 점수 입력</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <div style="position:relative;flex:1;min-width:100px;">
-              <input class="form-input" id="adventScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('advent')" autocomplete="off">
-              <div id="adventNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+
+          <!-- 입력 방식 탭 -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button id="amode_single" class="pve-tab-btn active" onclick="switchAdventMode('single')" style="font-size:11px;">개별 입력</button>
+            <button id="amode_bulk"   class="pve-tab-btn"        onclick="switchAdventMode('bulk')"   style="font-size:11px;">📋 일괄 입력</button>
+            <button id="amode_ai"     class="pve-tab-btn"        onclick="switchAdventMode('ai')"     style="font-size:11px;">✨ AI 스캔</button>
+          </div>
+
+          <!-- 개별 입력 -->
+          <div id="adventMode_single">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="position:relative;flex:1;min-width:100px;">
+                <input class="form-input" id="adventScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('advent')" autocomplete="off">
+                <div id="adventNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+              </div>
+              <input class="form-input" type="number" id="adventScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
+              <button class="btn-sm btn-blue" onclick="addPveScore('advent')">등록</button>
             </div>
-            <input class="form-input" type="number" id="adventScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
-            <button class="btn-sm btn-blue" onclick="addPveScore('advent')">등록</button>
+          </div>
+
+          <!-- 일괄 텍스트 입력 -->
+          <div id="adventMode_bulk" style="display:none;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">닉네임 점수 형식으로 한 줄씩 입력<br>예) 파멸 150000</div>
+            <textarea class="form-textarea" id="adventBulkText" rows="5" placeholder="파멸 150000&#10;파처르톤 140000&#10;닉네임 120000"></textarea>
+            <button class="btn-sm btn-blue" style="margin-top:8px;width:100%;" onclick="addAdventBulk()">일괄 등록</button>
+          </div>
+
+          <!-- AI 스캔 -->
+          <div id="adventMode_ai" style="display:none;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">랭킹 화면 캡처를 업로드하면 AI가 자동으로 닉네임·점수를 읽어서 등록해요</div>
+            <div id="adventAiPreview" style="display:none;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+              <img id="adventAiImg" style="width:100%;max-height:200px;object-fit:contain;"></div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <button class="btn-sm btn-blue" style="flex:1;" onclick="document.getElementById('adventAiFile').click()">📷 이미지 선택</button>
+              <button class="btn-sm btn-blue" id="adventAiScanBtn" style="flex:1;display:none;" onclick="runAdventAiScan()">✨ AI 분석</button>
+            </div>
+            <input type="file" id="adventAiFile" accept="image/*" style="display:none;" onchange="adventAiFileLoad(event)">
+            <div id="adventAiResult" style="display:none;background:var(--surface2);border-radius:8px;padding:10px;font-size:12px;"></div>
+            <button id="adventAiApplyBtn" class="btn-sm btn-blue" style="display:none;width:100%;margin-top:8px;" onclick="applyAdventAiResult()">✅ 결과 일괄 등록</button>
           </div>
         </div>
       </div>
@@ -2868,6 +2934,164 @@ function loadHomeRanking(){
     }).join("");
   });
 }
+
+
+// ══ 공성전/강림 입력 모드 전환 ══
+function switchSiegeMode(mode){
+  ["single","bulk","ai"].forEach(m=>{
+    const btn=document.getElementById("smode_"+m);
+    if(btn) btn.className=m===mode?"pve-tab-btn active":"pve-tab-btn";
+    const div=document.getElementById("siegeMode_"+m);
+    if(div) div.style.display=m===mode?"block":"none";
+  });
+}
+function switchAdventMode(mode){
+  ["single","bulk","ai"].forEach(m=>{
+    const btn=document.getElementById("amode_"+m);
+    if(btn) btn.className=m===mode?"pve-tab-btn active":"pve-tab-btn";
+    const div=document.getElementById("adventMode_"+m);
+    if(div) div.style.display=m===mode?"block":"none";
+  });
+}
+
+// ══ 일괄 텍스트 등록 ══
+async function addBulkScores(type, textId, listId, key){
+  if(!checkAdmin()) return;
+  const raw = document.getElementById(textId).value.trim();
+  if(!raw) return toast("내용을 입력하세요");
+  const lines = raw.split("\n").map(l=>l.trim()).filter(Boolean);
+  const date = new Date().toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"});
+  let ok=0, fail=[];
+  for(const line of lines){
+    const parts = line.split(/\s+/);
+    if(parts.length < 2){ fail.push(line); continue; }
+    const nick = parts[0];
+    const score = parseInt(parts[parts.length-1].replace(/,/g,""));
+    if(!nick||isNaN(score)){ fail.push(line); continue; }
+    if(!loginNickList.includes(nick)){ fail.push(`${nick}(없는 길드원)`); continue; }
+    await db.ref(`pveScores/${type}/${key}`).push({nick,score,date,createdAt:Date.now()});
+    ok++;
+  }
+  toast(`✅ ${ok}명 등록${fail.length?` / ❌ 실패: ${fail.join(", ")}`:""}`, fail.length?5000:2000);
+  document.getElementById(textId).value="";
+  if(type==="siege") loadSiegeRanking();
+  else loadPveScoreList("advent", key, listId);
+}
+
+function addSiegeBulk(){
+  addBulkScores("siege", "siegeBulkText", "rankSiegeList", `${currentRankDay}/${currentSiegeInput}`);
+}
+function addAdventBulk(){
+  addBulkScores("advent", "adventBulkText", "rankAdventList", currentRankBoss);
+}
+
+// ══ AI 스캔 (공통 로직) ══
+let siegeAiData=null, adventAiData=null;
+
+function aiFileLoad(event, type){
+  const file = event.target.files[0];
+  if(!file) return;
+  const previewDiv = document.getElementById(type+"AiPreview");
+  const previewImg = document.getElementById(type+"AiImg");
+  const scanBtn    = document.getElementById(type+"AiScanBtn");
+  const resultDiv  = document.getElementById(type+"AiResult");
+  const applyBtn   = document.getElementById(type+"AiApplyBtn");
+  previewImg.src = URL.createObjectURL(file);
+  previewDiv.style.display="block";
+  scanBtn.style.display="block";
+  resultDiv.style.display="none";
+  applyBtn.style.display="none";
+  if(type==="siege") siegeAiData=null;
+  else adventAiData=null;
+  // base64 저장
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result.split(",")[1];
+    const mt  = file.type||"image/jpeg";
+    if(type==="siege") siegeAiData = {b64,mt};
+    else adventAiData = {b64,mt};
+  };
+  reader.readAsDataURL(file);
+}
+function siegeAiFileLoad(e){ aiFileLoad(e,"siege"); }
+function adventAiFileLoad(e){ aiFileLoad(e,"advent"); }
+
+async function runAiScan(type){
+  const data = type==="siege" ? siegeAiData : adventAiData;
+  if(!data) return toast("이미지를 먼저 선택하세요");
+  const scanBtn   = document.getElementById(type+"AiScanBtn");
+  const resultDiv = document.getElementById(type+"AiResult");
+  const applyBtn  = document.getElementById(type+"AiApplyBtn");
+  scanBtn.textContent="🔍 분석 중..."; scanBtn.disabled=true;
+  resultDiv.style.display="none"; applyBtn.style.display="none";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:1000,
+        messages:[{
+          role:"user",
+          content:[
+            {type:"image",source:{type:"base64",media_type:data.mt,data:data.b64}},
+            {type:"text",text:`이 이미지는 게임 랭킹 화면이야. 닉네임과 점수(숫자)를 모두 추출해줘.
+JSON 배열만 반환해. 다른 텍스트 없이 순수 JSON만:
+[{"nick":"닉네임","score":숫자},...]
+점수는 쉼표 제거한 순수 숫자로.`}
+          ]
+        }]
+      })
+    });
+    const d = await res.json();
+    const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const match = text.match(/\[[\s\S]*\]/);
+    if(!match) throw new Error("인식 실패");
+    const parsed = JSON.parse(match[0]);
+    if(type==="siege") siegeAiData.result=parsed;
+    else adventAiData.result=parsed;
+
+    resultDiv.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:var(--accent);">인식 결과 ${parsed.length}명</div>` +
+      parsed.map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <span style="color:var(--text2);">${r.nick}</span>
+        <span style="color:var(--accent);font-weight:700;">${Number(r.score).toLocaleString()}</span>
+      </div>`).join("");
+    resultDiv.style.display="block";
+    applyBtn.style.display="block";
+  } catch(e){
+    resultDiv.innerHTML=`<span style="color:#e74c3c;">인식 실패: ${e.message}</span>`;
+    resultDiv.style.display="block";
+  }
+  scanBtn.textContent="✨ AI 분석"; scanBtn.disabled=false;
+}
+function runSiegeAiScan(){ runAiScan("siege"); }
+function runAdventAiScan(){ runAiScan("advent"); }
+
+async function applyAiResult(type){
+  if(!checkAdmin()) return;
+  const data = type==="siege" ? siegeAiData : adventAiData;
+  if(!data?.result?.length) return toast("인식된 결과가 없어요");
+  const date = new Date().toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"});
+  let ok=0, fail=[];
+  for(const r of data.result){
+    if(!r.nick||!r.score){ fail.push(r.nick||"?"); continue; }
+    const key = type==="siege"
+      ? `${currentRankDay}/${currentSiegeInput}`
+      : currentRankBoss;
+    await db.ref(`pveScores/${type}/${key}`).push({nick:r.nick,score:r.score,date,createdAt:Date.now()});
+    ok++;
+  }
+  toast(`✅ ${ok}명 등록${fail.length?` / ❌ ${fail.join(",")} 실패`:""}`);
+  document.getElementById(type+"AiResult").style.display="none";
+  document.getElementById(type+"AiApplyBtn").style.display="none";
+  document.getElementById(type+"AiPreview").style.display="none";
+  document.getElementById(type+"AiScanBtn").style.display="none";
+  if(type==="siege") loadSiegeRanking();
+  else loadPveScoreList("advent", currentRankBoss, "rankAdventList");
+}
+function applySiegeAiResult(){ applyAiResult("siege"); }
+function applyAdventAiResult(){ applyAiResult("advent"); }
 
 </script>
 </body>
