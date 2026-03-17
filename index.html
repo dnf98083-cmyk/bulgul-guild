@@ -61,7 +61,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
 /* ── 모바일 하단 탭바 ── */
-#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(6,1fr); }
+#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(7,1fr); }
 #tabBar.hidden { display:none; }
 .tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:8px 4px; color:var(--text3); border:none; background:none; font-family:inherit; }
 .tab-item .tab-icon { font-size:22px; transition:0.2s; }
@@ -110,7 +110,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   .attack-left-col { position:sticky; top:20px; }
   .atk-grid { grid-template-columns:repeat(2,1fr) !important; }
   .def-grid { grid-template-columns:repeat(3,1fr) !important; }
-  .pve-grid { grid-template-columns:repeat(6,1fr) !important; }
+  .pve-grid { grid-template-columns:repeat(7,1fr) !important; }
   .admin-2col { display:grid !important; grid-template-columns:1fr 1fr; gap:24px; }
   .atk-btn:hover,.def-btn:hover,.pve-btn:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.4); }
   .home-menu-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
@@ -293,6 +293,22 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .rf-value { font-size:13px; color:var(--text); white-space:pre-wrap; }
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:rgba(255,85,51,0.25); border-radius:2px; }
+.rank-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.rank-row { display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); gap:12px; transition:background 0.15s; }
+.rank-row:last-child { border-bottom:none; }
+.rank-row:hover { background:var(--surface2); }
+.rank-num { font-size:16px; font-weight:900; min-width:28px; text-align:center; }
+.rank-num.gold   { color:#f1c40f; }
+.rank-num.silver { color:#bdc3c7; }
+.rank-num.bronze { color:#cd6133; }
+.rank-num.normal { color:var(--text3); }
+.rank-nick { font-size:14px; font-weight:700; flex:1; }
+.rank-stat { text-align:right; }
+.rank-main { font-size:15px; font-weight:900; color:var(--accent); }
+.rank-sub  { font-size:11px; color:var(--text3); margin-top:2px; }
+.rank-me   { background:rgba(255,85,51,0.06) !important; }
+.rank-day-btn { padding:10px 6px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.rank-day-btn.active { border-color:var(--accent); background:rgba(255,85,51,0.15); color:var(--accent); }
 .calc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
 .calc-field { display:flex; flex-direction:column; gap:4px; }
 .calc-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; }
@@ -362,7 +378,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div class="login-sub">BULGUL GUILD</div>
   <div class="login-card">
     <label>닉네임</label>
-    <input id="nickInput" type="text" placeholder="게임 닉네임" autocomplete="off">
+    <div style="position:relative;">
+      <input id="nickInput" type="text" placeholder="게임 닉네임" autocomplete="off" oninput="filterLoginNick()" onkeydown="loginNickKeyDown(event)">
+      <div id="loginNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:4px;"></div>
+    </div>
     <label>입장 코드</label>
     <input id="codeInput" type="password" placeholder="6자리 코드" autocomplete="off">
     <button class="btn-primary" onclick="tryLogin()">입장하기 →</button>
@@ -384,6 +403,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
+    <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
     <!-- 관리자 전용 (기본 숨김) -->
     <div id="adminNavSection" style="display:none;">
       <div class="sb-divider">관리자</div>
@@ -413,6 +433,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
     <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
     <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
+    <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
   </div>
 
   <!-- 홈 -->
@@ -811,8 +832,20 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
         <div class="calc-field">
           <label class="calc-label">치명타 피해 %</label>
-          <input class="form-input" type="number" id="c_critdmg" value="150" oninput="runCalc()" style="margin:0;">
-          <span class="calc-hint">치타율 기반 기대딜 계산</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="form-input" type="number" id="c_critdmg" value="150" oninput="runCalc()" style="margin:0;flex:1;">
+            <span style="font-size:12px;color:var(--text3);flex-shrink:0;">+</span>
+            <input class="form-input" type="number" id="c_critdmg_bonus" value="0" oninput="runCalc()" style="margin:0;width:70px;" placeholder="버프">
+          </div>
+          <span class="calc-hint" id="c_critdmg_total">합계: 150%</span>
+        </div>
+        <div class="calc-field">
+          <label class="calc-label">약공 확률</label>
+          <div style="display:flex;gap:8px;margin-top:2px;">
+            <button id="weak_0" onclick="setWeakChance(0)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,85,51,0.15);color:var(--accent);font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;">0%</button>
+            <button id="weak_100" onclick="setWeakChance(100)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;">100%</button>
+          </div>
+          <input type="hidden" id="c_weakchance" value="0">
         </div>
         <div class="calc-field">
           <label class="calc-label">약공계수 기본값</label>
@@ -942,6 +975,100 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <div id="c_r_hpbar_after" style="height:100%;border-radius:99px;background:#27ae60;transition:width 0.4s;width:0%;"></div>
         </div>
         <div id="c_r_verdict" style="border-radius:var(--radius);padding:12px 16px;text-align:center;font-weight:900;font-size:15px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 랭킹 ══ -->
+  <div id="rankingScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">🏆 랭킹</div>
+    </div>
+
+    <!-- 메인 탭: 길드전 / PVE -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="rmain_guild" class="pve-tab-btn active" onclick="switchRankMain('guild')" style="flex:1;">⚔️ 길드전</button>
+      <button id="rmain_pve"   class="pve-tab-btn"        onclick="switchRankMain('pve')"   style="flex:1;">🏰 PVE</button>
+    </div>
+
+    <!-- 길드전 랭킹 -->
+    <div id="rankPanel_guild">
+      <div id="rankingListFull" class="rank-card">
+        <div class="empty-state">로딩중...</div>
+      </div>
+    </div>
+
+    <!-- PVE 랭킹 -->
+    <div id="rankPanel_pve" style="display:none;">
+      <!-- 공성전 / 강림 탭 -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="rpve_siege"  class="pve-tab-btn active" onclick="switchRankPve('siege')"  style="flex:1;">🏯 공성전</button>
+        <button id="rpve_advent" class="pve-tab-btn"        onclick="switchRankPve('advent')" style="flex:1;">⚔️ 강림원정대</button>
+      </div>
+
+      <!-- 공성전 요일 선택 -->
+      <div id="rankPve_siege">
+        <!-- 요일 선택 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+          <button class="rank-day-btn active" id="rday_월" onclick="switchRankDay('월')">월</button>
+          <button class="rank-day-btn" id="rday_화" onclick="switchRankDay('화')">화</button>
+          <button class="rank-day-btn" id="rday_수" onclick="switchRankDay('수')">수</button>
+          <button class="rank-day-btn" id="rday_목" onclick="switchRankDay('목')">목</button>
+          <button class="rank-day-btn" id="rday_금" onclick="switchRankDay('금')">금</button>
+          <button class="rank-day-btn" id="rday_토" onclick="switchRankDay('토')">토</button>
+          <button class="rank-day-btn" id="rday_일" onclick="switchRankDay('일')">일</button>
+        </div>
+
+        <!-- 이번주/저번주/성장률 탭 -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button id="sweek_this"   class="pve-tab-btn active" onclick="switchSiegeWeek('this')"   style="flex:1;">이번주</button>
+          <button id="sweek_last"   class="pve-tab-btn"        onclick="switchSiegeWeek('last')"   style="flex:1;">저번주</button>
+          <button id="sweek_growth" class="pve-tab-btn"        onclick="switchSiegeWeek('growth')" style="flex:1;">📈 성장률</button>
+        </div>
+
+        <div id="rankSiegeList" class="rank-card"><div class="empty-state">요일을 선택하세요</div></div>
+
+        <!-- 관리자: 점수 입력 -->
+        <div id="rankSiegeAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+          <div class="admin-section-title">📝 점수 입력</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button id="sinput_this" onclick="switchSiegeInput('this')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,85,51,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">이번주</button>
+            <button id="sinput_last" onclick="switchSiegeInput('last')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">저번주</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="position:relative;flex:1;min-width:100px;">
+              <input class="form-input" id="siegeScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('siege')" autocomplete="off">
+              <div id="siegeNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+            </div>
+            <input class="form-input" type="number" id="siegeScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
+            <button class="btn-sm btn-blue" onclick="addSiegeScore()">등록</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 강림원정대 보스 선택 -->
+      <div id="rankPve_advent" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+          <button class="rank-day-btn active" id="rboss_태오" onclick="switchRankBoss('태오')">태오</button>
+          <button class="rank-day-btn" id="rboss_카일" onclick="switchRankBoss('카일')">카일</button>
+          <button class="rank-day-btn" id="rboss_연희" onclick="switchRankBoss('연희')">연희</button>
+          <button class="rank-day-btn" id="rboss_카르마" onclick="switchRankBoss('카르마')">카르마</button>
+          <button class="rank-day-btn" id="rboss_파괴신" onclick="switchRankBoss('파괴신')" style="grid-column:span 2;background:rgba(255,85,51,0.1);border-color:rgba(255,85,51,0.4);color:var(--accent);">👑 파괴신</button>
+        </div>
+        <div id="rankAdventList" class="rank-card"><div class="empty-state">보스를 선택하세요</div></div>
+
+        <!-- 관리자: 점수 입력 -->
+        <div id="rankAdventAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+          <div class="admin-section-title">📝 점수 입력</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="position:relative;flex:1;min-width:100px;">
+              <input class="form-input" id="adventScoreNick" placeholder="닉네임" style="margin:0;width:100%;" oninput="filterScoreNick('advent')" autocomplete="off">
+              <div id="adventNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+            </div>
+            <input class="form-input" type="number" id="adventScoreVal" placeholder="점수" style="margin:0;flex:1;min-width:100px;">
+            <button class="btn-sm btn-blue" onclick="addPveScore('advent')">등록</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1088,6 +1215,11 @@ window.onload = () => {
 
 function isPC() { return window.innerWidth >= 900; }
 
+// ══ 로그인 닉네임 미리 로드 ══
+window.addEventListener("DOMContentLoaded", ()=>{
+  setTimeout(()=>{ if(typeof db !== "undefined") preloadNickList(); }, 1000);
+});
+
 // ══ 로그인 ══
 function tryLogin() {
   const nick=document.getElementById("nickInput").value.trim(), key=document.getElementById("codeInput").value.trim();
@@ -1187,7 +1319,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","notice","attack","defense","pve","calc","adminMembers","adminReports","adminScores"];
+  const allTabs=["home","notice","attack","defense","pve","calc","ranking","adminMembers","adminReports","adminScores"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -1195,7 +1327,7 @@ function switchTab(tab) {
   document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"adminMembers":6,"adminReports":7,"adminScores":8};
+  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"ranking":6,"adminMembers":7,"adminReports":8,"adminScores":9};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -1219,6 +1351,7 @@ function switchTab(tab) {
     }
   }
   if(tab==="notice") loadNotices();
+  if(tab==="ranking") loadRanking();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports") loadAdminReports();
   if(tab==="adminScores") loadAdminScores();
@@ -2033,9 +2166,18 @@ function runCalc(){
   const defReduce   = cv('c_defreducepct') / 100;
   const defIgn      = cv('c_defignpct')    / 100;
   const skillCoef   = cv('c_skillcoef')    / 100;
-  const critDmgVal  = cv('c_critdmg') / 100;
+  const critDmgBase = cv('c_critdmg');
+  const critDmgBonus = cv('c_critdmg_bonus');
+  const critDmgTotal = critDmgBase + critDmgBonus;
+  const critDmgVal  = critDmgTotal / 100;
+  // 합계 표시
+  const cdTotal = document.getElementById('c_critdmg_total');
+  if(cdTotal) cdTotal.textContent = '합계: ' + critDmgTotal + '%';
   const critDmg     = critRatePct >= 100 ? critDmgVal : 1.0; // 치명타 확정시만 치피 적용
-  const weakCoef    = cv('c_weakcoef') + cv('c_weakbuff') / 100;
+  const weakChance  = cv('c_weakchance');
+  const weakCoefBase = cv('c_weakcoef') + cv('c_weakbuff') / 100;
+  // 약공확률 0%면 약공계수 1.0, 100%면 그대로 적용
+  const weakCoef    = weakChance >= 100 ? weakCoefBase : 1.0;
   const magicVuln   = 1 + cv('c_magicvuln') / 100;
   const physVuln    = 1 + cv('c_physvuln')  / 100;
   const vulnCoef    = magicVuln * physVuln;
@@ -2163,6 +2305,404 @@ function setCritChance(val){
   }
   runCalc();
 }
+
+
+function setWeakChance(val){
+  document.getElementById("c_weakchance").value = val;
+  const btn0   = document.getElementById("weak_0");
+  const btn100 = document.getElementById("weak_100");
+  if(val === 0){
+    btn0.style.border="1px solid var(--accent)"; btn0.style.background="rgba(255,85,51,0.15)"; btn0.style.color="var(--accent)";
+    btn100.style.border="1px solid var(--border)"; btn100.style.background="var(--surface2)"; btn100.style.color="var(--text3)";
+  } else {
+    btn100.style.border="1px solid var(--accent)"; btn100.style.background="rgba(255,85,51,0.15)"; btn100.style.color="var(--accent)";
+    btn0.style.border="1px solid var(--border)"; btn0.style.background="var(--surface2)"; btn0.style.color="var(--text3)";
+  }
+  runCalc();
+}
+
+
+// ══ 랭킹 탭 ══
+let currentRankMain = "guild";
+let currentRankPve  = "siege";
+let currentRankDay  = "월";
+let currentRankBoss = "태오";
+
+function switchRankMain(tab){
+  currentRankMain = tab;
+  ["guild","pve"].forEach(t=>{
+    const btn=document.getElementById("rmain_"+t);
+    if(btn) btn.className=t===tab?"pve-tab-btn active":"pve-tab-btn";
+    const panel=document.getElementById("rankPanel_"+t);
+    if(panel) panel.style.display=t===tab?"block":"none";
+  });
+  if(tab==="guild") loadRanking();
+}
+
+function switchRankPve(tab){
+  currentRankPve = tab;
+  ["siege","advent"].forEach(t=>{
+    const btn=document.getElementById("rpve_"+t);
+    if(btn) btn.className=t===tab?"pve-tab-btn active":"pve-tab-btn";
+    const panel=document.getElementById("rankPve_"+t);
+    if(panel) panel.style.display=t===tab?"block":"none";
+  });
+  if(tab==="siege") switchRankDay(currentRankDay);
+  else switchRankBoss(currentRankBoss);
+}
+
+let currentSiegeWeek  = "this";
+let currentSiegeInput = "this";
+
+function switchRankDay(day){
+  currentRankDay = day;
+  ["월","화","수","목","금","토","일"].forEach(d=>{
+    const btn=document.getElementById("rday_"+d);
+    if(btn) btn.className=d===day?"rank-day-btn active":"rank-day-btn";
+  });
+  loadSiegeRanking();
+  const adminPanel=document.getElementById("rankSiegeAdmin");
+  if(adminPanel) adminPanel.style.display=(myRole==="관리자")?"block":"none";
+}
+
+function switchSiegeWeek(week){
+  currentSiegeWeek = week;
+  ["this","last","growth"].forEach(w=>{
+    const btn=document.getElementById("sweek_"+w);
+    if(btn) btn.className=w===week?"pve-tab-btn active":"pve-tab-btn";
+  });
+  loadSiegeRanking();
+}
+
+function switchSiegeInput(week){
+  currentSiegeInput = week;
+  ["this","last"].forEach(w=>{
+    const btn=document.getElementById("sinput_"+w);
+    if(!btn) return;
+    if(w===week){
+      btn.style.border="1px solid var(--accent)"; btn.style.background="rgba(255,85,51,0.15)"; btn.style.color="var(--accent)";
+    } else {
+      btn.style.border="1px solid var(--border)"; btn.style.background="var(--surface2)"; btn.style.color="var(--text3)";
+    }
+  });
+}
+
+function loadSiegeRanking(){
+  const list=document.getElementById("rankSiegeList");
+  if(!list) return;
+  list.innerHTML="<div class='empty-state'>로딩중...</div>";
+  const day=currentRankDay;
+
+  if(currentSiegeWeek==="growth"){
+    // 이번주+저번주 동시 로드 후 성장률 계산
+    Promise.all([
+      db.ref(`pveScores/siege/${day}/this`).once("value"),
+      db.ref(`pveScores/siege/${day}/last`).once("value")
+    ]).then(([thisSnap, lastSnap])=>{
+      const thisData=thisSnap.val()||{};
+      const lastData=lastSnap.val()||{};
+      // nick별 매핑
+      const thisMap={}, lastMap={};
+      Object.values(thisData).forEach(d=>{ if(d.nick) thisMap[d.nick]=d.score; });
+      Object.values(lastData).forEach(d=>{ if(d.nick) lastMap[d.nick]=d.score; });
+      // 둘 다 있는 사람만 성장률 계산
+      const growthList = Object.keys(thisMap)
+        .filter(nick=>lastMap[nick])
+        .map(nick=>{
+          const t=thisMap[nick], l=lastMap[nick];
+          const growth=Math.round((t-l)/l*100);
+          return { nick, thisScore:t, lastScore:l, growth };
+        }).sort((a,b)=>b.growth-a.growth);
+
+      if(!growthList.length){ list.innerHTML="<div class='empty-state'>이번주+저번주 데이터 모두 있는 길드원 없음</div>"; return; }
+      const badges=["🥇","🥈","🥉"];
+      list.innerHTML=growthList.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        const badge=i<3?badges[i]:`${i+1}`;
+        const growthColor=d.growth>=0?"#27ae60":"#e74c3c";
+        const growthSign=d.growth>=0?"+":"";
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main" style="color:${growthColor}">${growthSign}${d.growth}%</div>
+            <div class="rs-sub">${Number(d.lastScore).toLocaleString()} → ${Number(d.thisScore).toLocaleString()}</div>
+          </div>
+        </div>`;
+      }).join("");
+    });
+  } else {
+    // 이번주 or 저번주
+    db.ref(`pveScores/siege/${day}/${currentSiegeWeek}`).once("value").then(snap=>{
+      const data=snap.val();
+      if(!data){ list.innerHTML="<div class='empty-state'>등록된 점수 없음</div>"; return; }
+      const sorted=Object.entries(data).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.score-a.score);
+      const badges=["🥇","🥈","🥉"];
+      const weekLabel=currentSiegeWeek==="this"?"이번주":"저번주";
+      list.innerHTML=sorted.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        const badge=i<3?badges[i]:`${i+1}`;
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main">${Number(d.score).toLocaleString()}</div>
+            <div class="rs-sub">${weekLabel} · ${d.date||""}</div>
+          </div>
+          ${myRole==="관리자"?`<button class="btn-sm btn-red" style="padding:4px 8px;font-size:11px;margin-left:4px;" onclick="delSiegeScore('${day}','${currentSiegeWeek}','${d.key}')">삭제</button>`:""}
+        </div>`;
+      }).join("");
+    });
+  }
+}
+
+function addSiegeScore(){
+  if(!checkAdmin()) return;
+  const nick=document.getElementById("siegeScoreNick").value.trim();
+  const score=parseInt(document.getElementById("siegeScoreVal").value);
+  if(!nick||!score) return toast("닉네임과 점수를 입력하세요");
+  if(!loginNickList.includes(nick)) return toast("존재하지 않는 길드원입니다");
+  const date=new Date().toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"});
+  db.ref(`pveScores/siege/${currentRankDay}/${currentSiegeInput}`).push({nick,score,date,createdAt:Date.now()}).then(()=>{
+    toast("✅ 등록됨");
+    document.getElementById("siegeScoreNick").value="";
+    document.getElementById("siegeScoreVal").value="";
+    loadSiegeRanking();
+  });
+}
+
+function delSiegeScore(day, week, id){
+  if(!checkAdmin()) return;
+  if(!confirm("삭제할까요?")) return;
+  db.ref(`pveScores/siege/${day}/${week}/${id}`).remove().then(()=>{
+    toast("삭제됨"); loadSiegeRanking();
+  });
+}
+
+function switchRankBoss(boss){
+  currentRankBoss = boss;
+  ["태오","카일","연희","카르마","파괴신"].forEach(b=>{
+    const btn=document.getElementById("rboss_"+b);
+    if(btn) btn.className=b===boss?"rank-day-btn active":"rank-day-btn";
+  });
+  loadPveScoreList("advent", boss, "rankAdventList");
+  const adminPanel=document.getElementById("rankAdventAdmin");
+  if(adminPanel) adminPanel.style.display=(myRole==="관리자")?"block":"none";
+}
+
+function loadPveScoreList(type, key, listId){
+  const list=document.getElementById(listId);
+  if(!list) return;
+  list.innerHTML="<div class='empty-state'>로딩중...</div>";
+  db.ref(`pveScores/${type}/${key}`).orderByChild("score").once("value").then(snap=>{
+    const data=snap.val();
+    if(!data){ list.innerHTML="<div class='empty-state'>등록된 점수 없음</div>"; return; }
+    const sorted=Object.entries(data).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.score-a.score);
+    const badges=["🥇","🥈","🥉"];
+    list.innerHTML=sorted.map((d,i)=>{
+      const isMe=d.nick===myNick;
+      const badge=i<3?badges[i]:`${i+1}`;
+      return `<div class="rank-row${isMe?" rank-me":""}">
+        <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
+        <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+        <div class="rank-stat">
+          <div class="rs-main">${Number(d.score).toLocaleString()}</div>
+          <div class="rs-sub">${d.date||""}</div>
+        </div>
+        ${myRole==="관리자"?`<button class="btn-sm btn-red" style="padding:4px 8px;font-size:11px;margin-left:4px;" onclick="delPveScore('${type}','${key}','${d.key}')">삭제</button>`:""}
+      </div>`;
+    }).join("");
+  });
+}
+
+function addPveScore(type){
+  if(!checkAdmin()) return;
+  const nickEl  = document.getElementById(type==="siege"?"siegeScoreNick":"adventScoreNick");
+  const scoreEl = document.getElementById(type==="siege"?"siegeScoreVal":"adventScoreVal");
+  const nick=nickEl.value.trim();
+  const score=parseInt(scoreEl.value);
+  if(!nick||!score) return toast("닉네임과 점수를 입력하세요");
+  if(!loginNickList.includes(nick)) return toast("존재하지 않는 길드원입니다");
+  const key  = type==="siege"?currentRankDay:currentRankBoss;
+  const date = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"}).replace(/\. /g,".").replace(".","");
+  db.ref(`pveScores/${type}/${key}`).push({nick,score,date,createdAt:Date.now()}).then(()=>{
+    toast("✅ 등록됨");
+    nickEl.value=""; scoreEl.value="";
+    loadPveScoreList(type, key, type==="siege"?"rankSiegeList":"rankAdventList");
+  });
+}
+
+function delPveScore(type, key, id){
+  if(!checkAdmin()) return;
+  if(!confirm("삭제할까요?")) return;
+  db.ref(`pveScores/${type}/${key}/${id}`).remove().then(()=>{
+    toast("삭제됨");
+    loadPveScoreList(type, key, type==="siege"?"rankSiegeList":"rankAdventList");
+  });
+}
+
+function loadRanking(){
+  const list = document.getElementById("rankingListFull");
+  if(list) list.innerHTML = "<div class='empty-state'>로딩중...</div>";
+  // 기존 renderRanking과 동일한 logs 기반 집계
+  db.ref("logs").once("value").then(snap=>{
+    const raw = snap.val()||{};
+    const stats = {};
+    Object.values(raw).forEach(log=>{
+      if(!log.nick) return;
+      if(!stats[log.nick]) stats[log.nick] = { logs:[] };
+      stats[log.nick].logs.push({ result:log.result, time:log.time||0 });
+    });
+    const rankData = Object.entries(stats).map(([nick, d])=>{
+      d.logs.sort((a,b)=>b.time-a.time);
+      const w=d.logs.filter(l=>l.result==="win").length;
+      const l=d.logs.filter(l=>l.result==="lose").length;
+      const recent=d.logs.slice(0,30);
+      const rw=recent.filter(l=>l.result==="win").length;
+      const rl=recent.filter(l=>l.result==="lose").length;
+      return { nick, w, l, rw, rl };
+    }).sort((a,b)=>b.w-a.w);
+
+    if(!rankData.length){ if(list) list.innerHTML="<div class='empty-state'>전적 데이터 없음</div>"; return; }
+
+    if(list) list.innerHTML = rankData.map((d,i)=>{
+      const tot=d.w+d.l, r=tot?Math.round(d.w/tot*100):0;
+      const rTot=d.rw+d.rl, rr=rTot?Math.round(d.rw/rTot*100):0;
+      const badges=["🥇","🥈","🥉"];
+      const badge=i<3?badges[i]:`${i+1}`;
+      const isMe=d.nick===myNick;
+      return `<div class="rank-row${isMe?" rank-me":""}">
+        <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
+        <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+        <div class="rank-stat">
+          <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
+          <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
+        </div>
+      </div>`;
+    }).join("");
+  });
+}
+
+
+// ══ 로그인 닉네임 자동완성 ══
+let loginNickList = [];
+let loginSuggestIdx = -1;
+
+// 앱 시작 시 닉네임 목록 미리 로드
+function preloadNickList(){
+  db.ref("allowedUsers").once("value").then(snap=>{
+    const data = snap.val()||{};
+    loginNickList = Object.keys(data);
+  });
+}
+
+function filterLoginNick(){
+  const input = document.getElementById("nickInput");
+  const suggest = document.getElementById("loginNickSuggest");
+  const val = input.value.trim().toLowerCase();
+  loginSuggestIdx = -1;
+
+  if(!val){ suggest.style.display="none"; return; }
+
+  const matches = loginNickList.filter(n => n.toLowerCase().includes(val));
+  if(!matches.length){ suggest.style.display="none"; return; }
+
+  suggest.innerHTML = matches.map((nick, i) => `
+    <div class="login-suggest-item" id="lsi_${i}"
+      onmousedown="selectLoginNick('${nick}')"
+      onmouseover="loginSuggestIdx=${i};highlightLoginSuggest()"
+      style="padding:11px 16px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
+      ${nick}
+    </div>`).join("");
+  suggest.style.display = "block";
+}
+
+function selectLoginNick(nick){
+  document.getElementById("nickInput").value = nick;
+  document.getElementById("loginNickSuggest").style.display = "none";
+  // 코드 입력칸으로 포커스 이동
+  document.getElementById("codeInput").focus();
+}
+
+function highlightLoginSuggest(){
+  document.querySelectorAll(".login-suggest-item").forEach((el, i) => {
+    el.style.background = i === loginSuggestIdx ? "rgba(255,85,51,0.12)" : "";
+  });
+}
+
+function loginNickKeyDown(e){
+  const suggest = document.getElementById("loginNickSuggest");
+  const items = suggest.querySelectorAll(".login-suggest-item");
+  if(!items.length || suggest.style.display==="none") return;
+
+  if(e.key==="ArrowDown"){
+    e.preventDefault();
+    loginSuggestIdx = Math.min(loginSuggestIdx+1, items.length-1);
+    highlightLoginSuggest();
+  } else if(e.key==="ArrowUp"){
+    e.preventDefault();
+    loginSuggestIdx = Math.max(loginSuggestIdx-1, 0);
+    highlightLoginSuggest();
+  } else if(e.key==="Enter" && loginSuggestIdx >= 0){
+    e.preventDefault();
+    const nick = items[loginSuggestIdx].textContent.trim();
+    selectLoginNick(nick);
+  } else if(e.key==="Escape"){
+    suggest.style.display="none";
+  }
+}
+
+// 외부 클릭 시 드롭다운 닫기
+document.addEventListener("click", e=>{
+  const suggest = document.getElementById("loginNickSuggest");
+  if(suggest && !suggest.contains(e.target) && e.target.id !== "nickInput"){
+    suggest.style.display = "none";
+  }
+});
+
+
+// ══ 점수 입력 닉네임 자동완성 ══
+function filterScoreNick(type){
+  const inputId   = type==="siege" ? "siegeScoreNick"  : "adventScoreNick";
+  const suggestId = type==="siege" ? "siegeNickSuggest": "adventNickSuggest";
+  const input   = document.getElementById(inputId);
+  const suggest = document.getElementById(suggestId);
+  if(!input||!suggest) return;
+  const val = input.value.trim().toLowerCase();
+  if(!val){ suggest.style.display="none"; return; }
+
+  const matches = loginNickList.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){ suggest.style.display="none"; return; }
+
+  suggest.innerHTML = matches.map(nick=>`
+    <div onmousedown="selectScoreNick('${type}','${nick}')"
+      onmouseover="this.style.background='rgba(255,85,51,0.1)'"
+      onmouseout="this.style.background=''"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
+      ${nick}
+    </div>`).join("");
+  suggest.style.display="block";
+}
+
+function selectScoreNick(type, nick){
+  const inputId   = type==="siege" ? "siegeScoreNick"  : "adventScoreNick";
+  const suggestId = type==="siege" ? "siegeNickSuggest": "adventNickSuggest";
+  const valId     = type==="siege" ? "siegeScoreVal"   : "adventScoreVal";
+  document.getElementById(inputId).value = nick;
+  document.getElementById(suggestId).style.display = "none";
+  document.getElementById(valId)?.focus();
+}
+
+// 외부 클릭 시 닫기
+document.addEventListener("click", e=>{
+  ["siegeNickSuggest","adventNickSuggest"].forEach(id=>{
+    const el=document.getElementById(id);
+    const inputId = id.replace("NickSuggest","ScoreNick");
+    if(el && !el.contains(e.target) && e.target.id!==inputId){
+      el.style.display="none";
+    }
+  });
+});
 
 </script>
 </body>
