@@ -655,6 +655,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <div class="pve-tabs">
       <button id="tabSiege" class="pve-tab-btn active" onclick="renderPveList('siege')">공성전</button>
       <button id="tabAdvent" class="pve-tab-btn" onclick="renderPveList('advent')">강림원정대</button>
+      <button id="tabRaid" class="pve-tab-btn" onclick="renderPveList('raid')">레이드</button>
     </div>
     <div id="pveList" class="pve-grid"></div>
     <div id="pveDetailCard" class="atk-card" style="display:none;">
@@ -1653,9 +1654,46 @@ function delRecDefense(){ if(checkResearcher()&&currentRecDef&&confirm("삭제?"
 // ══ PVE ══
 const PVE_DATA_KEYS={
   siege:[{id:"mon",name:"월요일"},{id:"tue",name:"화요일"},{id:"wed",name:"수요일"},{id:"thu",name:"목요일"},{id:"fri",name:"금요일"},{id:"sat",name:"토요일"},{id:"sun",name:"일요일"}],
-  advent:[{id:"destruct1",name:"🔥 파괴신 1라",type:"turn_build",fire:true},{id:"destruct2",name:"🔥 파괴신 2라",type:"turn_build",fire:true},{id:"teo",name:"태오"},{id:"kyle",name:"카일"},{id:"yeonhee",name:"연희"},{id:"karma",name:"카르마"}]
+  advent:[{id:"destruct1",name:"🔥 파괴신 1라",type:"turn_build",fire:true},{id:"destruct2",name:"🔥 파괴신 2라",type:"turn_build",fire:true},{id:"teo",name:"태오"},{id:"kyle",name:"카일"},{id:"yeonhee",name:"연희"},{id:"karma",name:"카르마"}],
+  raid:[{id:"normal_raid",name:"일반 레이드"},{id:"event_raid",name:"돌발 레이드"}],
+  normal_raid:[{id:"eye_of_doom",name:"파멸의 눈동자"},{id:"umawang",name:"우마왕"},{id:"iron_predator",name:"강철의 포식자"}],
+  event_raid:[]
 };
-function renderPveList(cat){ pveCurrentCategory=cat; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="none"; document.getElementById("tabSiege").className=cat==="siege"?"pve-tab-btn active":"pve-tab-btn"; document.getElementById("tabAdvent").className=cat==="advent"?"pve-tab-btn active":"pve-tab-btn"; const list=document.getElementById("pveList"); list.innerHTML=""; PVE_DATA_KEYS[cat].forEach(item=>{ const div=document.createElement("div"); div.className=item.fire?"pve-btn fire":"pve-btn"; div.textContent=item.name; div.onclick=()=>{ document.querySelectorAll(".pve-btn").forEach(b=>{ if(!b.classList.contains("fire")) b.classList.remove("active"); }); if(!item.fire) div.classList.add("active"); loadPveData(cat,item.id,item.name,item.type||"build"); }; list.appendChild(div); }); }
+function renderPveList(cat){ pveCurrentCategory=cat; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="none"; document.getElementById("tabSiege").className=cat==="siege"?"pve-tab-btn active":"pve-tab-btn"; document.getElementById("tabAdvent").className=cat==="advent"?"pve-tab-btn active":"pve-tab-btn"; const tabRaid=document.getElementById("tabRaid"); if(tabRaid) tabRaid.className=cat==="raid"?"pve-tab-btn active":"pve-tab-btn"; const list=document.getElementById("pveList"); list.innerHTML=""; PVE_DATA_KEYS[cat].forEach(item=>{ const div=document.createElement("div"); div.className=item.fire?"pve-btn fire":"pve-btn"; div.textContent=item.name; div.onclick=()=>{
+    document.querySelectorAll(".pve-btn").forEach(b=>{ if(!b.classList.contains("fire")) b.classList.remove("active"); });
+    if(!item.fire) div.classList.add("active");
+    // 레이드 서브카테고리면 하위 목록으로 이동
+    if(PVE_DATA_KEYS[item.id]){
+      renderPveSubList(item.id, item.name);
+    } else {
+      loadPveData(cat,item.id,item.name,item.type||"build");
+    }
+  }; list.appendChild(div); }); }
+
+function renderPveSubList(subCat, parentName){
+  pveCurrentCategory=subCat; pveCurrentDetail="";
+  document.getElementById("pveDetailCard").style.display="none";
+  const list=document.getElementById("pveList");
+  // 뒤로가기 버튼
+  list.innerHTML=`<div onclick="renderPveList('raid')" style="display:flex;align-items:center;gap:6px;padding:8px 4px;cursor:pointer;color:var(--text3);font-size:13px;margin-bottom:4px;">← 레이드</div>`;
+  const items=PVE_DATA_KEYS[subCat]||[];
+  if(!items.length){
+    const empty=document.createElement("div");
+    empty.className="empty-state"; empty.textContent="보스 없음";
+    list.appendChild(empty); return;
+  }
+  items.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="pve-btn";
+    div.textContent=item.name;
+    div.onclick=()=>{
+      document.querySelectorAll(".pve-btn").forEach(b=>b.classList.remove("active"));
+      div.classList.add("active");
+      loadPveData(subCat,item.id,item.name,item.type||"build");
+    };
+    list.appendChild(div);
+  });
+}
 function loadPveData(cat,id,title,type){ pveCurrentId=id; pveCurrentType=type; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="block"; document.getElementById("pveCardTitle").textContent=title; document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none"; document.getElementById("pveBuildArea").style.display="block"; if(type==="turn_build") document.getElementById("pveTurnSelect").value="8"; document.getElementById("pveBuildSelect").value="build1"; fetchPveRealData(); }
 function changePveTurn(){ pveCurrentDetail=""; fetchPveRealData(); }
 function changePveBuild(){ pveCurrentDetail=""; fetchPveRealData(); }
