@@ -1657,7 +1657,7 @@ const PVE_DATA_KEYS={
   advent:[{id:"destruct1",name:"🔥 파괴신 1라",type:"turn_build",fire:true},{id:"destruct2",name:"🔥 파괴신 2라",type:"turn_build",fire:true},{id:"teo",name:"태오"},{id:"kyle",name:"카일"},{id:"yeonhee",name:"연희"},{id:"karma",name:"카르마"}],
   raid:[{id:"normal_raid",name:"일반 레이드"},{id:"event_raid",name:"돌발 레이드"}],
   normal_raid:[{id:"eye_of_doom",name:"파멸의 눈동자"},{id:"umawang",name:"우마왕"},{id:"iron_predator",name:"강철의 포식자"}],
-  event_raid:[]
+  event_raid:[{id:"leonid",name:"레오니드"},{id:"astraea",name:"아스트레이아"},{id:"callistra",name:"칼리스트라"}]
 };
 function renderPveList(cat){ pveCurrentCategory=cat; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="none"; document.getElementById("tabSiege").className=cat==="siege"?"pve-tab-btn active":"pve-tab-btn"; document.getElementById("tabAdvent").className=cat==="advent"?"pve-tab-btn active":"pve-tab-btn"; const tabRaid=document.getElementById("tabRaid"); if(tabRaid) tabRaid.className=cat==="raid"?"pve-tab-btn active":"pve-tab-btn"; const list=document.getElementById("pveList"); list.innerHTML=""; PVE_DATA_KEYS[cat].forEach(item=>{ const div=document.createElement("div"); div.className=item.fire?"pve-btn fire":"pve-btn"; div.textContent=item.name; div.onclick=()=>{
     document.querySelectorAll(".pve-btn").forEach(b=>{ if(!b.classList.contains("fire")) b.classList.remove("active"); });
