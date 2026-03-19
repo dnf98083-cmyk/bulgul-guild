@@ -61,13 +61,86 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
 /* ── 모바일 하단 탭바 ── */
-#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(28,10,10,0.97); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(7,1fr); }
+#tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(20,6,6,0.98); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(7,1fr); }
 #tabBar.hidden { display:none; }
-.tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:8px 4px; color:var(--text3); border:none; background:none; font-family:inherit; }
-.tab-item .tab-icon { font-size:22px; transition:0.2s; }
-.tab-item .tab-label { font-size:10px; font-weight:600; }
+.tab-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; padding:6px 2px; color:var(--text3); border:none; background:none; font-family:inherit; transition:0.15s; }
+.tab-item .tab-icon { font-size:20px; transition:0.2s; }
+.tab-item .tab-label { font-size:9px; font-weight:700; letter-spacing:0.2px; }
 .tab-item.active { color:var(--accent); }
 .tab-item.active .tab-icon { filter:drop-shadow(0 0 6px var(--accent)); transform:translateY(-2px); }
+
+/* ── 모바일 전용 개선 ── */
+@media (max-width: 899px) {
+  /* 페이지 여백 줄이기 */
+  .screen { padding:16px 14px; padding-bottom:calc(var(--tab-h)+16px); }
+
+  /* 페이지 헤더 */
+  .page-header { margin-bottom:14px; padding-top:4px; }
+  .page-title { font-size:16px; }
+
+  /* 홈 인사 */
+  .home-greeting { margin-bottom:14px; }
+  .home-greeting .name { font-size:20px; }
+
+  /* 홈 스탯카드 */
+  .home-stat-card { padding:14px 16px; border-radius:12px; }
+  .home-stat-card .stat-value { font-size:20px; }
+
+  /* 빠른메뉴 버튼 */
+  .home-menu-btn { padding:14px 10px; border-radius:12px; gap:6px; }
+  .home-menu-btn .menu-icon { font-size:22px; }
+  .home-menu-btn .menu-label { font-size:12px; }
+  .home-menu-btn .menu-desc { font-size:10px; }
+
+  /* 섹션 타이틀 */
+  .section-title { font-size:11px; margin-bottom:8px; }
+
+  /* 카드 공통 */
+  .atk-card, .atk-btn { border-radius:10px; }
+
+  /* 폼 요소 */
+  .form-input, .form-select, .form-textarea {
+    font-size:15px !important;
+    padding:11px 14px !important;
+    border-radius:10px !important;
+  }
+
+  /* 버튼 */
+  .btn-icon { padding:7px 12px; font-size:11px; }
+  .btn-sm { padding:7px 12px; font-size:12px; }
+
+  /* PVE 버튼 */
+  .pve-btn { font-size:12px; padding:10px 8px; border-radius:10px; }
+  .pve-tab-btn { font-size:12px; padding:8px 10px; }
+
+  /* 랭킹 */
+  .rank-row { padding:10px 12px; gap:8px; }
+  .rank-num { font-size:14px; min-width:24px; }
+  .rank-name { font-size:13px; }
+  .rs-main { font-size:13px; }
+  .rs-sub { font-size:10px; }
+
+  /* 관리자 섹션 */
+  .admin-section { padding:14px 16px; border-radius:12px; }
+  .admin-section-title { font-size:12px; margin-bottom:10px; }
+
+  /* 공지 배너 */
+  .notice-banner { border-radius:12px; padding:14px 16px; }
+  .notice-banner-title { font-size:14px; }
+  .notice-banner-body { font-size:13px; }
+
+  /* 딜계산기 */
+  .calc-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px; }
+  .calc-field label { font-size:11px; }
+  .calc-result-grid { grid-template-columns:repeat(3,1fr); gap:6px; }
+  .calc-result-val { font-size:15px; }
+
+  /* 토스트 */
+  #toast { font-size:13px; padding:10px 18px; max-width:90vw; white-space:normal; text-align:center; }
+
+  /* 요일 버튼 */
+  .rank-day-btn { font-size:11px; padding:6px 3px; border-radius:7px; }
+}
 
 /* ── PC 사이드바 ── */
 #sidebar { display:none; }
