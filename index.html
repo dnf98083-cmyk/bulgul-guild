@@ -1202,16 +1202,20 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
       </div>
 
-      <!-- 강림원정대 보스 선택 -->
+      <!-- 강림원정대 - 파괴신만 -->
       <div id="rankPve_advent" style="display:none;">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
-          <button class="rank-day-btn active" id="rboss_태오" onclick="switchRankBoss('태오')">태오</button>
-          <button class="rank-day-btn" id="rboss_카일" onclick="switchRankBoss('카일')">카일</button>
-          <button class="rank-day-btn" id="rboss_연희" onclick="switchRankBoss('연희')">연희</button>
-          <button class="rank-day-btn" id="rboss_카르마" onclick="switchRankBoss('카르마')">카르마</button>
-          <button class="rank-day-btn" id="rboss_파괴신" onclick="switchRankBoss('파괴신')" style="grid-column:span 2;background:rgba(255,85,51,0.1);border-color:rgba(255,85,51,0.4);color:var(--accent);">👑 파괴신</button>
+        <div style="background:rgba(255,85,51,0.08);border:1px solid rgba(255,85,51,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center;font-size:14px;font-weight:900;color:var(--accent);">
+          👑 파괴신
         </div>
-        <div id="rankAdventList" class="rank-card"><div class="empty-state">보스를 선택하세요</div></div>
+
+        <!-- 이번주/저번주/성장률 탭 -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button id="aweek_this"   class="pve-tab-btn active" onclick="switchAdventWeek('this')"   style="flex:1;">이번주</button>
+          <button id="aweek_last"   class="pve-tab-btn"        onclick="switchAdventWeek('last')"   style="flex:1;">저번주</button>
+          <button id="aweek_growth" class="pve-tab-btn"        onclick="switchAdventWeek('growth')" style="flex:1;">📈 성장률</button>
+        </div>
+
+        <div id="rankAdventList" class="rank-card"><div class="empty-state">로딩중...</div></div>
 
         <!-- 관리자: 점수 입력 -->
         <div id="rankAdventAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
@@ -2589,7 +2593,7 @@ function switchRankPve(tab){
     if(panel) panel.style.display=t===tab?"block":"none";
   });
   if(tab==="siege") switchRankDay(currentRankDay);
-  else switchRankBoss(currentRankBoss);
+  else loadAdventRanking();
 }
 
 let currentSiegeWeek  = "this";
@@ -2720,15 +2724,85 @@ function delSiegeScore(day, week, id){
   });
 }
 
+let currentAdventWeek = "this";
+
 function switchRankBoss(boss){
   currentRankBoss = boss;
-  ["태오","카일","연희","카르마","파괴신"].forEach(b=>{
-    const btn=document.getElementById("rboss_"+b);
-    if(btn) btn.className=b===boss?"rank-day-btn active":"rank-day-btn";
-  });
-  loadPveScoreList("advent", boss, "rankAdventList");
+  loadAdventRanking();
   const adminPanel=document.getElementById("rankAdventAdmin");
   if(adminPanel) adminPanel.style.display=(myRole==="관리자")?"block":"none";
+}
+
+function switchAdventWeek(week){
+  currentAdventWeek = week;
+  ["this","last","growth"].forEach(w=>{
+    const btn=document.getElementById("aweek_"+w);
+    if(btn) btn.className=w===week?"pve-tab-btn active":"pve-tab-btn";
+  });
+  loadAdventRanking();
+}
+
+function loadAdventRanking(){
+  const list=document.getElementById("rankAdventList");
+  if(!list) return;
+  list.innerHTML="<div class='empty-state'>로딩중...</div>";
+  const boss="파괴신";
+  const badges=["🥇","🥈","🥉"];
+
+  if(currentAdventWeek==="growth"){
+    Promise.all([
+      db.ref(`pveScores/advent/${boss}/this`).once("value"),
+      db.ref(`pveScores/advent/${boss}/last`).once("value")
+    ]).then(([thisSnap,lastSnap])=>{
+      const thisMap={}, lastMap={};
+      Object.values(thisSnap.val()||{}).forEach(d=>{ if(d.nick) thisMap[d.nick]=d.score; });
+      Object.values(lastSnap.val()||{}).forEach(d=>{ if(d.nick) lastMap[d.nick]=d.score; });
+      const growthList=Object.keys(thisMap).filter(n=>lastMap[n]).map(nick=>{
+        const t=thisMap[nick], l=lastMap[nick];
+        return{nick,thisScore:t,lastScore:l,growth:Math.round((t-l)/l*100)};
+      }).sort((a,b)=>b.growth-a.growth);
+      if(!growthList.length){list.innerHTML="<div class='empty-state'>데이터 부족</div>";return;}
+      list.innerHTML=growthList.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        const c=d.growth>=0?"#27ae60":"#e74c3c";
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${i<3?badges[i]:i+1}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main" style="color:${c}">${d.growth>=0?"+":""}${d.growth}%</div>
+            <div class="rs-sub">${Number(d.lastScore).toLocaleString()} → ${Number(d.thisScore).toLocaleString()}</div>
+          </div>
+        </div>`;
+      }).join("");
+    });
+  } else {
+    db.ref(`pveScores/advent/${boss}/${currentAdventWeek}`).once("value").then(snap=>{
+      const data=snap.val();
+      if(!data){list.innerHTML="<div class='empty-state'>등록된 점수 없음</div>";return;}
+      const sorted=Object.entries(data).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.score-a.score);
+      const label=currentAdventWeek==="this"?"이번주":"저번주";
+      list.innerHTML=sorted.map((d,i)=>{
+        const isMe=d.nick===myNick;
+        return `<div class="rank-row${isMe?" rank-me":""}">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${i<3?badges[i]:i+1}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main">${Number(d.score).toLocaleString()}</div>
+            <div class="rs-sub">${label} · ${d.date||""}</div>
+          </div>
+          ${myRole==="관리자"?`<button class="btn-sm btn-red" style="padding:4px 8px;font-size:11px;margin-left:4px;" onclick="delAdventScore('${boss}','${currentAdventWeek}','${d.key}')">삭제</button>`:""}
+        </div>`;
+      }).join("");
+    });
+  }
+}
+
+function delAdventScore(boss, week, id){
+  if(!checkAdmin()) return;
+  if(!confirm("삭제할까요?")) return;
+  db.ref(`pveScores/advent/${boss}/${week}/${id}`).remove().then(()=>{
+    toast("삭제됨"); loadAdventRanking();
+  });
 }
 
 function loadPveScoreList(type, key, listId){
@@ -2764,7 +2838,7 @@ function addPveScore(type){
   const score=parseInt(scoreEl.value);
   if(!nick||!score) return toast("닉네임과 점수를 입력하세요");
   if(!loginNickList.includes(nick)) return toast("존재하지 않는 길드원입니다");
-  const key  = type==="siege"?currentRankDay:currentRankBoss;
+  const key  = type==="siege"?`${currentRankDay}/${currentSiegeInput}`:`파괴신/${currentAdventWeek||'this'}`;
   const date = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"}).replace(/\. /g,".").replace(".","");
   db.ref(`pveScores/${type}/${key}`).push({nick,score,date,createdAt:Date.now()}).then(()=>{
     toast("✅ 등록됨");
