@@ -852,6 +852,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
 
         <div class="calc-field">
+          <label class="calc-label">펫 깡공</label>
+          <input class="form-input" type="number" id="c_petflat" value="0" oninput="runCalc()" style="margin:0;">
+        </div>
+        <div class="calc-field">
           <label class="calc-label">펫 잠재력 %</label>
           <input class="form-input" type="number" id="c_potentialpct" value="0" oninput="runCalc()" style="margin:0;">
           <span class="calc-hint">태생공 × 잠재력% 적용</span>
@@ -868,12 +872,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="section-title">✨ 버프</div>
       <div class="calc-grid">
         <div class="calc-field">
-          <label class="calc-label">피해량 증가 % (공격력버프)</label>
+          <label class="calc-label">공격력 버프 %</label>
           <input class="form-input" type="number" id="c_buffpct" value="0" oninput="runCalc()" style="margin:0;">
-        </div>
-        <div class="calc-field">
-          <label class="calc-label">피해량 증가 % (피증)</label>
-          <input class="form-input" type="number" id="c_dmginc" value="0" oninput="runCalc()" style="margin:0;">
         </div>
       </div>
     </div>
