@@ -1220,6 +1220,11 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <!-- 관리자: 점수 입력 -->
         <div id="rankAdventAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
           <div class="admin-section-title">📝 점수 입력</div>
+          <!-- 이번주/저번주 선택 -->
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button id="ainput_this" onclick="switchAdventInput('this')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,85,51,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">이번주</button>
+            <button id="ainput_last" onclick="switchAdventInput('last')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">저번주</button>
+          </div>
 
           <!-- 입력 방식 탭 -->
           <div style="display:flex;gap:6px;margin-bottom:10px;">
@@ -2746,6 +2751,9 @@ function loadAdventRanking(){
   const list=document.getElementById("rankAdventList");
   if(!list) return;
   list.innerHTML="<div class='empty-state'>로딩중...</div>";
+  // 관리자 입력 패널 표시
+  const adminPanel=document.getElementById("rankAdventAdmin");
+  if(adminPanel) adminPanel.style.display=(myRole==="관리자")?"block":"none";
   const boss="파괴신";
   const badges=["🥇","🥈","🥉"];
 
@@ -3564,6 +3572,22 @@ function showCalcGuide(){
 function hideCalcGuide(){
   document.getElementById("calcGuideOverlay").style.display="none";
   document.getElementById("calcGuideModal").style.display="none";
+}
+
+
+function switchAdventInput(week){
+  currentAdventWeek = week;
+  const btnThis=document.getElementById("ainput_this");
+  const btnLast=document.getElementById("ainput_last");
+  if(week==="this"){
+    btnThis.style.border="1px solid var(--accent)"; btnThis.style.background="rgba(255,85,51,0.15)"; btnThis.style.color="var(--accent)";
+    btnLast.style.border="1px solid var(--border)"; btnLast.style.background="var(--surface2)"; btnLast.style.color="var(--text3)";
+  } else {
+    btnLast.style.border="1px solid var(--accent)"; btnLast.style.background="rgba(255,85,51,0.15)"; btnLast.style.color="var(--accent)";
+    btnThis.style.border="1px solid var(--border)"; btnThis.style.background="var(--surface2)"; btnThis.style.color="var(--text3)";
+  }
+  // 랭킹 탭도 같이 전환
+  switchAdventWeek(week);
 }
 
 </script>
