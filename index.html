@@ -849,17 +849,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
             <option value="irin">이린</option>
           </select>
         </div>
-        <div class="calc-field">
-          <label class="calc-label">성급</label>
-          <select class="form-select" id="c_petstar" onchange="onPetChange()" style="margin:0;">
-            <option value="5">5성</option>
-            <option value="6">6성</option>
-          </select>
-        </div>
-        <div class="calc-field">
-          <label class="calc-label">펫 깡공</label>
-          <input class="form-input" type="number" id="c_petflat" value="0" oninput="runCalc()" style="margin:0;">
-        </div>
+
+
         <div class="calc-field">
           <label class="calc-label">펫 잠재력 %</label>
           <input class="form-input" type="number" id="c_potentialpct" value="0" oninput="runCalc()" style="margin:0;">
@@ -871,44 +862,17 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       </div>
     </div>
 
-    <!-- 장비 세트 -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
-      <div class="section-title">🎽 장비 세트 (4세트 효과)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
-        <button id="set_없음" class="calc-set-btn active" onclick="selectSet('없음')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:var(--text2);">없음</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">-</div>
-        </button>
-        <button id="set_복수자" class="calc-set-btn" onclick="selectSet('복수자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#e05555;">복수자</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">피해+30% 보스+40%</div>
-        </button>
-        <button id="set_선봉장" class="calc-set-btn" onclick="selectSet('선봉장')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#4a9ae0;">선봉장</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">공격력+45%</div>
-        </button>
-        <button id="set_추적자" class="calc-set-btn" onclick="selectSet('추적자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#40c080;">추적자</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">약점피해+35%</div>
-        </button>
-        <button id="set_암살자" class="calc-set-btn" onclick="selectSet('암살자')" style="padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#9b59b6;">암살자</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">치타율+30% 방무+15%</div>
-        </button>
-      </div>
-      <div id="c_set_effect" style="font-size:12px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:8px 12px;display:none;"></div>
-    </div>
 
     <!-- 버프 -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;">
       <div class="section-title">✨ 버프</div>
       <div class="calc-grid">
         <div class="calc-field">
-          <label class="calc-label">공격력 버프 % (펫·세트 제외)</label>
+          <label class="calc-label">피해량 증가 % (공격력버프)</label>
           <input class="form-input" type="number" id="c_buffpct" value="0" oninput="runCalc()" style="margin:0;">
         </div>
         <div class="calc-field">
-          <label class="calc-label">피증 %</label>
+          <label class="calc-label">피해량 증가 % (피증)</label>
           <input class="form-input" type="number" id="c_dmginc" value="0" oninput="runCalc()" style="margin:0;">
         </div>
       </div>
@@ -991,25 +955,15 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <input class="form-input" type="number" id="c_defignpct" value="0" oninput="runCalc()" style="margin:0;">
         </div>
         <div class="calc-field">
-          <label class="calc-label">마법 취약 %</label>
+          <label class="calc-label">취약 %</label>
           <input class="form-input" type="number" id="c_magicvuln" value="0" oninput="runCalc()" style="margin:0;">
-          <span class="calc-hint">마법 캐릭터일 때</span>
-        </div>
-        <div class="calc-field">
-          <label class="calc-label">물리 취약 %</label>
-          <input class="form-input" type="number" id="c_physvuln" value="0" oninput="runCalc()" style="margin:0;">
-          <span class="calc-hint">물리 캐릭터일 때</span>
         </div>
         <div class="calc-field" id="c_bossrate_field">
           <label class="calc-label">보스 피해증가 %</label>
           <input class="form-input" type="number" id="c_bossrate" value="0" oninput="runCalc()" style="margin:0;">
           <span class="calc-hint">반지·버프 합산</span>
         </div>
-        <div class="calc-field" id="c_bossresist_field">
-          <label class="calc-label">보스 저항 %</label>
-          <input class="form-input" type="number" id="c_bossresist" value="0" oninput="runCalc()" style="margin:0;">
-          <span class="calc-hint">보스 속성 저항</span>
-        </div>
+
         <div class="calc-field">
           <label class="calc-label">최대 HP <span style="color:var(--text3);font-weight:400;">(0=미입력)</span></label>
           <input class="form-input" type="number" id="c_targetHP" value="0" oninput="runCalc()" style="margin:0;">
@@ -2313,7 +2267,7 @@ const SET_DATA = {
   추적자:{ atkBuff:0,  dmg:0,  bossDmg:0, weakDmg:35,critRate:0, defPen:0 },
   암살자:{ atkBuff:0,  dmg:0,  bossDmg:0, weakDmg:0, critRate:30,defPen:15 },
 };
-let currentSet = "없음";
+let currentSet = "없음"; // 세트 비활성화
 let isBossMode = true;
 
 function selectSet(name){
@@ -2366,24 +2320,24 @@ function toggleBoss(on){
 const PET_DATA = {
   windi: {
     name:"윈디",
-    5: { buffAtk:10, dmgInc:20 },
-    6: { buffAtk:12, dmgInc:26 }
+    5: { buffAtk:10, dmgInc:20, flatAtk:564 },
+    6: { buffAtk:12, dmgInc:26, flatAtk:564 }
   },
   yenji: {
     name:"연지",
-    5: { buffAtk:19, dmgInc:0 },
-    6: { buffAtk:21, dmgInc:0 }
+    5: { buffAtk:19, dmgInc:0, flatAtk:564 },
+    6: { buffAtk:21, dmgInc:0, flatAtk:564 }
   },
   irin: {
     name:"이린",
-    5: { buffAtk:19, dmgInc:0 },
-    6: { buffAtk:21, dmgInc:0 }
+    5: { buffAtk:19, dmgInc:0, flatAtk:564 },
+    6: { buffAtk:21, dmgInc:0, flatAtk:564 }
   }
 };
 
 function onPetChange(){
   const petType = document.getElementById('c_pettype').value;
-  const petStar = parseInt(document.getElementById('c_petstar').value);
+  const petStar = 6;
   const effectDiv = document.getElementById('c_pet_effect');
   const effectText = document.getElementById('c_pet_effect_text');
   if(petType==='none'){ effectDiv.style.display='none'; runCalc(); return; }
@@ -2406,7 +2360,7 @@ function runCalc(){
   const buffPctAdd  = cv('c_buffpct')      / 100;
   const critRatePct = Math.min(100, cv('c_critchance') + (SET_DATA[currentSet]?.critRate||0));
   const petType     = document.getElementById('c_pettype')?.value || 'none';
-  const petStar     = parseInt(document.getElementById('c_petstar')?.value || '6');
+  const petStar     = 6;
   const defVal      = cv('c_defval');
   const defBoost    = cv('c_defboostpct')  / 100;
   const defReduce   = cv('c_defreducepct') / 100;
@@ -2424,9 +2378,7 @@ function runCalc(){
   const weakCoefBase = cv('c_weakcoef') + cv('c_weakbuff') / 100;
   // 약공확률 0%면 약공계수 1.0, 100%면 그대로 적용
   const weakCoef    = weakChance >= 100 ? weakCoefBase : 1.0;
-  const magicVuln   = 1 + cv('c_magicvuln') / 100;
-  const physVuln    = 1 + cv('c_physvuln')  / 100;
-  const vulnCoef    = magicVuln * physVuln;
+  const vulnCoef    = 1 + cv('c_magicvuln') / 100;
   const bossRate    = 1 + cv('c_bossrate')  / 100;
   const dmgIncAdd   = cv('c_dmginc')       / 100;
   const targetMaxHP = cv('c_targetHP');
@@ -2460,8 +2412,7 @@ function runCalc(){
   const dmgIncCoef = 1 + dmgIncAdd + petDmgInc + setDmg;
 
   // 보스 관련
-  const bossResist  = cv('c_bossresist') / 100;
-  const bossMult    = isBossMode ? bossRate * (1 + setBossDmg) * (1 - bossResist) : 1;
+  const bossMult    = isBossMode ? bossRate * (1 + setBossDmg) : 1;
   const weakDmgCoef = 1 + setWeakDmg + cv('c_weakbuff2')/100; // 세트 약점피해 포함 (weakbuff는 따로)
 
   // 합산 배율
