@@ -1594,24 +1594,28 @@ function loadHomeAdventGraph(){
     if(latestEl) latestEl.textContent = "최신: " + Number(latest.total).toLocaleString();
 
     const maxScore = Math.max(...seasons.map(s=>s.total));
-    const minScore = Math.min(...seasons.map(s=>s.total));
-    const range = maxScore - minScore || 1;
 
     barsEl.innerHTML = seasons.map((s,i)=>{
-      const pct = Math.round(((s.total-minScore)/range)*70)+20;
+      const pct = Math.round((s.total / maxScore) * 90) + 5; // 0기준, 최대값=95%
       const prev = seasons[i-1];
       const isUp = prev ? s.total >= prev.total : true;
       const color = isUp ? "#27ae60" : "#e74c3c";
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="${s.season}: ${Number(s.total).toLocaleString()}">
-        <div style="font-size:8px;color:${color};font-weight:700;">${Number(s.total/10000).toFixed(0)}만</div>
-        <div style="width:100%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:6px;opacity:0.85;"></div>
-        <div style="font-size:8px;color:${color};">${prev?(isUp?"▲":"▼"):"-"}</div>
+      const scoreLabel = s.total >= 10000
+        ? (s.total/10000).toFixed(1)+"만"
+        : Number(s.total).toLocaleString();
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;" title="${s.season}: ${Number(s.total).toLocaleString()}">
+        <div style="font-size:8px;color:${color};font-weight:700;text-align:center;">${scoreLabel}</div>
+        <div style="width:80%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:4px;opacity:0.85;transition:height 0.4s;"></div>
       </div>`;
     }).join("");
 
-    labelsEl.innerHTML = seasons.map(s=>`
-      <div style="flex:1;text-align:center;font-size:9px;color:var(--text3);font-weight:700;overflow:hidden;white-space:nowrap;">${s.season}</div>
-    `).join("");
+    labelsEl.innerHTML = seasons.map((s,i)=>{
+      const prev = seasons[i-1];
+      const isUp = prev ? s.total >= prev.total : null;
+      const arrow = isUp===null ? "" : isUp ? " ▲" : " ▼";
+      const color = isUp===null ? "var(--text3)" : isUp ? "#27ae60" : "#e74c3c";
+      return `<div style="flex:1;text-align:center;font-size:9px;color:${color};font-weight:700;overflow:hidden;white-space:nowrap;">${s.season}${arrow}</div>`;
+    }).join("");
   });
 }
 
@@ -1642,31 +1646,32 @@ function loadAdventTotal(){
     const latest = seasons[seasons.length-1];
     if(latestEl) latestEl.textContent = "최신: " + Number(latest.total).toLocaleString();
 
-    // 그래프 그리기
+    // 그래프 그리기 (0 기준 절대값)
     const maxScore = Math.max(...seasons.map(s=>s.total));
-    const minScore = Math.min(...seasons.map(s=>s.total));
-    const range = maxScore - minScore || 1;
 
     if(barsEl){
       barsEl.innerHTML = seasons.map((s,i)=>{
-        const pct = Math.round(((s.total - minScore) / range) * 70) + 20; // 20~90% 범위
+        const pct = Math.round((s.total / maxScore) * 90) + 5;
         const prev = seasons[i-1];
         const isUp = prev ? s.total >= prev.total : true;
         const color = isUp ? "#27ae60" : "#e74c3c";
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:default;"
-          title="${s.season}: ${Number(s.total).toLocaleString()}">
-          <div style="font-size:8px;color:${color};font-weight:700;">${Number(s.total/10000).toFixed(0)}만</div>
-          <div style="width:100%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:6px;opacity:0.85;transition:height 0.3s;"></div>
-          ${isUp&&prev?`<div style="font-size:8px;color:${color};">▲</div>`
-            :prev?`<div style="font-size:8px;color:${color};">▼</div>`
-            :`<div style="font-size:8px;color:var(--text3);">-</div>`}
+        const scoreLabel = s.total >= 10000
+          ? (s.total/10000).toFixed(1)+"만"
+          : Number(s.total).toLocaleString();
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;" title="${s.season}: ${Number(s.total).toLocaleString()}">
+          <div style="font-size:8px;color:${color};font-weight:700;text-align:center;">${scoreLabel}</div>
+          <div style="width:80%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:4px;opacity:0.85;transition:height 0.4s;"></div>
         </div>`;
       }).join("");
     }
     if(labelsEl){
-      labelsEl.innerHTML = seasons.map(s=>`
-        <div style="flex:1;text-align:center;font-size:9px;color:var(--text3);font-weight:700;overflow:hidden;white-space:nowrap;">${s.season}</div>
-      `).join("");
+      labelsEl.innerHTML = seasons.map((s,i)=>{
+        const prev = seasons[i-1];
+        const isUp = prev ? s.total >= prev.total : null;
+        const arrow = isUp===null ? "" : isUp ? " ▲" : " ▼";
+        const color = isUp===null ? "var(--text3)" : isUp ? "#27ae60" : "#e74c3c";
+        return `<div style="flex:1;text-align:center;font-size:9px;color:${color};font-weight:700;overflow:hidden;white-space:nowrap;">${s.season}${arrow}</div>`;
+      }).join("");
     }
 
     // 관리자 시즌 목록 렌더링
