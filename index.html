@@ -815,6 +815,50 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div id="calcScreen" class="screen">
     <div class="page-header">
       <div class="page-title">🧮 딜 계산기</div>
+      <button class="btn-icon" onclick="showCalcGuide()">❓ 설명서</button>
+    </div>
+
+    <!-- 설명서 팝업 -->
+    <div id="calcGuideOverlay" onclick="hideCalcGuide()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+    <div id="calcGuideModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:900;">📖 딜 계산기 입력 설명</div>
+        <button onclick="hideCalcGuide()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;">
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">⚔️ 캐릭터</div>
+          <div><b>프로필 공격력</b> — 캐릭터 스탯창에 보이는 공격력</div>
+          <div><b>태생 공격력</b> — 도감에서 확인, 30렙 5강 기준 수치</div>
+          <div><b>진형 보너스 %</b> — 진형이 주는 공격력 증가 %</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">🐾 펫</div>
+          <div><b>펫 깡공</b> — 펫이 주는 고정 공격력 수치</div>
+          <div><b>펫 잠재력 %</b> — 펫 잠재력으로 올린 % (태생공에 곱해짐)</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">✨ 버프</div>
+          <div><b>공격력 버프 %</b> — 물리피해량증가, 공격력 버프 등 합산</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">💥 스킬</div>
+          <div><b>스킬 계수 %</b> — 스킬 정보창의 배율 (기본 100)</div>
+          <div><b>치명타 피해 %</b> — 스탯창 치명타 피해 수치 + 버프</div>
+          <div><b>약공계수</b> — 기본 1.3, 추적자 4세트 착용 시 1.5</div>
+          <div><b>약점공격 피해증가 %</b> — 약점공격 피해 버프 (예: 23%)</div>
+          <div><b>공격 횟수</b> — 멀티히트 스킬일 때 타수 입력</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">👾 상대 정보</div>
+          <div><b>방어력</b> — 보스·적의 방어력 수치</div>
+          <div><b>방증 %</b> — 진형이 적에게 주는 방어력 증가</div>
+          <div><b>방감 %</b> — 방어력 감소 버프 합산</div>
+          <div><b>방무 %</b> — 방어 무시 합산</div>
+          <div><b>취약 %</b> — 마법·물리 취약 합산</div>
+          <div><b>피해량 증가 %</b> — 보스배율, 반지, 버프 합산</div>
+        </div>
+      </div>
     </div>
 
     <!-- 캐릭터 -->
@@ -943,7 +987,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <input class="form-input" type="number" id="c_defval" value="0" oninput="runCalc()" style="margin:0;">
         </div>
         <div class="calc-field">
-          <label class="calc-label">방증 % (진형버프)</label>
+          <label class="calc-label">방증 %</label>
           <input class="form-input" type="number" id="c_defboostpct" value="0" oninput="runCalc()" style="margin:0;">
         </div>
         <div class="calc-field">
@@ -959,7 +1003,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <input class="form-input" type="number" id="c_magicvuln" value="0" oninput="runCalc()" style="margin:0;">
         </div>
         <div class="calc-field" id="c_bossrate_field">
-          <label class="calc-label">보스 피해증가 %</label>
+          <label class="calc-label">피해량 증가 %</label>
           <input class="form-input" type="number" id="c_bossrate" value="0" oninput="runCalc()" style="margin:0;">
           <span class="calc-hint">반지·버프 합산</span>
         </div>
@@ -3436,6 +3480,16 @@ async function renameGuildMember(){
     statusEl.style.color="#e74c3c";
     statusEl.textContent="❌ 오류: "+e.message;
   }
+}
+
+
+function showCalcGuide(){
+  document.getElementById("calcGuideOverlay").style.display="block";
+  document.getElementById("calcGuideModal").style.display="block";
+}
+function hideCalcGuide(){
+  document.getElementById("calcGuideOverlay").style.display="none";
+  document.getElementById("calcGuideModal").style.display="none";
 }
 
 </script>
