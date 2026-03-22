@@ -58,7 +58,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 .login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,85,51,0.1); }
 .btn-primary { width:100%; background:linear-gradient(135deg,#ff4b2b,#ff3d3d); color:#fff; border:none; padding:16px; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; transition:0.2s; box-shadow:var(--glow); margin-top:16px; }
 .btn-primary:active { transform:scale(0.98); }
-.admin-link { margin-top:24px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:inherit; }
 
 /* ── 모바일 하단 탭바 ── */
 #tabBar { position:fixed; bottom:0; left:0; right:0; z-index:1000; height:var(--tab-h); background:rgba(20,6,6,0.98); border-top:1px solid var(--border); backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(7,1fr); }
@@ -459,7 +458,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <input id="codeInput" type="password" placeholder="6자리 코드" autocomplete="off">
     <button class="btn-primary" onclick="tryLogin()">입장하기 →</button>
   </div>
-  <button class="admin-link" onclick="adminLogin()">관리자 로그인</button>
 </div>
 
 <!-- ══ PC 사이드바 ══ -->
@@ -490,7 +488,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="sb-nick" style="margin-bottom:0;">접속 중: <b id="sidebarNick">-</b> <span id="roleBadge" style="display:none;font-size:10px;padding:2px 7px;border-radius:20px;color:#fff;font-weight:700;margin-left:4px;"></span></div>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtnSb" style="font-size:13px;padding:5px 10px;">🌙</button>
     </div>
-    <button id="sbAdminBtn" class="sb-admin-btn" onclick="tryAdminSwitch()">🔐 관리자 전환</button>
     <button class="sb-logout" onclick="doLogout()">로그아웃</button>
   </div>
 </div>
@@ -1422,8 +1419,7 @@ function toast(msg) {
 window.onload = () => {
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
   if(nick&&key){
-    if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick="관리자"; enterApp(); }
-    else { checkLogin(nick,key,true); }
+    checkLogin(nick,key,true);
   }
   document.getElementById("codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
   document.getElementById("nickInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
@@ -1443,7 +1439,6 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
-  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myRole="관리자"; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
       localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick;
@@ -1455,13 +1450,6 @@ function checkLogin(nick,key,isAuto) {
       });
     } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
   });
-}
-function adminLogin() {
-  const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){
-    localStorage.setItem("nickname","관리자"); localStorage.setItem("accessKey","ADMIN");
-    myNick="관리자"; isAdminAuthenticated=true; enterApp();
-  } else if(pw!==null) toast("비밀번호가 틀렸습니다");
 }
 function checkPW() {
   if(isAdminAuthenticated) return true;
@@ -1504,8 +1492,6 @@ function enterApp() {
 function showAdminNav() {
   const adminNav=document.getElementById("adminNavSection");
   if(adminNav) adminNav.style.display="block";
-  const sbAdminBtn=document.getElementById("sbAdminBtn");
-  if(sbAdminBtn) sbAdminBtn.style.display="none";
   // 역할 뱃지 표시
   const badge=document.getElementById("roleBadge");
   if(badge){
@@ -1523,13 +1509,7 @@ function showAdminNav() {
   }
 }
 
-// ══ 관리자 전환 (앱 안에서) ══
-function tryAdminSwitch() {
-  if(isAdminAuthenticated){ showAdminNav(); toast("이미 관리자입니다"); return; }
-  const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){ isAdminAuthenticated=true; myRole="관리자"; showAdminNav(); toast("🔐 관리자 모드 활성화!"); }
-  else if(pw!==null) toast("비밀번호가 틀렸습니다");
-}
+// 관리자 전환 제거됨
 
 function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear(); location.reload(); }
 
@@ -3223,7 +3203,7 @@ async function addBulkScores(type, textId, listId, key){
   if(btn){ btn.disabled=false; btn.textContent="일괄 등록"; }
   bulkScoresRunning = false;
   if(type==="siege") loadSiegeRanking();
-  else loadPveScoreList("advent", key, listId);
+  else loadAdventRanking();
 }
 
 // ══ 텍스트에리어 자동완성 ══
@@ -3312,7 +3292,8 @@ function addSiegeBulk(){
   addBulkScores("siege","siegeBulkText","rankSiegeList",`${currentRankDay}/${currentSiegeInput}`);
 }
 function addAdventBulk(){
-  addBulkScores("advent","adventBulkText","rankAdventList",currentRankBoss);
+  const week = currentAdventWeek||"this";
+  addBulkScores("advent","adventBulkText","rankAdventList",`파괴신/${week}`);
 }
 
 // ══ AI 스캔 (공통 로직) ══
