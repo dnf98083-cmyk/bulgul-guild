@@ -459,6 +459,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <input id="codeInput" type="password" placeholder="6자리 코드" autocomplete="off">
     <button class="btn-primary" onclick="tryLogin()">입장하기 →</button>
   </div>
+  <button class="admin-link" onclick="adminLogin()">관리자 로그인</button>
 </div>
 
 <!-- ══ PC 사이드바 ══ -->
@@ -1410,62 +1411,12 @@ function toast(msg) {
   setTimeout(()=>t.classList.remove("show"),2200);
 }
 
-// ══ 로그인 닉네임 자동완성 ══
-let loginNickList = [];
-let loginSuggestIdx = -1;
-
-function preloadNickList(){
-  db.ref("allowedUsers").once("value").then(snap=>{
-    const data = snap.val()||{};
-    loginNickList = Object.keys(data);
-  });
-}
-
-function filterLoginNick(){
-  const input = document.getElementById("nickInput");
-  const suggest = document.getElementById("loginNickSuggest");
-  const val = input.value.trim().toLowerCase();
-  loginSuggestIdx = -1;
-  if(!val){ suggest.style.display="none"; return; }
-  const matches = loginNickList.filter(n => n.toLowerCase().includes(val));
-  if(!matches.length){ suggest.style.display="none"; return; }
-  suggest.innerHTML = matches.map((nick, i) => `
-    <div class="login-suggest-item" id="lsi_${i}"
-      onmousedown="selectLoginNick('${nick}')"
-      onmouseover="loginSuggestIdx=${i};highlightLoginSuggest()"
-      style="padding:11px 16px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
-      ${nick}
-    </div>`).join("");
-  suggest.style.display = "block";
-}
-
-function selectLoginNick(nick){
-  document.getElementById("nickInput").value = nick;
-  document.getElementById("loginNickSuggest").style.display = "none";
-  document.getElementById("codeInput").focus();
-}
-
-function highlightLoginSuggest(){
-  document.querySelectorAll(".login-suggest-item").forEach((el, i) => {
-    el.style.background = i === loginSuggestIdx ? "rgba(255,85,51,0.12)" : "";
-  });
-}
-
-function loginNickKeyDown(e){
-  const suggest = document.getElementById("loginNickSuggest");
-  const items = suggest.querySelectorAll(".login-suggest-item");
-  if(!items.length || suggest.style.display==="none") return;
-  if(e.key==="ArrowDown"){ e.preventDefault(); loginSuggestIdx=Math.min(loginSuggestIdx+1,items.length-1); highlightLoginSuggest(); }
-  else if(e.key==="ArrowUp"){ e.preventDefault(); loginSuggestIdx=Math.max(loginSuggestIdx-1,0); highlightLoginSuggest(); }
-  else if(e.key==="Enter"&&loginSuggestIdx>=0){ e.preventDefault(); selectLoginNick(items[loginSuggestIdx].textContent.trim()); }
-  else if(e.key==="Escape"){ suggest.style.display="none"; }
-}
-
 // ══ 초기화 ══
 window.onload = () => {
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
   if(nick&&key){
-    checkLogin(nick,key,true);
+    if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick="관리자"; enterApp(); }
+    else { checkLogin(nick,key,true); }
   }
   document.getElementById("codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
   document.getElementById("nickInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
@@ -1485,6 +1436,7 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
+  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myRole="관리자"; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
       localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick;
@@ -1497,6 +1449,12 @@ function checkLogin(nick,key,isAuto) {
     } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
   });
 }
+function adminLogin() {
+  const pw=prompt("관리자 비밀번호");
+  if(pw===ADMIN_PW){
+    localStorage.setItem("nickname","관리자"); localStorage.setItem("accessKey","ADMIN");
+    myNick="관리자"; isAdminAuthenticated=true; enterApp();
+  } else if(pw!==null) toast("비밀번호가 틀렸습니다");
 }
 function checkPW() {
   if(isAdminAuthenticated) return true;
@@ -1552,11 +1510,9 @@ function showAdminNav() {
   // 연구원은 길드원/승패관리 탭 숨기기
   if(myRole==="연구원"){
     const allSbItems=document.querySelectorAll(".sb-item");
-    allSbItems.forEach(btn=>{
-      const t=btn.getAttribute("onclick")||"";
-      if(t.includes("adminMembers")||t.includes("adminScores"))
-        btn.style.display="none";
-    });
+    // adminMembers(index 5), adminScores(index 7) 숨기기
+    if(allSbItems[5]) allSbItems[5].style.display="none";
+    if(allSbItems[7]) allSbItems[7].style.display="none";
   }
 }
 
@@ -2875,7 +2831,72 @@ function loadRanking(){
 
 
 // ══ 로그인 닉네임 자동완성 ══
+let loginNickList = [];
+let loginSuggestIdx = -1;
 
+// 앱 시작 시 닉네임 목록 미리 로드
+function preloadNickList(){
+  db.ref("allowedUsers").once("value").then(snap=>{
+    const data = snap.val()||{};
+    loginNickList = Object.keys(data);
+  });
+}
+
+function filterLoginNick(){
+  const input = document.getElementById("nickInput");
+  const suggest = document.getElementById("loginNickSuggest");
+  const val = input.value.trim().toLowerCase();
+  loginSuggestIdx = -1;
+
+  if(!val){ suggest.style.display="none"; return; }
+
+  const matches = loginNickList.filter(n => n.toLowerCase().includes(val));
+  if(!matches.length){ suggest.style.display="none"; return; }
+
+  suggest.innerHTML = matches.map((nick, i) => `
+    <div class="login-suggest-item" id="lsi_${i}"
+      onmousedown="selectLoginNick('${nick}')"
+      onmouseover="loginSuggestIdx=${i};highlightLoginSuggest()"
+      style="padding:11px 16px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
+      ${nick}
+    </div>`).join("");
+  suggest.style.display = "block";
+}
+
+function selectLoginNick(nick){
+  document.getElementById("nickInput").value = nick;
+  document.getElementById("loginNickSuggest").style.display = "none";
+  // 코드 입력칸으로 포커스 이동
+  document.getElementById("codeInput").focus();
+}
+
+function highlightLoginSuggest(){
+  document.querySelectorAll(".login-suggest-item").forEach((el, i) => {
+    el.style.background = i === loginSuggestIdx ? "rgba(255,85,51,0.12)" : "";
+  });
+}
+
+function loginNickKeyDown(e){
+  const suggest = document.getElementById("loginNickSuggest");
+  const items = suggest.querySelectorAll(".login-suggest-item");
+  if(!items.length || suggest.style.display==="none") return;
+
+  if(e.key==="ArrowDown"){
+    e.preventDefault();
+    loginSuggestIdx = Math.min(loginSuggestIdx+1, items.length-1);
+    highlightLoginSuggest();
+  } else if(e.key==="ArrowUp"){
+    e.preventDefault();
+    loginSuggestIdx = Math.max(loginSuggestIdx-1, 0);
+    highlightLoginSuggest();
+  } else if(e.key==="Enter" && loginSuggestIdx >= 0){
+    e.preventDefault();
+    const nick = items[loginSuggestIdx].textContent.trim();
+    selectLoginNick(nick);
+  } else if(e.key==="Escape"){
+    suggest.style.display="none";
+  }
+}
 
 // 외부 클릭 시 드롭다운 닫기
 document.addEventListener("click", e=>{
