@@ -459,7 +459,6 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <input id="codeInput" type="password" placeholder="6자리 코드" autocomplete="off">
     <button class="btn-primary" onclick="tryLogin()">입장하기 →</button>
   </div>
-  <button class="admin-link" onclick="adminLogin()">관리자 로그인</button>
 </div>
 
 <!-- ══ PC 사이드바 ══ -->
@@ -1415,8 +1414,7 @@ function toast(msg) {
 window.onload = () => {
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
   if(nick&&key){
-    if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myNick="관리자"; enterApp(); }
-    else { checkLogin(nick,key,true); }
+    checkLogin(nick,key,true);
   }
   document.getElementById("codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
   document.getElementById("nickInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
@@ -1436,7 +1434,6 @@ function tryLogin() {
   checkLogin(nick,key,false);
 }
 function checkLogin(nick,key,isAuto) {
-  if(nick==="관리자"&&key==="ADMIN"){ isAdminAuthenticated=true; myRole="관리자"; myNick=nick; enterApp(); return; }
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
       localStorage.setItem("nickname",nick); localStorage.setItem("accessKey",key); myNick=nick;
@@ -1449,12 +1446,7 @@ function checkLogin(nick,key,isAuto) {
     } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
   });
 }
-function adminLogin() {
-  const pw=prompt("관리자 비밀번호");
-  if(pw===ADMIN_PW){
-    localStorage.setItem("nickname","관리자"); localStorage.setItem("accessKey","ADMIN");
-    myNick="관리자"; isAdminAuthenticated=true; enterApp();
-  } else if(pw!==null) toast("비밀번호가 틀렸습니다");
+ else if(pw!==null) toast("비밀번호가 틀렸습니다");
 }
 function checkPW() {
   if(isAdminAuthenticated) return true;
@@ -1510,9 +1502,11 @@ function showAdminNav() {
   // 연구원은 길드원/승패관리 탭 숨기기
   if(myRole==="연구원"){
     const allSbItems=document.querySelectorAll(".sb-item");
-    // adminMembers(index 5), adminScores(index 7) 숨기기
-    if(allSbItems[5]) allSbItems[5].style.display="none";
-    if(allSbItems[7]) allSbItems[7].style.display="none";
+    allSbItems.forEach(btn=>{
+      const t=btn.getAttribute("onclick")||"";
+      if(t.includes("adminMembers")||t.includes("adminScores"))
+        btn.style.display="none";
+    });
   }
 }
 
