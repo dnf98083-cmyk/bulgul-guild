@@ -686,7 +686,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <div class="info-block">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
               <div class="ib-label" style="margin:0;">진형</div>
-              <button onclick="toggleFormationEdit()" style="font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;" id="formationEditBtn">✏️ 수정</button>
+              <button onclick="toggleFormationEdit()" style="font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;display:none;" id="formationEditBtn">✏️ 수정</button>
             </div>
             <div id="cardFormation">-</div>
             <div id="formationEditArea" style="display:none;margin-top:8px;">
@@ -1701,6 +1701,9 @@ function showAdminNav() {
   const adminNav=document.getElementById("adminNavSection");
   if(adminNav) adminNav.style.display="block";
   // 역할 뱃지 표시
+  // 진형 수정 버튼 표시 (관리자/연구원)
+  const formEditBtn=document.getElementById("formationEditBtn");
+  if(formEditBtn) formEditBtn.style.display="inline-block";
   const badge=document.getElementById("roleBadge");
   if(badge){
     const colors={"관리자":"#ff5533","연구원":"#3498db"};
@@ -1954,7 +1957,7 @@ const FORMATION_LAYOUTS = {
   "기본":   [[0,1],[2,3,4]],       // 앞줄 1,2 / 뒷줄 3,4,5
   "밸런스": [[0,1,2],[3,4]],       // 앞줄 1,2,3 / 뒷줄 4,5
   "공격":   [[0],[1,2,3,4]],       // 앞줄 1 / 뒷줄 2,3,4,5
-  "보호":   [[0,4],[1,2,3]],       // 앞줄 1,5 / 뒷줄 2,3,4
+  "보호":   [[0,1,2,3],[4]],       // 앞줄 1,2,3,4 / 뒷줄 5
 };
 
 function detectFormationType(text){
@@ -1982,7 +1985,14 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
   const wrap = document.createElement("div");
   wrap.className = "formation-wrap";
 
-  layout.forEach(row=>{
+  // 앞줄/뒷줄 라벨 (첫 번째 row = 앞줄, 나머지 = 뒷줄)
+  layout.forEach((row, rowIdx)=>{
+    // 라벨 추가
+    const rowLabel = document.createElement("div");
+    rowLabel.style.cssText = "font-size:9px;color:var(--text3);font-weight:700;text-align:center;margin-bottom:2px;letter-spacing:0.5px;";
+    rowLabel.textContent = rowIdx===0 ? "▲ 앞줄" : "▼ 뒷줄";
+    wrap.appendChild(rowLabel);
+
     const rowDiv = document.createElement("div");
     rowDiv.className = "formation-row";
     row.forEach(idx=>{
@@ -1991,8 +2001,8 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
       const charName = chars[idx] || "";
 
       if(editable){
-        // 클릭하면 인라인 input으로 전환
-        cell.textContent = charName || "?";
+        cell.textContent = charName || "";
+      if(!charName) cell.style.borderStyle='dashed';
         cell.style.cursor = "pointer";
         cell.title = "클릭해서 수정";
         cell.onclick = ()=>{
@@ -2003,7 +2013,6 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
             const newVal = input.value.trim();
             chars[idx] = newVal;
             cell.textContent = newVal || "?";
-            // 전체 진형 문자열 재조성
             const allChars = [];
             layout.forEach(r=> r.forEach(i=>{ if(chars[i]!==undefined) allChars[i]=chars[i]; }));
             const newFormation = type + " " + allChars.filter(Boolean).join(" ");
@@ -2016,7 +2025,8 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
           input.select();
         };
       } else {
-        cell.textContent = charName || "?";
+        cell.textContent = charName || "";
+      if(!charName) cell.style.borderStyle='dashed';
       }
       rowDiv.appendChild(cell);
     });
