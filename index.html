@@ -748,6 +748,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <div id="pveDetailCard" class="atk-card" style="display:none;">
       <div class="atk-card-header" style="margin-bottom:14px;padding-bottom:12px;">
         <div class="atk-card-name" id="pveCardTitle"></div>
+        <div id="pveMakerDisplay" class="atk-card-maker" style="margin-top:3px;"></div>
       </div>
       <div id="pveTurnArea" style="display:none;margin-bottom:10px;">
         <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px;">⏳ 턴 수</div>
@@ -1274,6 +1275,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
         <!-- 관리자: 점수 입력 -->
         <div id="rankAdventAdmin" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+          <!-- 주차 이동 -->
+          <div style="background:rgba(255,85,51,0.06);border:1px solid rgba(255,85,51,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:8px;">📅 주차 이동</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">이번주 데이터를 저번주로 이동하고 이번주를 초기화해요</div>
+            <button class="btn-sm btn-red" onclick="moveAdventWeek()" style="width:100%;">이번주→저번주</button>
+          </div>
           <div class="admin-section-title">📝 점수 입력</div>
           <!-- 이번주/저번주 선택 -->
           <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1569,6 +1576,24 @@ function showAdminNav() {
 }
 
 // 관리자 전환 제거됨
+
+// ══ 파괴신 주차 이동 ══
+async function moveAdventWeek(){
+  if(!checkAdmin()) return;
+  if(!confirm("파괴신 이번주 데이터를 저번주로 이동하고 이번주를 초기화할까요?\n\n이 작업은 되돌릴 수 없어요!")) return;
+
+  toast("⏳ 이동 중...");
+  const thisSnap = await db.ref("pveScores/advent/파괴신/this").once("value");
+  const thisData = thisSnap.val();
+
+  await db.ref("pveScores/advent/파괴신/last").remove();
+  if(thisData) await db.ref("pveScores/advent/파괴신/last").set(thisData);
+  await db.ref("pveScores/advent/파괴신/this").remove();
+
+  toast("✅ 주차 이동 완료!");
+  loadAdventRanking();
+}
+
 
 // ══ 홈 파괴신 시즌 그래프 ══
 function loadHomeAdventGraph(){
@@ -1911,7 +1936,7 @@ function addLose() { if(!confirm("패배를 기록할까요?")) return; const l=
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
 function delDefense() { if(checkResearcher()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
-function addAttack() { if(!checkResearcher()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0}); toast("추가됨"); }
+function addAttack() { if(!checkResearcher()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0,maker:myNick}); toast("추가됨"); }
 function editAttack() { if(!checkResearcher()||!currentAttack) return; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value}); toast("수정됨"); }
 function delAttack() { if(checkResearcher()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
 
@@ -2027,6 +2052,9 @@ function fetchPveRealData(){
     document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
     document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
     document.getElementById("viewPveEquip").textContent=currentData?.equip||"-";
+    // 작성자 표시
+    const pveMakerEl = document.getElementById("pveMakerDisplay");
+    if(pveMakerEl) pveMakerEl.textContent = currentData?.maker ? `✏️ By. ${currentData.maker}` : (buildData?.maker ? `✏️ By. ${buildData.maker}` : "");
     renderPveDetailTabs(details);
     if(document.getElementById("pveEditMode").style.display==="block") fillPveEditForm(buildData, details);
   });
@@ -2124,7 +2152,7 @@ function savePveData(){
   const dataPath = savedDetail ? `${buildPath}/details/${savedDetail}` : buildPath;
 
   const doSave=(existingDetailName)=>{
-    const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now()});
+    const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now(), maker:myNick});
     let p2;
     if(savedDetail){
       // 세부사항: set으로 덮어쓰기 (이름 보존)
