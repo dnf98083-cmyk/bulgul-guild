@@ -603,6 +603,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
     <div class="attack-2col">
       <div class="attack-left-col">
+        <!-- 방어팀 선택 -->
         <div class="def-selector-wrap">
           <div class="def-selector" onclick="openDefDropdown()">
             <div>
@@ -619,13 +620,13 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
             </div>
           </div>
         </div>
-        <div id="attackList" class="atk-grid"></div>
-        <div id="atkSuggestBtn" style="display:none; margin-bottom:14px;">
-          <div style="display:flex;gap:8px;">
-  <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 방어팀 추가</button>
-  <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 공격덱 제보</button>
-</div>
+        <!-- 버튼 한 줄 -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 방어팀 추가</button>
+          <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 공격덱 제보</button>
         </div>
+        <div id="attackList" class="atk-grid"></div>
+        <div id="atkSuggestBtn" style="display:none;"></div>
         <div class="ranking-box">
           <div class="section-title">🏆 시즌 랭킹</div>
           <div id="rankingList" class="rank-card ranking-scroll"></div>
@@ -1849,7 +1850,11 @@ function loadDefenseTeamsListener() {
   });
 }
 function openDefDropdown() {
-  document.getElementById("defDropdownSheet").classList.add("open");
+  const sheet = document.getElementById("defDropdownSheet");
+  if(sheet.classList.contains("open")){
+    sheet.classList.remove("open"); return;
+  }
+  sheet.classList.add("open");
   document.getElementById("defSearchInput").value=""; filterDefense();
   setTimeout(()=>document.getElementById("defSearchInput").focus(),100);
 }
