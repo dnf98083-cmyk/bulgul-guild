@@ -80,7 +80,8 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 /* ── 진형 비주얼 ── */
 .formation-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; margin:6px 0; }
 .formation-row { display:flex; gap:6px; justify-content:center; }
-.formation-cell { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; color:var(--text2); min-width:54px; text-align:center; }
+.formation-cell { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; color:var(--text2); min-width:54px; text-align:center; position:relative; }
+.formation-cell .cell-num { position:absolute; top:-7px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; border-radius:50%; width:15px; height:15px; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; line-height:1; }
 .formation-label { font-size:10px; color:var(--accent); font-weight:700; margin-top:2px; letter-spacing:0.5px; }
 
 /* ── 모바일 전용 개선 ── */
@@ -1733,7 +1734,6 @@ function setRdFormationType(type, updateInput=true){
     if(input){
       const val=input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
       input.value=val?type+" "+val:type+" ";
-      input.focus();
     }
   }
   previewRdFormation();
@@ -1756,7 +1756,6 @@ function setMFormType(type, updateInput=true){
     if(input){
       const val=input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
       input.value=val?type+" "+val:type+" ";
-      input.focus();
     }
   }
   previewMFormation();
@@ -1806,7 +1805,6 @@ function setPveFormationType(type, updateInput=true){
     if(input){
       const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
       input.value = val ? type+" "+val : type+" ";
-      input.focus();
     }
   }
   previewPveFormation();
@@ -1870,7 +1868,6 @@ function setCardFormationType(type, updateInput=true){
     if(input){
       const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
       input.value = val ? type+" "+val : type+" ";
-      input.focus();
     }
   }
   previewCardFormation();
@@ -1913,7 +1910,6 @@ function setFormationType(type){
   if(input){
     const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/,"").trim();
     input.value = val ? type+" "+val : type+" ";
-    input.focus();
   }
   previewFormation();
 }
@@ -1937,7 +1933,6 @@ function setModalFormationType(type){
   if(input){
     const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/,"").trim();
     input.value = val ? type+" "+val : type+" ";
-    input.focus();
   }
   previewModalFormation();
 }
@@ -1979,7 +1974,7 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
   if(!type){ targetEl.textContent = formationText; return; }
 
   const cleaned = formationText.replace(type,"").trim();
-  const chars = cleaned ? cleaned.split(/\s+/).filter(Boolean) : [];
+  const chars = cleaned ? cleaned.split(/\s+/).map(c=>c==="_"?"":c) : [];
   const layout = FORMATION_LAYOUTS[type];
 
   const wrap = document.createElement("div");
@@ -2006,20 +2001,60 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
         cell.style.cursor = "pointer";
         cell.title = "클릭해서 수정";
         cell.onclick = ()=>{
+          // 이미 input 있으면 스킵
+          if(cell.querySelector("input")) return;
+          const currentName = cell.querySelector("span:not(.cell-num)")?.textContent||"";
           const input = document.createElement("input");
-          input.value = charName;
+          input.value = currentName;
           input.style.cssText = "width:100%;background:transparent;border:none;outline:none;font-size:11px;font-weight:700;color:var(--text);text-align:center;font-family:inherit;";
-          input.onblur = ()=>{
+
+          const saveCell = ()=>{
             const newVal = input.value.trim();
             chars[idx] = newVal;
-            cell.textContent = newVal || "?";
+            // 번호 배지 + 이름 다시 렌더
+            cell.innerHTML = "";
+            const nb = document.createElement("span");
+            nb.className = "cell-num"; nb.textContent = idx+1;
+            cell.appendChild(nb);
+            const ns = document.createElement("span");
+            ns.textContent = newVal;
+            cell.appendChild(ns);
+            cell.style.borderStyle = newVal ? "solid" : "dashed";
+            // 전체 진형 문자열 재조성
             const allChars = [];
-            layout.forEach(r=> r.forEach(i=>{ if(chars[i]!==undefined) allChars[i]=chars[i]; }));
-            const newFormation = type + " " + allChars.filter(Boolean).join(" ");
+            // 전체 인덱스 범위 파악
+            const maxIdx = Math.max(...layout.flat());
+            for(let i=0; i<=maxIdx; i++) allChars[i] = chars[i]||"_";
+            // 마지막 빈칸(_) 제거
+            while(allChars.length && allChars[allChars.length-1]==="_") allChars.pop();
+            const newFormation = type + " " + allChars.join(" ");
             if(onChangeCb) onChangeCb(newFormation);
           };
-          input.onkeydown = e=>{ if(e.key==="Enter"||e.key==="Tab") input.blur(); };
+
+          input.onblur = saveCell;
+
+          input.onkeydown = e=>{
+            if(e.key==="Enter"){
+              e.preventDefault();
+              input.blur();
+              return;
+            }
+            if(e.key==="Tab"){
+              e.preventDefault();
+              saveCell();
+              // 다음 셀로 이동
+              const allCells = Array.from(wrap.querySelectorAll(".formation-cell"));
+              const curCellIdx = allCells.indexOf(cell);
+              const nextIdx = (curCellIdx+1) % allCells.length;
+              setTimeout(()=> allCells[nextIdx].click(), 10);
+            }
+          };
+
+          // 번호 배지 유지하고 이름 자리에 input 넣기
           cell.innerHTML = "";
+          const nb2 = document.createElement("span");
+          nb2.className = "cell-num"; nb2.textContent = idx+1;
+          cell.appendChild(nb2);
           cell.appendChild(input);
           input.focus();
           input.select();
