@@ -615,7 +615,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div id="attackScreen" class="screen">
     <div class="page-header">
       <div class="page-title">⚔️ 길드전</div>
-      <button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button>
+      <div style="display:flex;gap:8px;"><button class="btn-icon" onclick="showPageGuide('attack')" style="padding:7px 10px;">❓</button><button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button></div>
     </div>
     <div class="attack-2col">
       <div class="attack-left-col">
@@ -716,6 +716,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div id="defenseScreen" class="screen">
     <div class="page-header">
       <div class="page-title">🛡️ 추천 방어</div>
+      <button class="btn-icon" onclick="showPageGuide('defense')" style="padding:7px 10px;">❓</button>
       <button class="btn-icon" id="defAdminBtn" onclick="toggleDefenseAdmin()">관리자</button>
     </div>
     <div class="search-bar-wrap">
@@ -724,7 +725,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     </div>
     <div id="recDefList" class="def-grid"></div>
     <div style="margin-bottom:14px;">
-      <button onclick="openModal('defense')" class="btn-icon" style="width:100%;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 방어덱 제보</button>
+      <div style="display:flex;gap:8px;margin-bottom:0;">
+        <button onclick="openModal('defense')" class="btn-icon" style="flex:1;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 방어덱 제보</button>
+        <button onclick="openMyDefReportsPopup()" class="btn-icon" style="padding:13px 12px;border-radius:12px;font-size:13px;white-space:nowrap;">📨 내 제보</button>
+      </div>
     </div>
     <div id="recDefCard" class="atk-card">
       <div class="atk-card-header" style="margin-bottom:12px;padding-bottom:12px;">
@@ -755,7 +759,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
   <!-- PVE -->
   <div id="pveScreen" class="screen">
-    <div class="page-header"><div class="page-title">🏰 PVE 공략</div></div>
+    <div class="page-header"><div class="page-title">🏰 PVE 공략</div><button class="btn-icon" onclick="showPageGuide('pve')" style="padding:7px 10px;">❓</button></div>
     <div class="search-bar-wrap">
       <input type="text" id="pveSearchBar" placeholder="PVE 공략 검색..." oninput="filterPveList()">
       <span class="search-icon">🔍</span>
@@ -1117,6 +1121,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
   <div id="rankingScreen" class="screen">
     <div class="page-header">
       <div class="page-title">🏆 랭킹</div>
+      <button class="btn-icon" onclick="showPageGuide('ranking')" style="padding:7px 10px;">❓</button>
     </div>
 
     <!-- 메인 탭: 길드전 / PVE -->
@@ -1470,6 +1475,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
 <!-- 제보 검토 모달 -->
 
+<!-- 내 방어덱 제보 팝업 -->
+<div id="myDefReportOverlay" onclick="closeMyDefReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+<div id="myDefReportModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div style="font-size:15px;font-weight:900;">📨 내 방어덱 제보</div>
+    <button onclick="closeMyDefReportsPopup()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
+  </div>
+  <div id="myDefReportList"><div class="empty-state">로딩중...</div></div>
+</div>
+
 <!-- 내 제보 팝업 -->
 <div id="myReportOverlay" onclick="closeMyReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
 <div id="myReportModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">
@@ -1629,6 +1644,81 @@ function showAdminNav() {
 }
 
 // 관리자 전환 제거됨
+
+// ══ 내 방어덱 제보 팝업 ══
+function openMyDefReportsPopup(){
+  document.getElementById("myDefReportOverlay").style.display="block";
+  document.getElementById("myDefReportModal").style.display="block";
+  loadMyDefReports();
+}
+function closeMyDefReportsPopup(){
+  document.getElementById("myDefReportOverlay").style.display="none";
+  document.getElementById("myDefReportModal").style.display="none";
+}
+
+function loadMyDefReports(){
+  const list = document.getElementById("myDefReportList");
+  if(!list) return;
+  db.ref("suggestions/defense").once("value").then(snap=>{
+    const data = snap.val();
+    const myItems = data
+      ? Object.entries(data).filter(([k,v])=>v.suggester===myNick)
+      : [];
+    if(!myItems.length){
+      list.innerHTML='<div class="empty-state">제보한 내역 없음</div>';
+      return;
+    }
+    list.innerHTML = myItems.map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div>
+          <div style="font-size:13px;font-weight:700;">${v.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${v.heroes||""} ${v.formation?"· "+v.formation:""}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm btn-blue" style="padding:6px 10px;font-size:11px;" onclick="openMyDefReportEdit('${k}')">수정</button>
+          <button class="btn-sm btn-red" style="padding:6px 10px;font-size:11px;" onclick="deleteMyDefReport('${k}')">삭제</button>
+        </div>
+      </div>`).join("");
+  });
+}
+
+function openMyDefReportEdit(key){
+  db.ref(`suggestions/defense/${key}`).once("value").then(snap=>{
+    const data = snap.val();
+    if(!data) return toast("제보를 찾을 수 없어요");
+    document.getElementById("modalOverlay").classList.add("open");
+    document.getElementById("modalTitle").textContent = "✏️ 방어덱 제보 수정";
+    const body = document.getElementById("modalBody");
+    body.innerHTML = `
+<input class="form-input" id="mDefName" value="${data.name||""}" placeholder="방어팀 이름 (필수)">
+<input class="form-input" id="mHeroes" value="${data.heroes||""}" placeholder="반지 추천">
+<input class="form-input" id="mForm" value="${data.formation||""}" placeholder="진형">
+<input class="form-input" id="mPet" value="${data.pet||""}" placeholder="펫">
+<textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서">${data.skill||""}</textarea>
+<textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁">${data.desc||""}</textarea>`;
+    document.getElementById("modalSubmitBtn").onclick = ()=>{
+      const name = document.getElementById("mDefName").value.trim();
+      if(!name) return toast("이름을 입력하세요");
+      db.ref(`suggestions/defense/${key}`).update({
+        name,
+        heroes: document.getElementById("mHeroes").value,
+        formation: document.getElementById("mForm").value,
+        pet: document.getElementById("mPet").value,
+        skill: document.getElementById("mSkillDef").value,
+        desc: document.getElementById("mDesc").value,
+      }).then(()=>{ toast("✅ 수정됨!"); closeModal(); loadMyDefReports(); });
+    };
+    document.getElementById("modalSubmitBtn").textContent = "💾 수정 저장";
+  });
+}
+
+function deleteMyDefReport(key){
+  if(!confirm("제보를 삭제할까요?")) return;
+  db.ref(`suggestions/defense/${key}`).remove().then(()=>{
+    toast("삭제됨"); loadMyDefReports();
+  });
+}
+
 
 function openMyReportsPopup(){
   document.getElementById("myReportOverlay").style.display="block";
