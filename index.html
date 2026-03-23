@@ -690,7 +690,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       </div>
     </div>
     <!-- 공격 관리자 패널 (기존 유지) -->
-    <div id="attackAdminPanel" style="display:none; margin-top:24px; padding-top:24px; border-top:2px solid var(--border);">
+    <div id="attackAdminPanel" style="display:none; margin-top:24px; padding-top:24px; padding-bottom:80px; border-top:2px solid var(--border);">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 공격 관리자</div>
       <div class="admin-section">
         <div class="admin-section-title">🛡️ 방어팀 관리</div>
@@ -1822,7 +1822,11 @@ function switchTab(tab) {
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
   // 모바일 탭바
-  document.querySelectorAll(".tab-item").forEach((el,i)=>{ el.classList.toggle("active",["home","attack","defense","pve"][i]===tab); });
+  // 탭바 active - onclick 속성 기반으로 처리
+  document.querySelectorAll(".tab-item").forEach(el=>{
+    const onclick = el.getAttribute("onclick")||"";
+    el.classList.toggle("active", onclick.includes(`'${tab}'`));
+  });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
   const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"ranking":6,"adminMembers":7,"adminReports":8,"adminScores":9};
