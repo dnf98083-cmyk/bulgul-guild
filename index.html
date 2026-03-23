@@ -2905,8 +2905,52 @@ function addLose() { if(!confirm("패배를 기록할까요?")) return; const l=
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
 function delDefense() { if(checkResearcher()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
-function addAttack() { if(!checkResearcher()) return; db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value,win:0,lose:0,maker:myNick}); toast("추가됨"); }
-function editAttack() { if(!checkResearcher()||!currentAttack) return; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({name:document.getElementById("atkName").value,type:document.getElementById("atkType").value,ring:document.getElementById("ringRec").value,pet:document.getElementById("atkPet").value,formation:document.getElementById("atkFormation").value,armor:document.getElementById("armorRec").value,skill:document.getElementById("skillOrder").value}); toast("수정됨"); }
+function clearAtkForm(){
+  ["atkName","ringRec","atkPet","atkFormation","armorRec","skillOrder"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value="";
+  });
+  const atkType=document.getElementById("atkType"); if(atkType) atkType.value="";
+  // 진형 버튼 초기화
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn=document.getElementById("ftype_"+t);
+    if(btn) btn.className="pve-tab-btn";
+  });
+  // 진형 미리보기 초기화
+  const preview=document.getElementById("atkFormationPreview");
+  if(preview) preview.innerHTML="";
+}
+
+function addAttack() {
+  if(!checkResearcher()) return;
+  const name=document.getElementById("atkName").value.trim();
+  if(!name) return toast("공격팀 이름을 입력하세요");
+  checkDupAttackName(name, dup=>{
+    if(dup && !confirm(`"${dup.name}" 과 비슷한 공격팀이 이미 있어요!
+그래도 추가할까요?`)) return;
+    db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({
+      name, type:document.getElementById("atkType").value,
+      ring:document.getElementById("ringRec").value,
+      pet:document.getElementById("atkPet").value,
+      formation:document.getElementById("atkFormation").value,
+      armor:document.getElementById("armorRec").value,
+      skill:document.getElementById("skillOrder").value,
+      win:0, lose:0, maker:myNick
+    }).then(()=>{ toast("추가됨 ✅"); clearAtkForm(); });
+  });
+}
+
+function editAttack() {
+  if(!checkResearcher()||!currentAttack) return;
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({
+    name:document.getElementById("atkName").value,
+    type:document.getElementById("atkType").value,
+    ring:document.getElementById("ringRec").value,
+    pet:document.getElementById("atkPet").value,
+    formation:document.getElementById("atkFormation").value,
+    armor:document.getElementById("armorRec").value,
+    skill:document.getElementById("skillOrder").value
+  }).then(()=>{ toast("수정됨 ✅"); clearAtkForm(); });
+}
 function delAttack() { if(checkResearcher()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
 
 // ══ 관리자 패널 토글 (공격/방어 탭 내부) ══
