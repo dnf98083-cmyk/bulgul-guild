@@ -1535,6 +1535,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle">제보하기</div>
     <div id="modalBody"></div>
+    <div id="modalPasteRow" style="display:none;margin-bottom:8px;">
+      <button onclick="pasteAtkCard('modal')" class="btn-sm btn-gray" style="width:100%;padding:10px;">📥 공략 코드 붙여넣기</button>
+    </div>
     <div class="modal-btns">
       <button id="modalSubmitBtn" class="btn-sm btn-blue" style="padding:14px;">제보 보내기</button>
       <button onclick="closeModal()" class="btn-sm btn-gray" style="padding:14px;">취소</button>
@@ -1731,37 +1734,64 @@ function showAdminNav() {
 // ══ 공격 카드 복사/붙여넣기 ══
 function copyAtkCard(){
   if(!currentDefense||!currentAttack) return toast("공격팀을 먼저 선택하세요");
-  const data = {
-    name: document.getElementById("cardName").textContent,
-    type: document.getElementById("cardType").textContent,
-    ring: document.getElementById("cardRing").textContent,
-    pet:  document.getElementById("cardPet").textContent,
-    formation: document.getElementById("atkFormation")?.value || "",
-    armor: document.getElementById("cardArmor")?.textContent||"",
-    skill: document.getElementById("cardSkill")?.textContent||"",
-  };
-  navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data))))
-    .then(()=>toast("복사됨 📋"));
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).once("value").then(snap=>{
+    const d = snap.val(); if(!d) return toast("데이터 없음");
+    const data = {
+      name: d.name||"",
+      type: d.type||"",
+      ring: d.ring||"",
+      pet:  d.pet||"",
+      formation: d.formation||"",
+      armor: d.armor||"",
+      skill: d.skill||"",
+    };
+    navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data))))
+      .then(()=>toast("복사됨 📋"))
+      .catch(()=>{
+        // clipboard API 실패 시 prompt로 대체
+        const code = btoa(encodeURIComponent(JSON.stringify(data)));
+        prompt("아래 코드를 복사하세요:", code);
+      });
+  });
 }
 
-function pasteAtkCard(){
-  if(!checkResearcher()) return;
+function pasteAtkCard(target="admin"){
   const c = prompt("공략 코드:");
   if(!c) return;
   try{
     const d = JSON.parse(decodeURIComponent(atob(c)));
-    if(document.getElementById("atkName")) document.getElementById("atkName").value = d.name||"";
-    if(document.getElementById("atkType")) document.getElementById("atkType").value = d.type||"";
-    if(document.getElementById("ringRec")) document.getElementById("ringRec").value = d.ring||"";
-    if(document.getElementById("atkPet")) document.getElementById("atkPet").value = d.pet||"";
-    if(document.getElementById("atkFormation")){
-      document.getElementById("atkFormation").value = d.formation||"";
-      previewFormation();
+    if(target==="modal"){
+      // 제보 모달에 붙여넣기
+      if(document.getElementById("mName")) document.getElementById("mName").value = d.name||"";
+      if(document.getElementById("mType")) document.getElementById("mType").value = d.type||"";
+      if(document.getElementById("mRing")) document.getElementById("mRing").value = d.ring||"";
+      if(document.getElementById("mPet")) document.getElementById("mPet").value = d.pet||"";
+      if(document.getElementById("mArmor")) document.getElementById("mArmor").value = d.armor||"";
+      if(document.getElementById("mSkill")) document.getElementById("mSkill").value = d.skill||"";
+      if(document.getElementById("mFormation")){
+        document.getElementById("mFormation").value = d.formation||"";
+        previewModalFormation();
+        const ftype = detectFormationType(d.formation||"");
+        if(ftype) setModalFormationType(ftype, false);
+      }
+    } else {
+      // 관리자 폼에 붙여넣기
+      if(!checkResearcher()) return;
+      if(document.getElementById("atkName")) document.getElementById("atkName").value = d.name||"";
+      if(document.getElementById("atkType")) document.getElementById("atkType").value = d.type||"";
+      if(document.getElementById("ringRec")) document.getElementById("ringRec").value = d.ring||"";
+      if(document.getElementById("atkPet")) document.getElementById("atkPet").value = d.pet||"";
+      if(document.getElementById("armorRec")) document.getElementById("armorRec").value = d.armor||"";
+      if(document.getElementById("skillOrder")) document.getElementById("skillOrder").value = d.skill||"";
+      if(document.getElementById("atkFormation")){
+        document.getElementById("atkFormation").value = d.formation||"";
+        previewFormation();
+        const ftype = detectFormationType(d.formation||"");
+        if(ftype) setFormationType(ftype, false);
+      }
     }
-    if(document.getElementById("armorRec")) document.getElementById("armorRec").value = d.armor||"";
-    if(document.getElementById("skillOrder")) document.getElementById("skillOrder").value = d.skill||"";
     toast("불러오기 완료 ✅");
-  } catch{ toast("잘못된 코드"); }
+  } catch(e){ toast("잘못된 코드"); }
 }
 
 
@@ -3202,7 +3232,7 @@ function openModal(type){ document.getElementById("modalOverlay").classList.add(
   <button type="button" id="mResultLose" onclick="setModalResult('lose')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">💀 패배</button>
 </div>
 <input type="hidden" id="mResult" value="">
-`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><div>
+`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; document.getElementById("modalPasteRow").style.display="block"; }else if(type==="defense_add"){ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><div>
   <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
     <button type="button" class="pve-tab-btn" onclick="setMFormType('기본')" id="mft_기본" style="font-size:11px;padding:5px 8px;">기본</button>
     <button type="button" class="pve-tab-btn" onclick="setMFormType('밸런스')" id="mft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
