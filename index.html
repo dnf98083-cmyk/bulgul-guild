@@ -2702,15 +2702,41 @@ function closeDefDropdown(e) {
 // 퍼지 검색 - 입력한 글자들이 순서대로 포함되면 매칭
 function fuzzyMatch(text, query) {
   if(!query) return true;
-  text=text.toLowerCase(); query=query.toLowerCase();
-  if(text.includes(query)) return true; // 일반 포함 검색 우선
-  let ti=0;
-  for(let qi=0;qi<query.length;qi++){
-    let found=false;
-    while(ti<text.length){ if(text[ti]===query[qi]){ti++;found=true;break;} ti++; }
-    if(!found) return false;
+  text = text.toLowerCase().trim();
+  query = query.toLowerCase().trim();
+
+  // 1. 완전 포함 검색 (기존)
+  if(text.includes(query)) return true;
+
+  // 2. 단어 분리 후 순서 무관 검색
+  // 쿼리를 공백으로 나눈 단어들이 모두 텍스트에 포함되면 매칭
+  const queryWords = query.split(/\s+/).filter(Boolean);
+  if(queryWords.length > 1){
+    // 모든 단어가 텍스트에 포함되는지 확인 (순서 무관)
+    if(queryWords.every(w => text.includes(w))) return true;
   }
-  return true;
+
+  // 3. 단어별 퍼지 매칭 - 각 쿼리 단어가 텍스트 단어 중 하나라도 매칭되면 OK
+  const textWords = text.split(/\s+/).filter(Boolean);
+  if(queryWords.length > 0){
+    const allMatched = queryWords.every(qw =>
+      textWords.some(tw => tw.includes(qw) || qw.includes(tw))
+    );
+    if(allMatched) return true;
+  }
+
+  // 4. 단일 단어 퍼지 (기존 문자 순서 매칭)
+  if(queryWords.length === 1){
+    let ti=0;
+    for(let qi=0;qi<query.length;qi++){
+      let found=false;
+      while(ti<text.length){ if(text[ti]===query[qi]){ti++;found=true;break;} ti++; }
+      if(!found) return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 function filterDefense() {
   const f=document.getElementById("defSearchInput").value.trim();
