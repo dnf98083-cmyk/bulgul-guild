@@ -738,11 +738,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <input class="form-input" id="ringRec" placeholder="반지">
         <input class="form-input" id="atkPet" placeholder="펫">
         <div style="margin-bottom:4px;">
-          <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
+          <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
             <button type="button" class="pve-tab-btn" onclick="setFormationType('기본')" id="ftype_기본" style="font-size:11px;padding:5px 10px;">기본</button>
             <button type="button" class="pve-tab-btn" onclick="setFormationType('밸런스')" id="ftype_밸런스" style="font-size:11px;padding:5px 10px;">밸런스</button>
             <button type="button" class="pve-tab-btn" onclick="setFormationType('공격')" id="ftype_공격" style="font-size:11px;padding:5px 10px;">공격</button>
             <button type="button" class="pve-tab-btn" onclick="setFormationType('보호')" id="ftype_보호" style="font-size:11px;padding:5px 10px;">보호</button>
+            <button type="button" onclick="showFormationGuide()" style="background:none;border:1px solid var(--border);border-radius:50%;width:20px;height:20px;font-size:10px;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">?</button>
           </div>
           <input class="form-input" id="atkFormation" placeholder="캐릭터 이름 입력 (예: 브브 여포 풍연)" oninput="previewFormation()" style="display:none;">
           <div id="atkFormationPreview" style="margin-top:6px;"></div>
@@ -1723,6 +1724,46 @@ function showAdminNav() {
 
 // 관리자 전환 제거됨
 
+// ══ 진형 설명서 팝업 ══
+function showFormationGuide(){
+  document.getElementById("pageGuideTitle").textContent = "🗺️ 진형 사용법";
+  document.getElementById("pageGuideBody").innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">진형 종류 선택</div>
+        <div>기본 / 밸런스 / 공격 / 보호 버튼 중 하나를 선택해요.<br>
+        <span style="font-size:11px;color:var(--text3);">
+        • <b>기본</b>: 앞줄 2명 / 뒷줄 3명<br>
+        • <b>밸런스</b>: 앞줄 3명 / 뒷줄 2명<br>
+        • <b>공격</b>: 앞줄 1명 / 뒷줄 4명<br>
+        • <b>보호</b>: 앞줄 4명 / 뒷줄 1명
+        </span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">캐릭터 입력</div>
+        <div>진형 선택 후 나타나는 칸을 <b>직접 클릭</b>해서 캐릭터 이름을 입력해요.<br>
+        <span style="font-size:11px;color:var(--text3);">
+        • Tab 키로 다음 칸으로 이동<br>
+        • Enter 키로 입력 완료<br>
+        • 비워둬도 저장 가능 (빈 칸 유지)
+        </span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">🔴 빨간 숫자</div>
+        <div>각 칸 위의 빨간 동그라미 숫자는 <b>속공 순서</b>예요.<br>
+        <span style="font-size:11px;color:var(--text3);">숫자가 작을수록 먼저 속공을 시도해요</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">▲ 앞줄 / ▼ 뒷줄</div>
+        <div>앞줄은 전방 배치, 뒷줄은 후방 배치예요.<br>
+        <span style="font-size:11px;color:var(--text3);">보호 진형은 앞줄에 4명이 배치돼 방어에 유리해요</span></div>
+      </div>
+    </div>`;
+  document.getElementById("pageGuideOverlay").style.display="block";
+  document.getElementById("pageGuideModal").style.display="block";
+}
+
+
 // ══ 추천 방어 진형 입력 ══
 function setRdFormationType(type, updateInput=true){
   ["기본","밸런스","공격","보호"].forEach(t=>{
@@ -2090,61 +2131,84 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
 const PAGE_GUIDES = {
   attack: {
     title: "⚔️ 길드전 공격 안내",
-    body: `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">1️⃣ 방어팀 선택</div>
-          <div>상단 드롭다운에서 상대 방어팀을 선택해요.<br><span style="font-size:11px;color:var(--text3);">검색으로 빠르게 찾을 수 있어요</span></div>
+    body: `<div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">1️⃣ 방어팀 선택</div>
+        <div>드롭다운에서 상대 방어팀을 선택해요. 검색으로 빠르게 찾을 수 있어요.</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">2️⃣ 공격덱 선택</div>
+        <div>등록된 공격덱 중 사용할 덱을 선택해요.<br>
+        <span style="font-size:11px;color:var(--text3);">🔥 승률 70% 이상 추천 덱 &nbsp;⚠️ 중복 의심 덱</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">3️⃣ 진형 확인</div>
+        <div>공격덱 카드에서 진형 배치를 확인해요.<br>
+        <span style="font-size:11px;color:var(--text3);">
+        🔴 숫자 = 속공 순서 &nbsp; ▲앞줄 / ▼뒷줄<br>
+        기본(앞2뒤3) · 밸런스(앞3뒤2) · 공격(앞1뒤4) · 보호(앞4뒤1)
+        </span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">4️⃣ 결과 기록</div>
+        <div>공격 후 <b>🏆 승리 / 💀 패배</b> 버튼으로 결과를 기록해요.</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">📨 제보하기</div>
+        <div>
+          <b>+ 방어팀 제보</b> — 목록에 없는 상대 방어팀 추가 요청<br>
+          <b>+ 공격덱 제보</b> — 새 공격덱 제보 (승패 결과 포함 가능)<br>
+          <b>📨 내 제보</b> — 내가 제보한 내역 수정/삭제<br>
+          <span style="font-size:11px;color:var(--text3);">제보는 관리자/연구원 승인 후 반영돼요</span>
         </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">2️⃣ 공격덱 선택</div>
-          <div>등록된 공격덱 중 사용할 덱을 선택해요.<br><span style="font-size:11px;color:var(--text3);">🔥 표시는 승률 70% 이상 추천 덱이에요</span></div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">3️⃣ 결과 기록</div>
-          <div>공격 후 <b>🏆 승리 / 💀 패배</b> 버튼으로 결과를 기록해요.</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">➕ 제보하기</div>
-          <div><b>+ 방어팀 제보</b> — 목록에 없는 상대 방어팀 추가<br><b>+ 공격덱 제보</b> — 새 공격덱 제보 (승패 포함)<br><b>📨 내 제보</b> — 내가 제보한 내역 수정/삭제</div>
-        </div>
-      </div>`
+      </div>
+    </div>`
   },
   defense: {
     title: "🛡️ 추천 방어 안내",
-    body: `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">방어덱 공략 보기</div>
-          <div>상단 목록에서 방어팀을 선택하면 추천 공략을 볼 수 있어요.</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">+ 방어덱 제보</div>
-          <div>좋은 방어덱 세팅을 알고 있으면 제보해요.<br><span style="font-size:11px;color:var(--text3);">관리자 승인 후 목록에 추가돼요</span></div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">📨 내 제보</div>
-          <div>내가 제보한 방어덱을 수정하거나 삭제할 수 있어요.</div>
-        </div>
-      </div>`
+    body: `<div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">방어덱 공략 보기</div>
+        <div>목록에서 방어팀을 선택하면 추천 진형·스킬 공략을 볼 수 있어요.<br>
+        <span style="font-size:11px;color:var(--text3);">🔴 숫자 = 속공 순서 &nbsp; ▲앞줄 / ▼뒷줄</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">+ 방어덱 제보</div>
+        <div>좋은 방어덱 세팅을 알고 있으면 제보해요.<br>
+        진형 종류 선택 후 각 칸에 캐릭터 이름을 직접 입력할 수 있어요.<br>
+        <span style="font-size:11px;color:var(--text3);">관리자/연구원 승인 후 목록에 추가돼요</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">📨 내 제보</div>
+        <div>내가 제보한 방어덱을 수정하거나 삭제할 수 있어요.</div>
+      </div>
+    </div>`
   },
   pve: {
     title: "🏰 PVE 공략 안내",
-    body: `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">공성전</div>
-          <div>요일별 공략을 확인할 수 있어요. 빌드 1~4 탭으로 여러 덱 정보를 저장해요.</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">강림원정대</div>
-          <div>보스별 공략을 확인해요. 🔥 파괴신은 라운드별 공략이 있어요.</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">레이드</div>
-          <div>일반 레이드 · 돌발 레이드 보스별 공략을 확인해요.</div>
-        </div>
-      </div>`
+    body: `<div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">🏯 공성전</div>
+        <div>요일별 공략을 확인해요. 빌드 1~4로 여러 덱 정보를 저장할 수 있어요.<br>
+        <span style="font-size:11px;color:var(--text3);">진형 칸에서 속공 순서와 배치를 확인하세요</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">👑 강림원정대</div>
+        <div>보스별 공략을 확인해요. 파괴신은 라운드별 공략이 있어요.</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">⚔️ 레이드</div>
+        <div>일반·돌발 레이드 보스별 공략을 확인해요.</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
+        <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">🗺️ 진형 보는 법</div>
+        <div><span style="font-size:11px;color:var(--text3);">
+        🔴 숫자 = 속공 순서<br>
+        ▲앞줄 / ▼뒷줄 구분<br>
+        기본(앞2뒤3) · 밸런스(앞3뒤2) · 공격(앞1뒤4) · 보호(앞4뒤1)
+        </span></div>
+      </div>
+    </div>`
   },
   ranking: {
     title: "🏆 랭킹 안내",
