@@ -713,6 +713,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           <button class="card-collapse-btn" onclick="toggleCardExtra()" id="cardCollapseBtn">
             <span id="cardCollapseBtnText">▼ 상세정보 보기</span>
           </button>
+          <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;">
+            <button onclick="copyAtkCard()" class="btn-sm btn-gray" style="flex:1;">📤 복사</button>
+            <button onclick="pasteAtkCard()" class="btn-sm btn-gray" style="flex:1;">📥 붙여넣기</button>
+          </div>
           <div class="wl-btns">
             <button class="btn-win" onclick="addWin()">🏆 승리</button>
             <button class="btn-lose" onclick="addLose()">💀 패배</button>
@@ -1723,6 +1727,43 @@ function showAdminNav() {
 }
 
 // 관리자 전환 제거됨
+
+// ══ 공격 카드 복사/붙여넣기 ══
+function copyAtkCard(){
+  if(!currentDefense||!currentAttack) return toast("공격팀을 먼저 선택하세요");
+  const data = {
+    name: document.getElementById("cardName").textContent,
+    type: document.getElementById("cardType").textContent,
+    ring: document.getElementById("cardRing").textContent,
+    pet:  document.getElementById("cardPet").textContent,
+    formation: document.getElementById("atkFormation")?.value || "",
+    armor: document.getElementById("cardArmor")?.textContent||"",
+    skill: document.getElementById("cardSkill")?.textContent||"",
+  };
+  navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data))))
+    .then(()=>toast("복사됨 📋"));
+}
+
+function pasteAtkCard(){
+  if(!checkResearcher()) return;
+  const c = prompt("공략 코드:");
+  if(!c) return;
+  try{
+    const d = JSON.parse(decodeURIComponent(atob(c)));
+    if(document.getElementById("atkName")) document.getElementById("atkName").value = d.name||"";
+    if(document.getElementById("atkType")) document.getElementById("atkType").value = d.type||"";
+    if(document.getElementById("ringRec")) document.getElementById("ringRec").value = d.ring||"";
+    if(document.getElementById("atkPet")) document.getElementById("atkPet").value = d.pet||"";
+    if(document.getElementById("atkFormation")){
+      document.getElementById("atkFormation").value = d.formation||"";
+      previewFormation();
+    }
+    if(document.getElementById("armorRec")) document.getElementById("armorRec").value = d.armor||"";
+    if(document.getElementById("skillOrder")) document.getElementById("skillOrder").value = d.skill||"";
+    toast("불러오기 완료 ✅");
+  } catch{ toast("잘못된 코드"); }
+}
+
 
 // ══ 진형 설명서 팝업 ══
 function showFormationGuide(){
