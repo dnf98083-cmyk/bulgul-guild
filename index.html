@@ -1412,7 +1412,11 @@ body::before {
     </div>
     <!-- 공격 관리자 패널 (기존 유지) -->
     <div id="attackAdminPanel" style="display:none; margin-top:24px; padding-top:24px; padding-bottom:80px; border-top:2px solid var(--border);">
-      <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 공격 관리자</div>
+      <div style="font-size:15px;font-weight:900;margin-bottom:12px;">🛠️ 공격 관리자</div>
+      <div id="adminCurrentDefBanner" style="background:rgba(255,77,46,0.1);border:1px solid rgba(255,77,46,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;color:var(--text3);">현재 방어팀:</span>
+        <span id="adminCurrentDefName" style="font-size:14px;font-weight:900;color:var(--accent);">⚠️ 위에서 방어팀을 먼저 선택하세요</span>
+      </div>
       <div class="admin-section">
         <div class="admin-section-title">🛡️ 방어팀 관리</div>
         <input class="form-input" id="newDefName" placeholder="새 방어팀 이름">
@@ -3512,7 +3516,7 @@ function loadDefenseTeamsListener() {
       const rate=(tW+tL)?Math.round(tW/(tW+tL)*100):0;
       const div=document.createElement("div"); div.className="dropdown-item";
       div.innerHTML=`<span class="d-name">${v.name}</span><span class="d-stat">${rate}% · ${tW}승${tL}패</span>`;
-      div.onclick=()=>{ document.getElementById("defCurrentText").textContent=v.name; closeDefDropdown(); loadAttackTeams(k); };
+      div.onclick=()=>{ document.getElementById("defCurrentText").textContent=v.name; closeDefDropdown(); loadAttackTeams(k, v.name); };
       list.appendChild(div);
     });
   });
@@ -3576,8 +3580,12 @@ function filterDefense() {
 }
 
 // ══ 공격팀 ══
-function loadAttackTeams(dk) {
+function loadAttackTeams(dk, dkName) {
   currentDefense=dk; currentAttack="";
+  // 관리자 패널 방어팀 이름 업데이트
+  const defNameEl = document.getElementById("adminCurrentDefName");
+  const resolvedName = dkName || (dk && defenseDataCache[dk]?.name) || "선택 안 됨";
+  if(defNameEl) defNameEl.textContent = resolvedName;
   document.getElementById("attackCard").style.display="none";
   const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns="1fr";
   document.getElementById("atkSuggestBtn").style.display="block";
@@ -3680,9 +3688,13 @@ function clearAtkForm(){
 
 function addAttack() {
   if(!checkResearcher()) return;
+  if(!currentDefense) return toast("⚠️ 먼저 방어팀을 선택해주세요!");
   const name=document.getElementById("atkName").value.trim();
   if(!name) return toast("공격팀 이름을 입력하세요");
-  checkDupAttackName(name, dup=>{
+  // 중복 이름 체크 후 추가
+  db.ref(`defenseTeams/${currentDefense}/attackTeams`).once("value").then(snap=>{
+    const existing = snap.val() || {};
+    const dup = Object.values(existing).find(v => v.name && v.name.replace(/\s/g,"").includes(name.replace(/\s/g,"")));
     if(dup && !confirm(`"${dup.name}" 과 비슷한 공격팀이 이미 있어요!
 그래도 추가할까요?`)) return;
     db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({
@@ -3698,7 +3710,9 @@ function addAttack() {
 }
 
 function editAttack() {
-  if(!checkResearcher()||!currentAttack) return;
+  if(!checkResearcher()) return;
+  if(!currentDefense) return toast("⚠️ 먼저 방어팀을 선택해주세요!");
+  if(!currentAttack) return toast("⚠️ 수정할 공격덱을 선택해주세요!");
   db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({
     name:document.getElementById("atkName").value,
     type:document.getElementById("atkType").value,
