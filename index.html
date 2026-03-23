@@ -2636,6 +2636,13 @@ function loadAttackTeams(dk) {
 }
 function selectAttack(dk,ak) {
   currentAttack=ak;
+  // 진형 수정창 닫기
+  const editArea = document.getElementById("formationEditArea");
+  const editBtn = document.getElementById("formationEditBtn");
+  if(editArea && editArea.style.display==="block"){
+    editArea.style.display="none";
+    if(editBtn) editBtn.textContent="✏️ 수정";
+  }
   db.ref(`defenseTeams/${dk}/attackTeams/${ak}`).on("value",snap=>{
     const d=snap.val(); if(!d) return;
     document.getElementById("attackCard").style.display="block";
