@@ -621,7 +621,10 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
         <div id="attackList" class="atk-grid"></div>
         <div id="atkSuggestBtn" style="display:none; margin-bottom:14px;">
-          <button onclick="openModal('attack')" class="btn-icon" style="width:100%;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 공격덱 제보</button>
+          <div style="display:flex;gap:8px;">
+  <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 방어팀 추가</button>
+  <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:13px;border-radius:12px;border-style:dashed;font-size:13px;">+ 공격덱 제보</button>
+</div>
         </div>
         <div class="ranking-box">
           <div class="section-title">🏆 시즌 랭킹</div>
@@ -2241,9 +2244,58 @@ function copyPveData(){ const data={deck:document.getElementById("editPveDeck").
 function pastePveData(){ const c=prompt("공략 코드:"); if(!c) return; try{ const d=JSON.parse(decodeURIComponent(atob(c))); document.getElementById("editPveDeck").value=d.deck||""; document.getElementById("editPveSkill").value=d.skill||""; document.getElementById("editPveEquip").value=d.equip||""; toast("불러오기 완료"); }catch{ toast("잘못된 코드"); } }
 
 // ══ 제보 모달 ══
-function openModal(type){ document.getElementById("modalOverlay").classList.add("open"); const body=document.getElementById("modalBody"); if(type==="attack"){ if(!currentDefense){ toast("방어팀을 먼저 선택하세요"); closeModal(); return; } document.getElementById("modalTitle").textContent="⚔️ 공격덱 제보"; body.innerHTML=`<input class="form-input" id="mName" placeholder="공격팀 이름 (필수)"><select class="form-select" id="mType"><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select><input class="form-input" id="mRing" placeholder="반지"><input class="form-input" id="mPet" placeholder="펫"><input class="form-input" id="mFormation" placeholder="진형"><textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항"></textarea><textarea class="form-textarea" id="mSkill" rows="2" placeholder="스킬순서"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
+function openModal(type){ document.getElementById("modalOverlay").classList.add("open"); const body=document.getElementById("modalBody"); if(type==="attack"){ if(!currentDefense){ toast("방어팀을 먼저 선택하세요"); closeModal(); return; } document.getElementById("modalTitle").textContent="⚔️ 공격덱 제보"; body.innerHTML=`
+<input class="form-input" id="mName" placeholder="공격팀 이름 (필수)">
+<select class="form-select" id="mType"><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select>
+<input class="form-input" id="mRing" placeholder="반지">
+<input class="form-input" id="mPet" placeholder="펫">
+<input class="form-input" id="mFormation" placeholder="진형">
+<textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항"></textarea>
+<textarea class="form-textarea" id="mSkill" rows="2" placeholder="스킬순서"></textarea>
+<div style="font-size:11px;font-weight:700;color:var(--text3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:0.5px;">결과</div>
+<div style="display:flex;gap:8px;">
+  <button type="button" id="mResultWin" onclick="setModalResult('win')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">🏆 이겼어요</button>
+  <button type="button" id="mResultLose" onclick="setModalResult('lose')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">💀 졌어요</button>
+</div>
+<input type="hidden" id="mResult" value="">
+`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀 추가"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
 function closeModal(e){ if(!e||e.target===document.getElementById("modalOverlay")) document.getElementById("modalOverlay").classList.remove("open"); }
-function submitAttackSug(){ const name=document.getElementById("mName").value; if(!name) return toast("이름을 입력하세요"); db.ref(`suggestions/attack/${currentDefense}`).push({name,type:document.getElementById("mType").value,ring:document.getElementById("mRing").value,pet:document.getElementById("mPet").value,formation:document.getElementById("mFormation").value,armor:document.getElementById("mArmor").value,skill:document.getElementById("mSkill").value,suggester:myNick,timestamp:Date.now()}); toast("제보 완료! 🙏"); closeModal(); }
+function setModalResult(r){
+  document.getElementById("mResult").value=r;
+  const winBtn=document.getElementById("mResultWin");
+  const loseBtn=document.getElementById("mResultLose");
+  if(r==="win"){
+    winBtn.style.background="rgba(39,174,96,0.15)"; winBtn.style.border="1px solid #27ae60"; winBtn.style.color="#27ae60";
+    loseBtn.style.background="var(--surface2)"; loseBtn.style.border="1px solid var(--border)"; loseBtn.style.color="var(--text3)";
+  } else {
+    loseBtn.style.background="rgba(231,76,60,0.15)"; loseBtn.style.border="1px solid #e74c3c"; loseBtn.style.color="#e74c3c";
+    winBtn.style.background="var(--surface2)"; winBtn.style.border="1px solid var(--border)"; winBtn.style.color="var(--text3)";
+  }
+}
+
+function submitAttackSug(){
+  const name=document.getElementById("mName").value.trim();
+  if(!name) return toast("이름을 입력하세요");
+  const result=document.getElementById("mResult").value;
+  db.ref(`suggestions/attack/${currentDefense}`).push({
+    name, type:document.getElementById("mType").value,
+    ring:document.getElementById("mRing").value,
+    pet:document.getElementById("mPet").value,
+    formation:document.getElementById("mFormation").value,
+    armor:document.getElementById("mArmor").value,
+    skill:document.getElementById("mSkill").value,
+    result:result||"",
+    suggester:myNick, timestamp:Date.now()
+  });
+  toast("제보 완료! 🙏"); closeModal();
+}
+
+function submitDefenseAdd(){
+  const name=document.getElementById("mDefAddName")?.value.trim();
+  if(!name) return toast("방어팀 이름을 입력하세요");
+  db.ref("defenseTeams").push({name, attackTeams:{}, addedBy:myNick, createdAt:Date.now()});
+  toast("✅ 방어팀 추가됨!"); closeModal();
+}
 function submitDefenseSug(){ const name=document.getElementById("mDefName").value; if(!name) return toast("이름을 입력하세요"); db.ref("suggestions/defense").push({name,heroes:document.getElementById("mHeroes").value,formation:document.getElementById("mForm").value,pet:document.getElementById("mPet").value,skill:document.getElementById("mSkillDef").value,desc:document.getElementById("mDesc").value,suggester:myNick,timestamp:Date.now()}); toast("제보 완료! 🙏"); closeModal(); }
 
 // ══ 랭킹 ══
@@ -2305,7 +2357,8 @@ function loadAdminReports(){
       Object.entries(sub).forEach(([sk,v])=>{
         count++;
         const d=document.createElement("div"); d.className="report-row";
-        d.innerHTML=`<div><div class="report-name">[${dName}] ${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;flex-shrink:0;" onclick="openAdminReview('attack','${dk}','${sk}')">검토</button>`;
+        const resultTag = v.result==="win"?'<span style="color:#27ae60;font-size:10px;font-weight:900;margin-left:4px;">🏆이김</span>':v.result==="lose"?'<span style="color:#e74c3c;font-size:10px;font-weight:900;margin-left:4px;">💀짐</span>':"";
+d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}] ${v.name}${resultTag}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토·수정</button></div>`;
         div.appendChild(d);
       });
     });
@@ -2318,7 +2371,7 @@ function loadAdminReports(){
     if(!all){ div.innerHTML='<div class="empty-state">제보 없음</div>'; return; }
     Object.entries(all).forEach(([k,v])=>{
       const d=document.createElement("div"); d.className="report-row";
-      d.innerHTML=`<div><div class="report-name">${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><button class="btn-sm btn-blue" style="padding:7px 14px;flex-shrink:0;" onclick="openAdminReview('defense','${k}','')">검토</button>`;
+      d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('defense','${k}','')">검토·수정</button></div>`;
       div.appendChild(d);
     });
   });
@@ -2368,8 +2421,9 @@ function openAdminReview(type,k1,k2){
     if(!data){ document.getElementById("adminReviewBody").innerHTML="데이터 없음"; return; }
 
     // 보기 탭
+    const resultText = data.result==="win"?"🏆 이겼어요":data.result==="lose"?"💀 졌어요":"-";
     const fields=type==="attack"
-      ?[["이름",data.name],["속공",data.type],["반지",data.ring],["펫",data.pet],["진형",data.formation||"-"],["장비",data.armor||"-"],["스킬",data.skill||"-"],["제보자",data.suggester]]
+      ?[["이름",data.name],["속공",data.type],["반지",data.ring],["펫",data.pet],["진형",data.formation||"-"],["장비",data.armor||"-"],["스킬",data.skill||"-"],["결과",resultText],["제보자",data.suggester]]
       :[["이름",data.name],["영웅/반지",data.heroes],["진형",data.formation||"-"],["펫",data.pet],["스킬",data.skill||"-"],["설명",data.desc||"-"],["제보자",data.suggester]];
     document.getElementById("adminReviewBody").innerHTML=
       fields.map(([l,v])=>`<div class="review-field"><div class="rf-label">${l}</div><div class="rf-value">${v||"-"}</div></div>`).join("");
@@ -2443,7 +2497,14 @@ function saveReviewEdit(){
 }
 
 function closeAdminReviewModal(){ document.getElementById("adminReviewModal").classList.remove("open"); }
-function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:0,lose:0,maker:d.suggester}); db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
+function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(!d) return;
+  // 공격팀 등록
+  db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:0,lose:0,maker:d.suggester});
+  // 제보자 승패 자동 기록
+  if(d.result==="win"||d.result==="lose"){
+    db.ref("logs").push({nick:d.suggester,result:d.result,defense:dk,attack:sk,attackName:d.name,attackType:d.type||"",date:new Date().toISOString().slice(0,10),time:Date.now(),fromSuggest:true});
+  }
+  db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
 function rejectAtk(dk,sk){ if(confirm("거절?")){ db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("거절됨"); loadAdminReports(); } }
 function approveDef(key){ db.ref(`suggestions/defense/${key}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref("recommendedDefenses").push({name:d.name,heroes:d.heroes,formation:d.formation,pet:d.pet,skill:d.skill||"",desc:d.desc,maker:d.suggester}); db.ref(`suggestions/defense/${key}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
 function rejectDef(key){ if(confirm("거절?")){ db.ref(`suggestions/defense/${key}`).remove(); toast("거절됨"); loadAdminReports(); } }
