@@ -1816,6 +1816,9 @@ function previewPveFormation(){
   if(!input || !preview) return;
   renderFormation(input.value.trim(), preview, true, (newVal)=>{
     input.value = newVal;
+    // 뷰모드 실시간 반영
+    const disp = document.getElementById("pveFormationDisplay");
+    if(disp) renderFormation(newVal, disp);
   });
 }
 
@@ -2060,8 +2063,13 @@ function renderFormation(formationText, targetEl, editable=false, onChangeCb=nul
           input.select();
         };
       } else {
-        cell.textContent = charName || "";
-      if(!charName) cell.style.borderStyle='dashed';
+        const nb3 = document.createElement("span");
+        nb3.className = "cell-num"; nb3.textContent = idx+1;
+        cell.appendChild(nb3);
+        const ns3 = document.createElement("span");
+        ns3.textContent = charName || "";
+        cell.appendChild(ns3);
+        if(!charName) cell.style.borderStyle='dashed';
       }
       rowDiv.appendChild(cell);
     });
@@ -2892,7 +2900,10 @@ function fillPveEditForm(buildData={}, details={}){
   const pveFormInput = document.getElementById("pveFormationInput");
   if(pveFormInput) pveFormInput.value = formVal;
   const ftype = detectFormationType(formVal);
-  if(ftype) setPveFormationType(ftype, false);
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn=document.getElementById("pftype_"+t);
+    if(btn) btn.className=t===ftype?"pve-tab-btn active":"pve-tab-btn";
+  });
   previewPveFormation();
   const sel=document.getElementById("pveBuildSelect");
   const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
