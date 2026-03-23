@@ -754,6 +754,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
         <textarea class="form-textarea" id="armorRec" rows="2" placeholder="장비/특이사항"></textarea>
         <textarea class="form-textarea" id="skillOrder" rows="2" placeholder="스킬"></textarea>
+        <div style="margin-bottom:8px;">
+          <button onclick="pasteAtkCard('admin')" class="btn-sm btn-gray" style="width:100%;padding:10px;border-style:dashed;">📥 공략 코드 붙여넣기</button>
+        </div>
         <div class="btn-row"><button class="btn-sm btn-blue" onclick="addAttack()">추가</button><button class="btn-sm btn-blue" onclick="editAttack()">수정</button><button class="btn-sm btn-red" onclick="delAttack()">삭제</button></div>
       </div>
     </div>
