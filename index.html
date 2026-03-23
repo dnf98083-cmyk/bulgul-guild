@@ -71,7 +71,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 /* ── 모바일 전용 개선 ── */
 @media (max-width: 899px) {
   /* ── 기본 레이아웃 ── */
-  .screen { padding:14px 12px; padding-bottom:calc(var(--tab-h)+14px); }
+  .screen { padding:14px 12px; padding-bottom:calc(var(--tab-h)+32px); }
   .page-header { margin-bottom:12px; padding-top:4px; }
   .page-title { font-size:16px; }
 
@@ -741,7 +741,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="rdSkill">-</div></div>
       <div class="info-block"><div class="ib-label">설명 · 팁</div><div class="ib-value" id="rdDesc">-</div></div>
     </div>
-    <div id="defenseAdminPanel" style="display:none; margin-top:24px; padding-top:24px; border-top:2px solid var(--border);">
+    <div id="defenseAdminPanel" style="display:none; margin-top:24px; padding-top:24px; padding-bottom:80px; border-top:2px solid var(--border);">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 방어 관리자</div>
       <div class="admin-section">
         <div class="admin-section-title">📝 추천 방어팀 관리</div>
@@ -851,7 +851,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
 
 
   <!-- ══ 딜 계산기 ══ -->
-  <div id="calcScreen" class="screen">
+  <div id="calcScreen" class="screen" style="padding-bottom:calc(var(--tab-h)+40px);">
     <div class="page-header">
       <div class="page-title">🧮 딜 계산기</div>
       <button class="btn-icon" onclick="showCalcGuide()">❓ 설명서</button>
@@ -1838,33 +1838,42 @@ function closeMyReportsPopup(){
 // ══ 내 제보 ══
 function loadMyReports(){
   const list = document.getElementById("myReportList");
-  if(!list||!currentDefense) return;
+  if(!list) return;
+  list.innerHTML='<div class="empty-state">로딩중...</div>';
 
-  db.ref(`suggestions/attack/${currentDefense}`).once("value").then(snap=>{
-    const data = snap.val();
-    const myItems = data
-      ? Object.entries(data).filter(([k,v])=>v.suggester===myNick)
-      : [];
+  // 전체 제보에서 내 닉네임 것만 찾기
+  db.ref("suggestions/attack").once("value").then(snap=>{
+    const all = snap.val()||{};
+    let myItems = [];
+    Object.entries(all).forEach(([dk, subs])=>{
+      Object.entries(subs||{}).forEach(([sk, v])=>{
+        if(v.suggester===myNick) myItems.push({dk, sk, ...v});
+      });
+    });
 
     if(!myItems.length){
-      box.style.display="none";
+      list.innerHTML='<div class="empty-state">제보한 내역 없음</div>';
       return;
     }
 
-    list.innerHTML = myItems.map(([k,v])=>{
-      const resultTag = v.result==="win"
+    list.innerHTML = myItems.map(item=>{
+      const dName = defenseDataCache[item.dk]?.name || item.dk;
+      const resultTag = item.result==="win"
         ? '<span style="color:#27ae60;font-size:10px;font-weight:700;margin-left:4px;">🏆 승리</span>'
-        : v.result==="lose"
+        : item.result==="lose"
         ? '<span style="color:#e74c3c;font-size:10px;font-weight:700;margin-left:4px;">💀 패배</span>'
         : "";
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-        <div>
-          <div style="font-size:13px;font-weight:700;">${v.name}${resultTag}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${v.type||""} ${v.ring?"· "+v.ring:""}</div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn-sm btn-blue" style="padding:6px 10px;font-size:11px;" onclick="openMyReportEdit('${currentDefense}','${k}')">수정</button>
-          <button class="btn-sm btn-red" style="padding:6px 10px;font-size:11px;" onclick="deleteMyReport('${currentDefense}','${k}')">삭제</button>
+      return `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">[${dName}]</div>
+            <div style="font-size:13px;font-weight:700;">${item.name}${resultTag}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">${item.type||""} ${item.ring?"· "+item.ring:""}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn-sm btn-blue" style="padding:6px 10px;font-size:11px;" onclick="openMyReportEdit('${item.dk}','${item.sk}')">수정</button>
+            <button class="btn-sm btn-red" style="padding:6px 10px;font-size:11px;" onclick="deleteMyReport('${item.dk}','${item.sk}')">삭제</button>
+          </div>
         </div>
       </div>`;
     }).join("");
