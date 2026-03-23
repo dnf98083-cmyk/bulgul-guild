@@ -696,7 +696,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
                 <button type="button" class="pve-tab-btn" onclick="setCardFormationType('공격')" id="cftype_공격" style="font-size:11px;padding:5px 8px;">공격</button>
                 <button type="button" class="pve-tab-btn" onclick="setCardFormationType('보호')" id="cftype_보호" style="font-size:11px;padding:5px 8px;">보호</button>
               </div>
-              <input class="form-input" id="cardFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewCardFormation()" style="margin:0;margin-bottom:6px;">
+              <input class="form-input" id="cardFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewCardFormation()" style="margin:0;margin-bottom:6px;display:none;">
               <div id="cardFormationPreview" style="margin-bottom:8px;"></div>
               <button class="btn-sm btn-blue" style="width:100%;" onclick="saveCardFormation()">저장</button>
             </div>
@@ -743,7 +743,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
             <button type="button" class="pve-tab-btn" onclick="setFormationType('공격')" id="ftype_공격" style="font-size:11px;padding:5px 10px;">공격</button>
             <button type="button" class="pve-tab-btn" onclick="setFormationType('보호')" id="ftype_보호" style="font-size:11px;padding:5px 10px;">보호</button>
           </div>
-          <input class="form-input" id="atkFormation" placeholder="캐릭터 이름 입력 (예: 브브 여포 풍연)" oninput="previewFormation()">
+          <input class="form-input" id="atkFormation" placeholder="캐릭터 이름 입력 (예: 브브 여포 풍연)" oninput="previewFormation()" style="display:none;">
           <div id="atkFormationPreview" style="margin-top:6px;"></div>
         </div>
         <textarea class="form-textarea" id="armorRec" rows="2" placeholder="장비/특이사항"></textarea>
@@ -788,7 +788,16 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div class="admin-section-title">📝 추천 방어팀 관리</div>
         <input class="form-input" id="rdInputName" placeholder="팀 이름">
         <input class="form-input" id="rdInputHeroes" placeholder="반지 추천">
-        <input class="form-input" id="rdInputFormation" placeholder="진형">
+        <div>
+          <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('기본')" id="rdft_기본" style="font-size:11px;padding:5px 8px;">기본</button>
+            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('밸런스')" id="rdft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
+            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('공격')" id="rdft_공격" style="font-size:11px;padding:5px 8px;">공격</button>
+            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('보호')" id="rdft_보호" style="font-size:11px;padding:5px 8px;">보호</button>
+          </div>
+          <input class="form-input" id="rdInputFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewRdFormation()" style="display:none;">
+          <div id="rdFormationPreview" style="margin-top:6px;"></div>
+        </div>
         <input class="form-input" id="rdInputPet" placeholder="펫">
         <textarea class="form-textarea" id="rdInputSkill" rows="2" placeholder="스킬순서"></textarea>
         <textarea class="form-textarea" id="rdInputDesc" rows="3" placeholder="설명"></textarea>
@@ -834,23 +843,9 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       <div id="pveViewMode">
         <div class="info-block"><div class="ib-label">⚔️ 덱 조합</div><div class="ib-value" id="viewPveDeck">-</div></div>
         <!-- PVE 진형 -->
-        <div class="info-block" id="pveFormationBlock">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div class="ib-label" style="margin:0;">🗺️ 진형</div>
-            <button onclick="togglePveFormationEdit()" style="font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;" id="pveFormationEditBtn">✏️ 수정</button>
-          </div>
+        <div class="info-block">
+          <div class="ib-label">🗺️ 진형</div>
           <div id="pveFormationDisplay">-</div>
-          <div id="pveFormationEditArea" style="display:none;margin-top:8px;">
-            <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
-              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('기본')" id="pftype_기본" style="font-size:11px;padding:5px 8px;">기본</button>
-              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('밸런스')" id="pftype_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
-              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('공격')" id="pftype_공격" style="font-size:11px;padding:5px 8px;">공격</button>
-              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('보호')" id="pftype_보호" style="font-size:11px;padding:5px 8px;">보호</button>
-            </div>
-            <input class="form-input" id="pveFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewPveFormation()" style="margin:0;margin-bottom:6px;">
-            <div id="pveFormationPreview" style="margin-bottom:8px;"></div>
-            <button class="btn-sm btn-blue" style="width:100%;" onclick="savePveFormation()">저장</button>
-          </div>
         </div>
         <div class="info-block"><div class="ib-label">📜 스킬 순서</div><div class="ib-value" id="viewPveSkill">-</div></div>
         <div class="info-block"><div class="ib-label">🛡️ 장비 세팅</div><div class="ib-value" id="viewPveEquip">-</div></div>
@@ -873,6 +868,15 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
           </div>
           <div id="pveDetailAdminList" class="pve-detail-list-admin"></div>
         </div>
+        <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">🗺️ 진형</div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('기본')" id="pftype_기본" style="font-size:11px;padding:5px 8px;">기본</button>
+          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('밸런스')" id="pftype_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
+          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('공격')" id="pftype_공격" style="font-size:11px;padding:5px 8px;">공격</button>
+          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('보호')" id="pftype_보호" style="font-size:11px;padding:5px 8px;">보호</button>
+        </div>
+        <input class="form-input" id="pveFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewPveFormation()" style="display:none;">
+        <div id="pveFormationPreview" style="margin-bottom:12px;"></div>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">덱 조합</div>
         <textarea class="form-textarea" id="editPveDeck" rows="3"></textarea>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">스킬 순서</div>
@@ -1714,6 +1718,53 @@ function showAdminNav() {
 }
 
 // 관리자 전환 제거됨
+
+// ══ 추천 방어 진형 입력 ══
+function setRdFormationType(type, updateInput=true){
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn=document.getElementById("rdft_"+t);
+    if(btn) btn.className=t===type?"pve-tab-btn active":"pve-tab-btn";
+  });
+  if(updateInput){
+    const input=document.getElementById("rdInputFormation");
+    if(input){
+      const val=input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
+      input.value=val?type+" "+val:type+" ";
+      input.focus();
+    }
+  }
+  previewRdFormation();
+}
+function previewRdFormation(){
+  const input=document.getElementById("rdInputFormation");
+  const preview=document.getElementById("rdFormationPreview");
+  if(!input||!preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{ input.value=newVal; });
+}
+
+// ══ 방어덱 제보 모달 진형 입력 ══
+function setMFormType(type, updateInput=true){
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn=document.getElementById("mft_"+t);
+    if(btn) btn.className=t===type?"pve-tab-btn active":"pve-tab-btn";
+  });
+  if(updateInput){
+    const input=document.getElementById("mForm");
+    if(input){
+      const val=input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
+      input.value=val?type+" "+val:type+" ";
+      input.focus();
+    }
+  }
+  previewMFormation();
+}
+function previewMFormation(){
+  const input=document.getElementById("mForm");
+  const preview=document.getElementById("mFormPreview");
+  if(!input||!preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{ input.value=newVal; });
+}
+
 
 // ══ PVE 진형 수정 ══
 function togglePveFormationEdit(){
@@ -2661,7 +2712,10 @@ function loadRecDefenseList() {
     Object.entries(data).forEach(([key,val])=>{ const div=document.createElement("div"); div.className="def-btn"; div.textContent=val.name; div.onclick=()=>{ document.querySelectorAll(".def-btn").forEach(x=>x.classList.remove("active")); div.classList.add("active"); showRecDefDetail(key,val); }; list.appendChild(div); });
   });
 }
-function showRecDefDetail(key,val){ currentRecDef=key; document.getElementById("recDefCard").style.display="block"; document.getElementById("rdName").textContent=val.name; document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:""; document.getElementById("rdHeroes").textContent=val.heroes||"-"; renderFormation(val.formation||"-", document.getElementById("rdFormation")); document.getElementById("rdPet").textContent=val.pet||"-"; document.getElementById("rdSkill").textContent=val.skill||"-"; document.getElementById("rdDesc").textContent=val.desc||"-"; document.getElementById("rdInputName").value=val.name; document.getElementById("rdInputHeroes").value=val.heroes||""; document.getElementById("rdInputFormation").value=val.formation||""; document.getElementById("rdInputPet").value=val.pet||""; document.getElementById("rdInputSkill").value=val.skill||""; document.getElementById("rdInputDesc").value=val.desc||""; document.getElementById("recDefCard").scrollIntoView({behavior:"smooth",block:"nearest"}); }
+function showRecDefDetail(key,val){ currentRecDef=key; document.getElementById("recDefCard").style.display="block"; document.getElementById("rdName").textContent=val.name; document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:""; document.getElementById("rdHeroes").textContent=val.heroes||"-"; renderFormation(val.formation||"-", document.getElementById("rdFormation")); document.getElementById("rdPet").textContent=val.pet||"-"; document.getElementById("rdSkill").textContent=val.skill||"-"; document.getElementById("rdDesc").textContent=val.desc||"-"; document.getElementById("rdInputName").value=val.name; document.getElementById("rdInputHeroes").value=val.heroes||""; document.getElementById("rdInputFormation").value=val.formation||"";
+  const rdft=detectFormationType(val.formation||"");
+  if(rdft) setRdFormationType(rdft,false);
+  previewRdFormation(); document.getElementById("rdInputPet").value=val.pet||""; document.getElementById("rdInputSkill").value=val.skill||""; document.getElementById("rdInputDesc").value=val.desc||""; document.getElementById("recDefCard").scrollIntoView({behavior:"smooth",block:"nearest"}); }
 function addRecDefense(){ if(checkResearcher()){ db.ref("recommendedDefenses").push({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value,maker:"관리자"}); toast("추가됨"); } }
 function editRecDefense(){ if(!checkResearcher()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value}); toast("수정됨"); }
 function delRecDefense(){ if(checkResearcher()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); } }
@@ -2781,6 +2835,13 @@ function fillPveEditForm(buildData={}, details={}){
   document.getElementById("editPveDeck").value=deck;
   document.getElementById("editPveSkill").value=(currentData?.skill&&currentData.skill!=="-")?currentData.skill:"";
   document.getElementById("editPveEquip").value=(currentData?.equip&&currentData.equip!=="-")?currentData.equip:"";
+  // 진형 불러오기
+  const formVal = currentData?.formation||"";
+  const pveFormInput = document.getElementById("pveFormationInput");
+  if(pveFormInput) pveFormInput.value = formVal;
+  const ftype = detectFormationType(formVal);
+  if(ftype) setPveFormationType(ftype, false);
+  previewPveFormation();
   const sel=document.getElementById("pveBuildSelect");
   const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
   const defNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
@@ -2849,15 +2910,16 @@ function savePveData(){
   const dataPath = savedDetail ? `${buildPath}/details/${savedDetail}` : buildPath;
 
   const doSave=(existingDetailName)=>{
-    const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now(), maker:myNick});
+    const formationVal = document.getElementById("pveFormationInput")?.value.trim()||"";
+  const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now(), maker:myNick});
     let p2;
     if(savedDetail){
       // 세부사항: set으로 덮어쓰기 (이름 보존)
       const finalName = detailNameInput || existingDetailName || "세부사항";
-      p2 = db.ref(dataPath).update({name:finalName, deck, skill, equip, updatedAt:Date.now()});
+      p2 = db.ref(dataPath).update({name:finalName, deck, skill, equip, formation:formationVal, updatedAt:Date.now()});
     } else {
       // 기본 빌드: buildName 등 기존 필드 보존하며 update
-      p2 = db.ref(dataPath).update({deck, skill, equip, updatedAt:Date.now()});
+      p2 = db.ref(dataPath).update({deck, skill, equip, formation:formationVal, updatedAt:Date.now()});
     }
     Promise.all([p1, p2]).then(()=>{
       toast("저장됨 ✅");
@@ -2935,7 +2997,7 @@ function openModal(type){ document.getElementById("modalOverlay").classList.add(
     <button type="button" class="pve-tab-btn" onclick="setModalFormationType('공격')" id="mftype_공격" style="font-size:11px;padding:5px 10px;">공격</button>
     <button type="button" class="pve-tab-btn" onclick="setModalFormationType('보호')" id="mftype_보호" style="font-size:11px;padding:5px 10px;">보호</button>
   </div>
-  <input class="form-input" id="mFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewModalFormation()">
+  <input class="form-input" id="mFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewModalFormation()" style="display:none;">
   <div id="mFormationPreview" style="margin-top:6px;"></div>
 </div>
 <textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항"></textarea>
@@ -2946,7 +3008,16 @@ function openModal(type){ document.getElementById("modalOverlay").classList.add(
   <button type="button" id="mResultLose" onclick="setModalResult('lose')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">💀 패배</button>
 </div>
 <input type="hidden" id="mResult" value="">
-`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
+`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><div>
+  <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+    <button type="button" class="pve-tab-btn" onclick="setMFormType('기본')" id="mft_기본" style="font-size:11px;padding:5px 8px;">기본</button>
+    <button type="button" class="pve-tab-btn" onclick="setMFormType('밸런스')" id="mft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
+    <button type="button" class="pve-tab-btn" onclick="setMFormType('공격')" id="mft_공격" style="font-size:11px;padding:5px 8px;">공격</button>
+    <button type="button" class="pve-tab-btn" onclick="setMFormType('보호')" id="mft_보호" style="font-size:11px;padding:5px 8px;">보호</button>
+  </div>
+  <input class="form-input" id="mForm" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewMFormation()" style="display:none;">
+  <div id="mFormPreview" style="margin-top:6px;"></div>
+</div><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
 function closeModal(e){ if(!e||e.target===document.getElementById("modalOverlay")) document.getElementById("modalOverlay").classList.remove("open"); }
 function setModalResult(r){
   document.getElementById("mResult").value=r;
