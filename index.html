@@ -1404,9 +1404,15 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         <div class="empty-state">로딩중...</div>
       </div>
     </div>
-    <div>
+    <div class="admin-section">
       <div class="admin-section-title">🛡️ 방어덱 제보</div>
       <div id="defSuggestionList2" class="list-card">
+        <div class="empty-state">로딩중...</div>
+      </div>
+    </div>
+    <div class="admin-section">
+      <div class="admin-section-title">🛡️ 상대 방어팀덱 제보</div>
+      <div id="defTeamSuggestionList" class="list-card">
         <div class="empty-state">로딩중...</div>
       </div>
     </div>
@@ -2263,7 +2269,7 @@ function openModal(type){ document.getElementById("modalOverlay").classList.add(
   <button type="button" id="mResultLose" onclick="setModalResult('lose')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">💀 졌어요</button>
 </div>
 <input type="hidden" id="mResult" value="">
-`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀 추가"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
+`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; }else if(type==="defense_add"){ document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><input class="form-input" id="mForm" placeholder="진형"><input class="form-input" id="mPet" placeholder="펫"><textarea class="form-textarea" id="mSkillDef" rows="2" placeholder="스킬순서"></textarea><textarea class="form-textarea" id="mDesc" rows="3" placeholder="설명 및 팁"></textarea>`; document.getElementById("modalSubmitBtn").onclick=submitDefenseSug; } }
 function closeModal(e){ if(!e||e.target===document.getElementById("modalOverlay")) document.getElementById("modalOverlay").classList.remove("open"); }
 function setModalResult(r){
   document.getElementById("mResult").value=r;
@@ -2298,8 +2304,16 @@ function submitAttackSug(){
 function submitDefenseAdd(){
   const name=document.getElementById("mDefAddName")?.value.trim();
   if(!name) return toast("방어팀 이름을 입력하세요");
-  db.ref("defenseTeams").push({name, attackTeams:{}, addedBy:myNick, createdAt:Date.now()});
-  toast("✅ 방어팀 추가됨!"); closeModal();
+  if(myRole==="관리자"||myRole==="연구원"){
+    // 관리자/연구원은 바로 추가
+    db.ref("defenseTeams").push({name, attackTeams:{}, addedBy:myNick, createdAt:Date.now()});
+    toast("✅ 방어팀 추가됨!");
+  } else {
+    // 길드원은 제보로 전송
+    db.ref("suggestions/defense_team").push({name, suggester:myNick, timestamp:Date.now()});
+    toast("📨 상대 방어팀덱 제보 완료! 관리자 승인 후 추가돼요");
+  }
+  closeModal();
 }
 function submitDefenseSug(){ const name=document.getElementById("mDefName").value; if(!name) return toast("이름을 입력하세요"); db.ref("suggestions/defense").push({name,heroes:document.getElementById("mHeroes").value,formation:document.getElementById("mForm").value,pet:document.getElementById("mPet").value,skill:document.getElementById("mSkillDef").value,desc:document.getElementById("mDesc").value,suggester:myNick,timestamp:Date.now()}); toast("제보 완료! 🙏"); closeModal(); }
 
@@ -2380,6 +2394,38 @@ d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}
       div.appendChild(d);
     });
   });
+  // 상대 방어팀덱 제보
+  db.ref("suggestions/defense_team").get().then(snap=>{
+    const div=document.getElementById("defTeamSuggestionList"); div.innerHTML="";
+    const all=snap.val();
+    if(!all){ div.innerHTML='<div class="empty-state">제보 없음</div>'; return; }
+    Object.entries(all).forEach(([k,v])=>{
+      const d=document.createElement("div"); d.className="report-row";
+      d.innerHTML=`
+        <div style="flex:1;min-width:0;">
+          <div class="report-name">➕ ${v.name}</div>
+          <div class="report-sub">제보자: ${v.suggester}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn-sm btn-green" style="padding:7px 10px;" onclick="approveDefTeam('${k}','${v.name}')">✅ 승인</button>
+          <button class="btn-sm btn-red" style="padding:7px 10px;" onclick="rejectDefTeam('${k}')">❌ 거절</button>
+        </div>`;
+      div.appendChild(d);
+    });
+  });
+}
+
+function approveDefTeam(key, name){
+  if(!checkResearcher()) return;
+  db.ref("defenseTeams").push({name, attackTeams:{}, createdAt:Date.now()});
+  db.ref(`suggestions/defense_team/${key}`).remove();
+  toast("✅ 방어팀 추가 승인됨!"); loadAdminReports();
+}
+function rejectDefTeam(key){
+  if(!checkResearcher()) return;
+  if(!confirm("거절할까요?")) return;
+  db.ref(`suggestions/defense_team/${key}`).remove();
+  toast("거절됨"); loadAdminReports();
 }
 
 // ══ 관리자: 승패 관리 ══
