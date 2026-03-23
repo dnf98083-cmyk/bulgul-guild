@@ -833,6 +833,25 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
       </div>
       <div id="pveViewMode">
         <div class="info-block"><div class="ib-label">⚔️ 덱 조합</div><div class="ib-value" id="viewPveDeck">-</div></div>
+        <!-- PVE 진형 -->
+        <div class="info-block" id="pveFormationBlock">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div class="ib-label" style="margin:0;">🗺️ 진형</div>
+            <button onclick="togglePveFormationEdit()" style="font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;" id="pveFormationEditBtn">✏️ 수정</button>
+          </div>
+          <div id="pveFormationDisplay">-</div>
+          <div id="pveFormationEditArea" style="display:none;margin-top:8px;">
+            <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('기본')" id="pftype_기본" style="font-size:11px;padding:5px 8px;">기본</button>
+              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('밸런스')" id="pftype_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
+              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('공격')" id="pftype_공격" style="font-size:11px;padding:5px 8px;">공격</button>
+              <button type="button" class="pve-tab-btn" onclick="setPveFormationType('보호')" id="pftype_보호" style="font-size:11px;padding:5px 8px;">보호</button>
+            </div>
+            <input class="form-input" id="pveFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewPveFormation()" style="margin:0;margin-bottom:6px;">
+            <div id="pveFormationPreview" style="margin-bottom:8px;"></div>
+            <button class="btn-sm btn-blue" style="width:100%;" onclick="savePveFormation()">저장</button>
+          </div>
+        </div>
         <div class="info-block"><div class="ib-label">📜 스킬 순서</div><div class="ib-value" id="viewPveSkill">-</div></div>
         <div class="info-block"><div class="ib-label">🛡️ 장비 세팅</div><div class="ib-value" id="viewPveEquip">-</div></div>
         <div style="text-align:right;margin-top:10px;"><button onclick="enablePveEdit()" class="btn-sm btn-blue">관리자 수정</button></div>
@@ -1696,6 +1715,74 @@ function showAdminNav() {
 
 // 관리자 전환 제거됨
 
+// ══ PVE 진형 수정 ══
+function togglePveFormationEdit(){
+  const area = document.getElementById("pveFormationEditArea");
+  const btn = document.getElementById("pveFormationEditBtn");
+  if(!area) return;
+  const isOpen = area.style.display==="block";
+  area.style.display = isOpen ? "none" : "block";
+  btn.textContent = isOpen ? "✏️ 수정" : "✕ 닫기";
+  if(!isOpen){
+    const input = document.getElementById("pveFormationInput");
+    if(input){
+      // 현재 저장된 진형값 불러오기
+      const buildPath = getPveBuildPath();
+      db.ref(buildPath).once("value").then(snap=>{
+        const d = snap.val()||{};
+        const currentData = pveCurrentDetail && d.details?.[pveCurrentDetail]
+          ? d.details[pveCurrentDetail] : d;
+        const val = currentData?.formation || "";
+        input.value = val;
+        const type = detectFormationType(val);
+        if(type) setPveFormationType(type, false);
+        previewPveFormation();
+      });
+    }
+  }
+}
+
+function setPveFormationType(type, updateInput=true){
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn = document.getElementById("pftype_"+t);
+    if(btn) btn.className = t===type ? "pve-tab-btn active" : "pve-tab-btn";
+  });
+  if(updateInput){
+    const input = document.getElementById("pveFormationInput");
+    if(input){
+      const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/g,"").trim();
+      input.value = val ? type+" "+val : type+" ";
+      input.focus();
+    }
+  }
+  previewPveFormation();
+}
+
+function previewPveFormation(){
+  const input = document.getElementById("pveFormationInput");
+  const preview = document.getElementById("pveFormationPreview");
+  if(!input || !preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{
+    input.value = newVal;
+  });
+}
+
+function savePveFormation(){
+  if(!checkResearcher()) return;
+  const input = document.getElementById("pveFormationInput");
+  if(!input) return;
+  const val = input.value.trim();
+  const buildPath = getPveBuildPath();
+  const dataPath = pveCurrentDetail ? `${buildPath}/details/${pveCurrentDetail}` : buildPath;
+  db.ref(dataPath).update({formation: val}).then(()=>{
+    toast("✅ 진형 저장됨!");
+    const disp = document.getElementById("pveFormationDisplay");
+    if(disp) renderFormation(val, disp);
+    togglePveFormationEdit();
+  });
+}
+
+
 // ══ 카드 진형 직접 수정 ══
 function toggleFormationEdit(){
   const area = document.getElementById("formationEditArea");
@@ -1738,7 +1825,10 @@ function setCardFormationType(type, updateInput=true){
 function previewCardFormation(){
   const input = document.getElementById("cardFormationInput");
   const preview = document.getElementById("cardFormationPreview");
-  if(input && preview) renderFormation(input.value.trim(), preview);
+  if(!input || !preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{
+    input.value = newVal;
+  });
 }
 
 function saveCardFormation(){
@@ -1777,7 +1867,10 @@ function setFormationType(type){
 function previewFormation(){
   const input = document.getElementById("atkFormation");
   const preview = document.getElementById("atkFormationPreview");
-  if(input && preview) renderFormation(input.value.trim(), preview);
+  if(!input || !preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{
+    input.value = newVal;
+  });
 }
 
 function setModalFormationType(type){
@@ -1798,7 +1891,10 @@ function setModalFormationType(type){
 function previewModalFormation(){
   const input = document.getElementById("mFormation");
   const preview = document.getElementById("mFormationPreview");
-  if(input && preview) renderFormation(input.value.trim(), preview);
+  if(!input || !preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{
+    input.value = newVal;
+  });
 }
 
 
@@ -1820,10 +1916,10 @@ function detectFormationType(text){
   return null;
 }
 
-function renderFormation(formationText, targetEl){
+function renderFormation(formationText, targetEl, editable=false, onChangeCb=null){
   if(!targetEl) return;
   if(!formationText || formationText==="-"){
-    targetEl.innerHTML = "<span>-</span>"; return;
+    targetEl.innerHTML = "<span style='color:var(--text3)'>-</span>"; return;
   }
   const type = detectFormationType(formationText);
   if(!type){ targetEl.textContent = formationText; return; }
@@ -1832,16 +1928,57 @@ function renderFormation(formationText, targetEl){
   const chars = cleaned ? cleaned.split(/\s+/).filter(Boolean) : [];
   const layout = FORMATION_LAYOUTS[type];
 
-  let html2 = `<div class="formation-wrap">`;
+  const wrap = document.createElement("div");
+  wrap.className = "formation-wrap";
+
   layout.forEach(row=>{
-    html2 += `<div class="formation-row">`;
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "formation-row";
     row.forEach(idx=>{
-      html2 += `<div class="formation-cell">${chars[idx]||"?"}</div>`;
+      const cell = document.createElement("div");
+      cell.className = "formation-cell";
+      const charName = chars[idx] || "";
+
+      if(editable){
+        // 클릭하면 인라인 input으로 전환
+        cell.textContent = charName || "?";
+        cell.style.cursor = "pointer";
+        cell.title = "클릭해서 수정";
+        cell.onclick = ()=>{
+          const input = document.createElement("input");
+          input.value = charName;
+          input.style.cssText = "width:100%;background:transparent;border:none;outline:none;font-size:11px;font-weight:700;color:var(--text);text-align:center;font-family:inherit;";
+          input.onblur = ()=>{
+            const newVal = input.value.trim();
+            chars[idx] = newVal;
+            cell.textContent = newVal || "?";
+            // 전체 진형 문자열 재조성
+            const allChars = [];
+            layout.forEach(r=> r.forEach(i=>{ if(chars[i]!==undefined) allChars[i]=chars[i]; }));
+            const newFormation = type + " " + allChars.filter(Boolean).join(" ");
+            if(onChangeCb) onChangeCb(newFormation);
+          };
+          input.onkeydown = e=>{ if(e.key==="Enter"||e.key==="Tab") input.blur(); };
+          cell.innerHTML = "";
+          cell.appendChild(input);
+          input.focus();
+          input.select();
+        };
+      } else {
+        cell.textContent = charName || "?";
+      }
+      rowDiv.appendChild(cell);
     });
-    html2 += `</div>`;
+    wrap.appendChild(rowDiv);
   });
-  html2 += `<div class="formation-label">${type} 진형</div></div>`;
-  targetEl.innerHTML = html2;
+
+  const label = document.createElement("div");
+  label.className = "formation-label";
+  label.textContent = type + " 진형";
+  wrap.appendChild(label);
+
+  targetEl.innerHTML = "";
+  targetEl.appendChild(wrap);
 }
 
 
@@ -2607,6 +2744,9 @@ function fetchPveRealData(){
     if(pveCurrentDetail && !details[pveCurrentDetail]) pveCurrentDetail="";
     const currentData=(pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
     document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
+    // PVE 진형 표시
+    const pveFormDisp = document.getElementById("pveFormationDisplay");
+    if(pveFormDisp) renderFormation(currentData?.formation||"-", pveFormDisp);
     document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
     document.getElementById("viewPveEquip").textContent=currentData?.equip||"-";
     // 작성자 표시
