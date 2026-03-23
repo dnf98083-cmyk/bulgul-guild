@@ -1535,12 +1535,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle">제보하기</div>
     <div id="modalBody"></div>
-    <div id="modalPasteRow" style="display:none;margin-bottom:8px;">
-      <button onclick="pasteAtkCard('modal')" class="btn-sm btn-gray" style="width:100%;padding:10px;">📥 공략 코드 붙여넣기</button>
-    </div>
     <div class="modal-btns">
       <button id="modalSubmitBtn" class="btn-sm btn-blue" style="padding:14px;">제보 보내기</button>
       <button onclick="closeModal()" class="btn-sm btn-gray" style="padding:14px;">취소</button>
+    </div>
+    <div id="modalPasteRow" style="display:none;margin-top:8px;">
+      <button onclick="pasteAtkCard('modal')" class="btn-sm btn-gray" style="width:100%;padding:10px;border-style:dashed;">📥 공략 코드 붙여넣기</button>
     </div>
   </div>
 </div>
