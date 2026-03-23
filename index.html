@@ -638,7 +638,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; background: radia
         </div>
         <!-- 버튼 한 줄 -->
         <div style="display:flex;gap:8px;margin-bottom:14px;">
-          <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 방어팀 추가</button>
+          <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 방어팀 제보</button>
           <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 공격덱 제보</button>
         </div>
         <div id="attackList" class="atk-grid"></div>
@@ -2501,9 +2501,8 @@ function openAdminReview(type,k1,k2){
         <div class="calc-field"><label class="calc-label">이름</label><input class="form-input" id="re_name" value="${data.name||""}" style="margin:0;"></div>
         <div class="calc-field"><label class="calc-label">속공</label>
           <select class="form-select" id="re_type" style="margin:0;">
-            <option ${data.type==="1속"?"selected":""}>1속</option>
-            <option ${data.type==="2속"?"selected":""}>2속</option>
-            <option ${data.type==="3속"?"selected":""}>3속</option>
+            <option value="속공 따야 함" ${data.type==="속공 따야 함"?"selected":""}>⚡ 속공 따야 함</option>
+            <option value="내줘도 됨" ${data.type==="내줘도 됨"?"selected":""}>🛡️ 내줘도 됨</option>
           </select>
         </div>
         <div class="calc-field"><label class="calc-label">반지</label><input class="form-input" id="re_ring" value="${data.ring||""}" style="margin:0;"></div>
