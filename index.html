@@ -91,7 +91,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,85,51,0.18) 0%, transparent 65%);
+  background: radial-gradient(ellipse 60% 30% at 50% 100%, rgba(255,85,51,0.10) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -167,6 +167,7 @@ body::before {
   width: 100%;
   max-width: 320px;
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 .login-card label {
   display: block;
@@ -207,7 +208,7 @@ body::before {
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.2s, transform 0.15s;
-  box-shadow: var(--glow);
+  box-shadow: 0 0 16px rgba(255,77,46,0.35);
   margin-top: 18px;
   letter-spacing: 0.3px;
 }
@@ -229,7 +230,7 @@ body::before {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
 }
-#tabBar.hidden { display: none; }
+#tabBar.hidden { display: none !important; visibility: hidden !important; pointer-events: none !important; opacity: 0 !important; }
 .tab-item {
   display: flex;
   flex-direction: column;
@@ -1266,6 +1267,17 @@ body::before {
 <div id="globalLoader"><div class="spinner"></div><div class="spinner-text">불러오는 중...</div></div>
 
 <!-- ══ 로그인 ══ -->
+<!-- 모바일 하단 탭바 -->
+<div id="tabBar" class="hidden" style="display:none!important;"><div style="position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:red;color:white;padding:4px 8px;z-index:99999;font-size:12px;">오류</div>
+  <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
+  <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
+  <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
+  <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
+  <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
+  <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
+  <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
+</div>
+
 <div id="loginScreen">
   <div class="login-logo">🔥</div>
   <div class="login-title">불굴 길드 DB</div>
@@ -1317,16 +1329,7 @@ body::before {
 <!-- ══ 메인 콘텐츠 ══ -->
 <div id="mainContent" style="display:none;">
 
-  <!-- 모바일 하단 탭바 -->
-  <div id="tabBar" class="hidden">
-    <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
-    <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
-    <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
-    <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
-    <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
-    <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
-    <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
-  </div>
+
 
   <!-- 홈 -->
   <div id="homeScreen" class="screen">
@@ -2435,6 +2438,9 @@ function toast(msg) {
 
 // ══ 초기화 ══
 window.onload = () => {
+  // 탭바 강제 숨김 (로그인 전)
+  const tb = document.getElementById("tabBar");
+  if(tb) { tb.classList.add("hidden"); tb.style.display="none"; }
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
   if(nick&&key){
     checkLogin(nick,key,true);
@@ -2493,7 +2499,7 @@ function enterApp() {
     document.getElementById("tabBar").classList.add("hidden");
     document.getElementById("mobileLogout").style.display="none";
   } else {
-    document.getElementById("tabBar").classList.remove("hidden");
+    const tb2=document.getElementById("tabBar"); tb2.classList.remove("hidden"); tb2.style.display="";
   }
   document.getElementById("homeNick").textContent=myNick;
   const sidebarNick=document.getElementById("sidebarNick");
