@@ -252,19 +252,8 @@ body::before {
   filter: drop-shadow(0 0 6px var(--accent));
   transform: translateY(-3px) scale(1.08);
 }
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 16px;
-  height: 2px;
-  background: var(--accent);
-  border-radius: 2px 2px 0 0;
-}
 /* 탭 아이템 overflow 방지 */
-.tab-item { overflow: hidden; }
+.tab-item { overflow: visible; }
 
 /* ── 진형 비주얼 ── */
 .formation-wrap  { display:flex; flex-direction:column; align-items:center; gap:5px; margin:8px 0; }
@@ -324,7 +313,7 @@ body::before {
     height: 58px;
     padding-bottom: env(safe-area-inset-bottom);
   }
-  .tab-item { gap: 2px; padding: 5px 1px; overflow: hidden; }
+  .tab-item { gap: 2px; padding: 5px 1px; }
   .tab-item .tab-icon  { font-size: 19px; }
   .tab-item .tab-label { font-size: 8px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
   .tab-item.active .tab-icon { transform: translateY(-3px) scale(1.1); }
@@ -1305,7 +1294,7 @@ body::before {
     <button class="sb-item active" onclick="switchTab('home')"><span class="si-icon">🏠</span> 홈</button>
     <button class="sb-item" onclick="switchTab('notice')"><span class="si-icon">📢</span> 공지사항</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
-    <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🔰</span> 추천 방어</button>
+    <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
     <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
@@ -1334,7 +1323,7 @@ body::before {
     <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
     <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
     <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
-    <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🔰</div><div class="tab-label">방어</div></button>
+    <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
     <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
     <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
     <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
