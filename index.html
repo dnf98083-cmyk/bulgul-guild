@@ -311,7 +311,6 @@ body::before {
   /* ── 탭바 ── */
   #tabBar {
     height: 58px;
-    padding-bottom: env(safe-area-inset-bottom);
   }
   .tab-item { gap: 2px; padding: 5px 1px; }
   .tab-item .tab-icon  { font-size: 19px; }
@@ -1316,7 +1315,7 @@ body::before {
 </div>
 
 <!-- ══ 메인 콘텐츠 ══ -->
-<div id="mainContent">
+<div id="mainContent" style="display:none;">
 
   <!-- 모바일 하단 탭바 -->
   <div id="tabBar" class="hidden">
@@ -2489,6 +2488,7 @@ function checkAdmin() {
 
 function enterApp() {
   document.getElementById("loginScreen").style.display="none";
+  document.getElementById("mainContent").style.display="block";
   if(isPC()){
     document.getElementById("tabBar").classList.add("hidden");
     document.getElementById("mobileLogout").style.display="none";
