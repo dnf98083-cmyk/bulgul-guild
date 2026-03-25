@@ -298,64 +298,186 @@ body::before {
 }
 .formation-label { font-size: 10px; color: var(--accent); font-weight: 700; margin-top: 3px; letter-spacing: 0.8px; text-transform: uppercase; }
 
-/* ── 모바일 ── */
+/* ══════════════════════════════
+   📱 모바일 UI
+   ══════════════════════════════ */
 @media (max-width: 899px) {
-  .screen { padding: 14px 13px; padding-bottom: calc(var(--tab-h) + 28px); }
-  /* 공격 화면 — 모바일에서 1열 full width */
+
+  /* ── 기본 레이아웃 ── */
+  .screen {
+    padding: 16px 14px;
+    padding-bottom: calc(var(--tab-h) + 24px);
+  }
+
+  /* ── 공격 화면 1열 ── */
   .attack-2col     { display: block !important; }
   .attack-left-col { width: 100% !important; position: static !important; }
   .attack-left-col .dropdown-search,
   .def-selector-wrap,
   .def-selector    { width: 100% !important; box-sizing: border-box !important; }
-  .page-header  { margin-bottom: 13px; padding-top: 4px; }
-  .page-title   { font-size: 16px; }
-  .home-greeting { margin-bottom: 13px; }
-  .home-greeting .name { font-size: 20px; }
-  .home-stat-card { padding: 13px 15px; border-radius: 13px; }
-  .home-stat-card .stat-value { font-size: 20px; }
-  .home-menu-grid { gap: 9px; margin-bottom: 14px; }
-  .home-menu-btn  { padding: 13px 8px; border-radius: 13px; gap: 6px; }
-  .home-menu-btn .menu-icon  { font-size: 21px; }
-  .home-menu-btn .menu-label { font-size: 11px; }
+  #attackCardWrap  { position: static !important; }
+
+  /* ── 탭바 ── */
+  #tabBar {
+    height: 58px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-item { gap: 2px; padding: 5px 2px; }
+  .tab-item .tab-icon  { font-size: 20px; }
+  .tab-item .tab-label { font-size: 9px; letter-spacing: 0; }
+  .tab-item.active .tab-icon { transform: translateY(-3px) scale(1.1); }
+
+  /* ── 페이지 헤더 ── */
+  .page-header { margin-bottom: 14px; padding-top: 2px; }
+  .page-title  { font-size: 17px; }
+
+  /* ── 홈 인사 ── */
+  .home-greeting { margin-bottom: 14px; }
+  .home-greeting .hi   { font-size: 12px; }
+  .home-greeting .name { font-size: 21px; }
+
+  /* ── 홈 스탯 카드 2열 나란히 ── */
+  .home-top-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .home-stat-card {
+    padding: 14px 12px;
+    border-radius: 14px;
+    margin-bottom: 0 !important;
+  }
+  .home-stat-card .stat-label { font-size: 9px; margin-bottom: 5px; }
+  .home-stat-card .stat-value { font-size: 18px; }
+  .home-stat-card .stat-rank  { font-size: 11px; }
+
+  /* ── 빠른 메뉴 ── */
+  .home-menu-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 9px;
+    margin-bottom: 16px;
+  }
+  .home-menu-btn {
+    padding: 16px 10px;
+    border-radius: 14px;
+    gap: 7px;
+  }
+  .home-menu-btn.big {
+    grid-column: span 2;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    padding: 16px 18px;
+    gap: 14px;
+  }
+  .home-menu-btn.big .menu-icon { font-size: 28px; }
+  .home-menu-btn .menu-icon  { font-size: 22px; }
+  .home-menu-btn .menu-label { font-size: 12px; }
   .home-menu-btn .menu-desc  { font-size: 10px; }
-  .section-title { font-size: 10px; margin-bottom: 9px; }
-  .atk-card  { border-radius: 13px; padding: 14px; }
-  .atk-btn   { border-radius: 10px; padding: 10px 8px; }
+
+  /* ── 섹션 제목 ── */
+  .section-title { font-size: 10px; margin-bottom: 9px; letter-spacing: 0.8px; }
+
+  /* ── 공격 카드/버튼 ── */
+  .atk-card  { border-radius: 14px; padding: 14px; }
+  .atk-btn   { border-radius: 11px; padding: 12px 8px; }
   .atk-btn .a-name { font-size: 12px; }
   .atk-btn .a-stat { font-size: 10px; }
-  .form-input,.form-select,.form-textarea { font-size:15px !important; padding:11px 13px !important; border-radius:10px !important; }
-  .btn-icon  { padding: 8px 12px; font-size: 12px; border-radius: 9px; }
-  .btn-sm    { padding: 8px 12px; font-size: 12px; border-radius: 9px; }
-  .btn-primary { font-size: 15px; padding: 15px; }
-  .pve-btn   { font-size: 12px; padding: 10px 6px; border-radius: 10px; }
-  .pve-tab-btn { font-size: 11px; padding: 7px 8px; border-radius: 9px; }
-  .rank-card { border-radius: 13px; }
-  .rank-row  { padding: 10px 12px; gap: 8px; }
-  .rank-num  { font-size: 14px; min-width: 22px; }
-  .rank-name { font-size: 13px; }
+
+  /* ── 승패 버튼 크게 ── */
+  .wl-btns { gap: 10px; margin-top: 16px; }
+  .btn-win, .btn-lose { padding: 18px; font-size: 16px; border-radius: 14px; }
+
+  /* ── 폼 요소 ── */
+  .form-input,.form-select,.form-textarea {
+    font-size: 16px !important;
+    padding: 13px 14px !important;
+    border-radius: 11px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ── 버튼 ── */
+  .btn-icon    { padding: 9px 13px; font-size: 12px; border-radius: 10px; }
+  .btn-sm      { padding: 10px 14px; font-size: 13px; border-radius: 10px; }
+  .btn-primary { font-size: 15px; padding: 16px; border-radius: 13px; }
+
+  /* ── PVE ── */
+  .pve-grid    { grid-template-columns: repeat(3,1fr) !important; gap: 8px; }
+  .pve-btn     { font-size: 12px; padding: 13px 6px; border-radius: 11px; }
+  .pve-tab-btn { font-size: 12px; padding: 9px 8px; border-radius: 10px; }
+  .pve-tabs    { gap: 7px; margin-bottom: 12px; }
+
+  /* ── 랭킹 ── */
+  .rank-card { border-radius: 14px; }
+  .rank-row  { padding: 12px 13px; gap: 10px; }
+  .rank-num  { font-size: 14px; min-width: 24px; }
+  .rank-nick,.rank-name { font-size: 13px; }
+  .rank-main { font-size: 14px; }
   .rs-main   { font-size: 13px; }
   .rs-sub    { font-size: 10px; }
-  .rank-day-btn { font-size: 11px; padding: 7px 3px; border-radius: 8px; }
-  .admin-section { padding: 13px 14px; border-radius: 13px; margin-bottom: 12px; }
-  .admin-section-title { font-size: 11px; margin-bottom: 10px; }
-  .notice-banner { border-radius: 13px; padding: 13px 14px; }
+  .rank-day-btn { font-size: 12px; padding: 10px 2px; border-radius: 9px; min-height: 38px; }
+
+  /* ── 공지 ── */
+  .notice-banner       { border-radius: 14px; padding: 14px 15px; margin-bottom: 12px; }
   .notice-banner-title { font-size: 14px; }
-  .notice-banner-body  { font-size: 13px; }
-  .calc-grid { grid-template-columns: repeat(2,1fr) !important; gap: 8px; }
-  .calc-label { font-size: 10px !important; }
-  .calc-hint  { font-size: 10px; }
-  .calc-result-grid { grid-template-columns: repeat(3,1fr); gap: 6px; }
-  .calc-result-val  { font-size: 14px; }
-  #toast { font-size: 12px; padding: 10px 18px; max-width: 88vw; white-space: normal; text-align: center; }
-  .review-inner { padding: 18px 16px; border-radius: 18px; }
-  .dropdown-inner { border-radius: 18px 18px 0 0; }
-  .dropdown-item { padding: 13px 18px; }
-  .d-name { font-size: 14px; }
-  .tab-item .tab-icon  { font-size: 19px; }
-  .tab-item .tab-label { font-size: 8.5px; }
-  .info-block { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; }
-  .ib-label { font-size: 10px; }
-  .ib-value { font-size: 13px; }
+  .notice-banner-body  { font-size: 13px; line-height: 1.8; }
+
+  /* ── 관리자 ── */
+  .admin-section       { padding: 14px; border-radius: 14px; margin-bottom: 12px; }
+  .admin-section-title { font-size: 11px; margin-bottom: 11px; }
+
+  /* ── 딜 계산기 ── */
+  .calc-grid        { grid-template-columns: repeat(2,1fr) !important; gap: 9px; }
+  .calc-label       { font-size: 10px !important; }
+  .calc-hint        { font-size: 10px; }
+  .calc-result-grid { grid-template-columns: repeat(3,1fr); gap: 7px; }
+  .calc-result-card { padding: 10px 11px; }
+  .calc-result-val  { font-size: 15px; }
+
+  /* ── 토스트 — 하단 탭바 위 ── */
+  #toast {
+    font-size: 13px;
+    padding: 11px 20px;
+    max-width: 88vw;
+    white-space: normal;
+    text-align: center;
+    bottom: calc(var(--tab-h) + 14px);
+    top: auto;
+    transform: translateX(-50%) translateY(80px);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── 모달 ── */
+  .review-inner { padding: 20px 16px; border-radius: 20px; }
+  .modal-sheet  { border-radius: 22px 22px 0 0; padding: 22px 18px 36px; }
+  .modal-title  { font-size: 16px; margin-bottom: 16px; }
+
+  /* ── 드롭다운 ── */
+  .dropdown-inner  { border-radius: 20px 20px 0 0; }
+  .dropdown-item   { padding: 15px 18px; min-height: 52px; }
+  .d-name          { font-size: 14px; }
+  .dropdown-search { font-size: 15px; padding: 13px 14px; }
+
+  /* ── 정보 블록 ── */
+  .info-block { padding: 11px 13px; border-radius: 11px; margin-bottom: 9px; }
+  .ib-label   { font-size: 10px; margin-bottom: 5px; }
+  .ib-value   { font-size: 13px; line-height: 1.8; }
+
+  /* ── 칩 ── */
+  .chip       { padding: 7px 13px; border-radius: 10px; }
+  .chip-label { font-size: 9px; }
+  .chip-value { font-size: 12px; }
+
+  /* ── 진형 셀 ── */
+  .formation-cell { padding: 6px 8px; font-size: 11px; min-width: 50px; }
+
+  /* ── 방어 버튼 ── */
+  .def-btn { padding: 16px 10px; border-radius: 12px; font-size: 13px; }
+
+  /* ── 카드 헤더 ── */
+  .atk-card-name  { font-size: 17px; }
+  .rate-num       { font-size: 18px; }
+  .win-rate-badge { padding: 7px 12px; border-radius: 10px; }
 }
 
 /* ── PC 사이드바 ── */
@@ -1349,7 +1471,7 @@ body::before {
           <div id="moreRankMsg" class="more-rank-msg">* 11위 이하는 관리자만 볼 수 있습니다</div>
         </div>
       </div>
-      <div style="position:sticky;top:20px;">
+      <div id="attackCardWrap" style="position:sticky;top:20px;">
         <div id="attackCard" class="atk-card">
           <div class="atk-card-header">
             <div>
@@ -3618,7 +3740,7 @@ function selectAttack(dk,ak) {
   db.ref(`defenseTeams/${dk}/attackTeams/${ak}`).on("value",snap=>{
     const d=snap.val(); if(!d) return;
     document.getElementById("attackCard").style.display="block";
-    const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns="45% 1fr";
+    const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns=isPC()?"45% 1fr":"1fr";
     document.getElementById("cardName").textContent=d.name;
     document.getElementById("cardMaker").textContent=d.maker?`By. ${d.maker}`:"";
     document.getElementById("cardWin").textContent=d.win;
