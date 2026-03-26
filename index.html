@@ -1293,11 +1293,13 @@ body::before {
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
     <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
+    <button class="sb-item" onclick="switchTab('suggest')"><span class="si-icon">📬</span> 건의사항</button>
     <!-- 관리자 전용 (기본 숨김) -->
     <div id="adminNavSection" style="display:none;">
       <div class="sb-divider">관리자</div>
       <button class="sb-item" onclick="switchTab('adminMembers')"><span class="si-icon">👥</span> 길드원 관리</button>
       <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리</button>
+      <button class="sb-item" onclick="switchTab('adminSuggest')"><span class="si-icon">📬</span> 건의 관리</button>
       <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
     </div>
   </nav>
@@ -1708,6 +1710,54 @@ body::before {
     </div>
   </div>
 
+
+
+  <!-- ══ 건의사항 ══ -->
+  <div id="suggestScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">📬 건의사항</div>
+    </div>
+
+    <!-- 제출 폼 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+        💬 관리자에게 익명으로 건의사항을 남길 수 있어요.<br>
+        <span style="font-size:11px;color:var(--text3);">닉네임은 저장되지 않아요.</span>
+      </div>
+      <select class="form-select" id="suggestCategory" style="margin-bottom:8px;">
+        <option value="" disabled selected>카테고리 선택</option>
+        <option value="건의">💡 건의</option>
+        <option value="불만">😤 불만</option>
+        <option value="칭찬">👍 칭찬</option>
+        <option value="질문">❓ 질문</option>
+        <option value="기타">📌 기타</option>
+      </select>
+      <textarea class="form-textarea" id="suggestContent" rows="4" placeholder="내용을 입력해주세요 (익명으로 제출됩니다)" style="margin-bottom:8px;"></textarea>
+      <button class="btn-primary" onclick="submitSuggest()" style="margin-top:0;">익명으로 제출하기</button>
+    </div>
+
+    <!-- 내 제출 내역 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">📋 내가 남긴 건의사항</div>
+      <div id="mySuggestList"><div class="empty-state">아직 남긴 건의사항이 없어요</div></div>
+    </div>
+  </div>
+
+  <!-- ══ 건의사항 관리자 탭 ══ -->
+  <div id="adminSuggestScreen" class="screen">
+    <div class="page-header">
+      <div class="page-title">📬 건의사항 관리</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="pve-tab-btn active" id="stab_all"     onclick="filterSuggestAdmin('all')"    >전체</button>
+      <button class="pve-tab-btn"        id="stab_건의"    onclick="filterSuggestAdmin('건의')"   >💡 건의</button>
+      <button class="pve-tab-btn"        id="stab_불만"    onclick="filterSuggestAdmin('불만')"   >😤 불만</button>
+      <button class="pve-tab-btn"        id="stab_칭찬"    onclick="filterSuggestAdmin('칭찬')"   >👍 칭찬</button>
+      <button class="pve-tab-btn"        id="stab_질문"    onclick="filterSuggestAdmin('질문')"   >❓ 질문</button>
+      <button class="pve-tab-btn"        id="stab_기타"    onclick="filterSuggestAdmin('기타')"   >📌 기타</button>
+    </div>
+    <div id="adminSuggestList"><div class="empty-state">건의사항이 없어요</div></div>
+  </div>
 
   <!-- ══ 딜 계산기 ══ -->
   <div id="calcScreen" class="screen" style="padding-bottom:calc(var(--tab-h)+40px);">
@@ -2487,7 +2537,8 @@ function enterApp() {
       const tabs = [
         ["home","🏠","홈","active"],["notice","📢","공지",""],
         ["attack","⚔️","공격",""],["defense","🛡️","방어",""],
-        ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],["ranking","🏆","랭킹",""]
+        ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],["ranking","🏆","랭킹",""],
+        ["suggest","📬","건의",""]
       ];
       tabs.forEach(function(t) {
         const btn = document.createElement("button");
@@ -2531,8 +2582,8 @@ function showAdminNav() {
   if(myRole==="연구원"){
     const allSbItems=document.querySelectorAll(".sb-item");
     // adminMembers(index 5), adminScores(index 7) 숨기기
-    if(allSbItems[5]) allSbItems[5].style.display="none";
-    if(allSbItems[7]) allSbItems[7].style.display="none";
+    if(allSbItems[8]) allSbItems[8].style.display="none";
+    if(allSbItems[11]) allSbItems[11].style.display="none";
   }
 }
 
@@ -3580,7 +3631,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","notice","attack","defense","pve","calc","ranking","adminMembers","adminReports","adminScores"];
+  const allTabs=["home","notice","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -3592,7 +3643,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"ranking":6,"adminMembers":7,"adminReports":8,"adminScores":9};
+  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"ranking":6,"suggest":7,"adminMembers":8,"adminReports":9,"adminSuggest":10,"adminScores":11};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -3617,6 +3668,8 @@ function switchTab(tab) {
   }
   if(tab==="notice") loadNotices();
   if(tab==="ranking") loadRanking();
+  if(tab==="suggest"){ loadMySuggests(); }
+  if(tab==="adminSuggest") loadAdminSuggests();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports") loadAdminReports();
   if(tab==="adminScores") loadAdminScores();
@@ -5821,6 +5874,121 @@ async function moveSiegeWeek(){
   loadSiegeRanking();
 }
 
+
+
+// ══ 건의사항 ══
+let suggestAdminFilter = 'all';
+// 익명 ID (로컬스토리지에 저장)
+function getAnonId(){
+  let id = localStorage.getItem('anonId');
+  if(!id){ id = 'anon_' + Math.random().toString(36).substr(2,9); localStorage.setItem('anonId', id); }
+  return id;
+}
+
+function submitSuggest(){
+  const category = document.getElementById('suggestCategory').value;
+  const content  = document.getElementById('suggestContent').value.trim();
+  if(!category) return toast('카테고리를 선택해주세요');
+  if(!content)  return toast('내용을 입력해주세요');
+  if(content.length < 5) return toast('내용을 5자 이상 입력해주세요');
+
+  const anonId = getAnonId();
+  db.ref('suggestions/guild').push({
+    category, content,
+    anonId,
+    date: new Date().toISOString().slice(0,10),
+    time: Date.now(),
+    reply: '',
+    status: '검토중'
+  }).then(()=>{
+    toast('✅ 익명으로 제출됐어요!');
+    document.getElementById('suggestCategory').value = '';
+    document.getElementById('suggestContent').value = '';
+    loadMySuggests();
+  });
+}
+
+function loadMySuggests(){
+  const anonId = getAnonId();
+  const list = document.getElementById('mySuggestList');
+  if(!list) return;
+  db.ref('suggestions/guild').orderByChild('anonId').equalTo(anonId).once('value').then(snap=>{
+    const data = snap.val();
+    if(!data){ list.innerHTML='<div class="empty-state">아직 남긴 건의사항이 없어요</div>'; return; }
+    const items = Object.entries(data).sort((a,b)=>b[1].time-a[1].time);
+    list.innerHTML = items.map(([k,v])=>`
+      <div style="padding:14px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="background:rgba(255,77,46,0.1);border:1px solid rgba(255,77,46,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);">${v.category}</span>
+          <span style="font-size:11px;color:var(--text3);">${v.date}</span>
+          <span style="margin-left:auto;font-size:11px;font-weight:700;color:${v.status==='완료'?'#27ae60':v.status==='검토중'?'var(--accent)':'var(--text3)'};">${v.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.7;">${v.content}</div>
+        ${v.reply ? `<div style="margin-top:8px;background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);border-left:3px solid var(--accent);">💬 관리자: ${v.reply}</div>` : ''}
+      </div>
+    `).join('');
+  });
+}
+
+// 관리자 건의사항 목록
+function loadAdminSuggests(){
+  db.ref('suggestions/guild').orderByChild('time').once('value').then(snap=>{
+    const data = snap.val();
+    const list = document.getElementById('adminSuggestList');
+    if(!data){ list.innerHTML='<div class="empty-state">건의사항이 없어요</div>'; return; }
+    let items = Object.entries(data).sort((a,b)=>b[1].time-a[1].time);
+    if(suggestAdminFilter !== 'all') items = items.filter(([k,v])=>v.category===suggestAdminFilter);
+    if(!items.length){ list.innerHTML='<div class="empty-state">해당 카테고리 건의사항이 없어요</div>'; return; }
+    list.innerHTML = items.map(([k,v])=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="background:rgba(255,77,46,0.1);border:1px solid rgba(255,77,46,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);">${v.category}</span>
+          <span style="font-size:11px;color:var(--text3);">${v.date}</span>
+          <span style="margin-left:auto;font-size:11px;font-weight:700;color:${v.status==='완료'?'#27ae60':v.status==='검토중'?'var(--accent)':'var(--text3)'};">${v.status}</span>
+          <button onclick="deleteSuggest('${k}')" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;">🗑️</button>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px;">${v.content}</div>
+        ${v.reply ? `<div style="margin-bottom:10px;background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);border-left:3px solid var(--accent);">💬 답변: ${v.reply}</div>` : ''}
+        <div style="display:flex;gap:6px;">
+          <input class="form-input" placeholder="답변 입력..." id="reply_${k}" value="${v.reply||''}" style="margin:0;flex:1;font-size:13px;padding:9px 12px;">
+          <button class="btn-sm btn-blue" onclick="replySuggest('${k}')">답변</button>
+          <button class="btn-sm btn-green" onclick="setSuggestStatus('${k}','완료')">완료</button>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+function filterSuggestAdmin(cat){
+  suggestAdminFilter = cat;
+  document.querySelectorAll('[id^="stab_"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('stab_'+cat)?.classList.add('active');
+  loadAdminSuggests();
+}
+
+function replySuggest(key){
+  if(!checkAdmin()) return;
+  const reply = document.getElementById('reply_'+key)?.value.trim();
+  if(!reply) return toast('답변을 입력해주세요');
+  db.ref('suggestions/guild/'+key).update({reply, status:'완료'}).then(()=>{
+    toast('✅ 답변 등록됨'); loadAdminSuggests();
+  });
+}
+
+function setSuggestStatus(key, status){
+  if(!checkAdmin()) return;
+  db.ref('suggestions/guild/'+key).update({status}).then(()=>{
+    toast('상태 변경됨'); loadAdminSuggests();
+  });
+}
+
+function deleteSuggest(key){
+  if(!checkAdmin()) return;
+  if(!confirm('삭제할까요?')) return;
+  db.ref('suggestions/guild/'+key).remove().then(()=>{
+    toast('삭제됨'); loadAdminSuggests();
+  });
+}
 
 // ══ 닉네임 변경 ══
 function filterRenameNick(){
