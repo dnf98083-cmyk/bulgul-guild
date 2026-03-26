@@ -2484,15 +2484,18 @@ function enterApp() {
     if(!document.getElementById("tabBar")) {
       const tabBar = document.createElement("div");
       tabBar.id = "tabBar";
-      tabBar.innerHTML = [
-        '<button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>',
-        '<button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>',
-        '<button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>',
-        '<button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>',
-        '<button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>',
-        '<button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>',
-        '<button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>'
-      ].join('');
+      const tabs = [
+        ["home","🏠","홈","active"],["notice","📢","공지",""],
+        ["attack","⚔️","공격",""],["defense","🛡️","방어",""],
+        ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],["ranking","🏆","랭킹",""]
+      ];
+      tabs.forEach(function(t) {
+        const btn = document.createElement("button");
+        btn.className = "tab-item" + (t[3] ? " active" : "");
+        btn.onclick = function(){ switchTab(t[0]); };
+        btn.innerHTML = "<div class=\"tab-icon\">" + t[1] + "</div><div class=\"tab-label\">" + t[2] + "</div>";
+        tabBar.appendChild(btn);
+      });
       document.body.appendChild(tabBar);
     }
   }
