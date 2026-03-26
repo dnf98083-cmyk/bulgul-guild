@@ -127,9 +127,11 @@ body::before {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 32px 24px;
+  padding: 20px 24px 40px;
   position: relative;
   z-index: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .login-logo {
   font-size: 60px;
@@ -156,7 +158,7 @@ body::before {
   font-weight: 700;
   color: var(--text3);
   letter-spacing: 3px;
-  margin-bottom: 40px;
+  margin-bottom: 28px;
   text-transform: uppercase;
 }
 .login-card {
@@ -223,10 +225,8 @@ body::before {
   right: 0;
   z-index: 1000;
   height: var(--tab-h);
-  background: rgba(15,5,5,0.97);
+  background: rgba(15,5,5,0.99);
   border-top: 1px solid var(--border);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   display: grid;
   grid-template-columns: repeat(7, 1fr);
 }
@@ -432,9 +432,9 @@ body::before {
     max-width: 88vw;
     white-space: normal;
     text-align: center;
-    bottom: calc(var(--tab-h) + 14px);
-    top: auto;
-    transform: translateX(-50%) translateY(80px);
+    top: 16px;
+    bottom: auto;
+    transform: translateX(-50%) translateY(-100px);
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -488,8 +488,7 @@ body::before {
     height: 100vh;
     background: rgba(18,6,6,0.98);
     border-right: 1px solid var(--border);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    -webkit-
     z-index: 100;
     overflow-y: auto;
   }
@@ -576,7 +575,7 @@ body::before {
   .admin-2col{ display: grid !important; grid-template-columns: 1fr 1fr; gap: 24px; }
   .atk-btn:hover,.def-btn:hover,.pve-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.45); }
   .home-menu-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-  .dropdown-sheet { position:absolute !important; inset:unset !important; top:calc(100% + 8px) !important; left:0 !important; right:0 !important; background:transparent !important; backdrop-filter:none !important; display:none !important; align-items:flex-start !important; }
+  .dropdown-sheet { position:absolute !important; inset:unset !important; top:calc(100% + 8px) !important; left:0 !important; right:0 !important; background:transparent !important; display:none !important; align-items:flex-start !important; }
   .dropdown-sheet.open { display: block !important; }
   .dropdown-inner { border-radius: var(--radius) !important; border: 1px solid var(--border2) !important; box-shadow: 0 12px 40px rgba(0,0,0,0.75) !important; max-height: 320px !important; }
   .dropdown-handle { display: none !important; }
@@ -692,8 +691,7 @@ body::before {
   inset: 0;
   z-index: 2000;
   background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  -webkit-
   align-items: flex-end;
 }
 .dropdown-sheet.open { display: flex; }
@@ -1075,8 +1073,7 @@ body::before {
   inset: 0;
   z-index: 3000;
   background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  -webkit-
   align-items: flex-end;
 }
 .modal-overlay.open { display: flex; }
@@ -1097,8 +1094,7 @@ body::before {
   inset: 0;
   z-index: 4000;
   background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  -webkit-
   align-items: center;
   justify-content: center;
   padding: 20px;
@@ -1152,8 +1148,7 @@ body::before {
   inset: 0;
   z-index: 9998;
   background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  -webkit-
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -1267,16 +1262,6 @@ body::before {
 <div id="globalLoader"><div class="spinner"></div><div class="spinner-text">불러오는 중...</div></div>
 
 <!-- ══ 로그인 ══ -->
-<!-- 모바일 하단 탭바 -->
-<div id="tabBar" class="hidden" style="display:none!important;">  <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
-  <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
-  <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
-  <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
-  <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
-  <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
-  <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
-</div>
-
 <div id="loginScreen">
   <div class="login-logo">🔥</div>
   <div class="login-title">불굴 길드 DB</div>
@@ -1294,7 +1279,7 @@ body::before {
 </div>
 
 <!-- ══ PC 사이드바 ══ -->
-<div id="sidebar">
+<div id="sidebar" style="display:none;">
   <div class="sb-logo">
     <div class="sb-icon">🔥</div>
     <div class="sb-name">불굴 길드 DB</div>
@@ -1732,7 +1717,7 @@ body::before {
     </div>
 
     <!-- 설명서 팝업 -->
-    <div id="calcGuideOverlay" onclick="hideCalcGuide()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+    <div id="calcGuideOverlay" onclick="hideCalcGuide()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);"></div>
     <div id="calcGuideModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div style="font-size:15px;font-weight:900;">📖 딜 계산기 입력 설명</div>
@@ -2353,7 +2338,7 @@ body::before {
 
 
 <!-- 페이지 가이드 팝업 -->
-<div id="pageGuideOverlay" onclick="hidePageGuide()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+<div id="pageGuideOverlay" onclick="hidePageGuide()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);"></div>
 <div id="pageGuideModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
     <div style="font-size:15px;font-weight:900;" id="pageGuideTitle">사용 안내</div>
@@ -2363,7 +2348,7 @@ body::before {
 </div>
 
 <!-- 내 방어덱 제보 팝업 -->
-<div id="myDefReportOverlay" onclick="closeMyDefReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+<div id="myDefReportOverlay" onclick="closeMyDefReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);"></div>
 <div id="myDefReportModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
     <div style="font-size:15px;font-weight:900;">📨 내 방어덱 제보</div>
@@ -2373,7 +2358,7 @@ body::before {
 </div>
 
 <!-- 내 제보 팝업 -->
-<div id="myReportOverlay" onclick="closeMyReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);"></div>
+<div id="myReportOverlay" onclick="closeMyReportsPopup()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);"></div>
 <div id="myReportModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
     <div style="font-size:15px;font-weight:900;">📨 내 제보</div>
@@ -2437,9 +2422,6 @@ function toast(msg) {
 
 // ══ 초기화 ══
 window.onload = () => {
-  // 탭바 강제 숨김 (로그인 전)
-  const tb = document.getElementById("tabBar");
-  if(tb) { tb.classList.add("hidden"); tb.style.display="none"; }
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
   if(nick&&key){
     checkLogin(nick,key,true);
@@ -2494,11 +2476,25 @@ function checkAdmin() {
 function enterApp() {
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("mainContent").style.display="block";
-  if(isPC()){
-    document.getElementById("tabBar").classList.add("hidden");
+  if(isPC()) {
+    document.getElementById("sidebar").style.display="flex";
     document.getElementById("mobileLogout").style.display="none";
   } else {
-    const tb2=document.getElementById("tabBar"); tb2.classList.remove("hidden"); tb2.style.display="";
+    // 모바일: 탭바 동적 생성
+    if(!document.getElementById("tabBar")) {
+      const tabBar = document.createElement("div");
+      tabBar.id = "tabBar";
+      tabBar.innerHTML = \`
+        <button class="tab-item active" onclick="switchTab('home')"><div class="tab-icon">🏠</div><div class="tab-label">홈</div></button>
+        <button class="tab-item" onclick="switchTab('notice')"><div class="tab-icon">📢</div><div class="tab-label">공지</div></button>
+        <button class="tab-item" onclick="switchTab('attack')"><div class="tab-icon">⚔️</div><div class="tab-label">공격</div></button>
+        <button class="tab-item" onclick="switchTab('defense')"><div class="tab-icon">🛡️</div><div class="tab-label">방어</div></button>
+        <button class="tab-item" onclick="switchTab('pve')"><div class="tab-icon">🏰</div><div class="tab-label">PVE</div></button>
+        <button class="tab-item" onclick="switchTab('calc')"><div class="tab-icon">🧮</div><div class="tab-label">딜계산</div></button>
+        <button class="tab-item" onclick="switchTab('ranking')"><div class="tab-icon">🏆</div><div class="tab-label">랭킹</div></button>
+      \`;
+      document.body.appendChild(tabBar);
+    }
   }
   document.getElementById("homeNick").textContent=myNick;
   const sidebarNick=document.getElementById("sidebarNick");
@@ -5954,7 +5950,7 @@ function switchAdventInput(week){
     btnLast.style.border="1px solid var(--accent)"; btnLast.style.background="rgba(255,85,51,0.15)"; btnLast.style.color="var(--accent)";
     btnThis.style.border="1px solid var(--border)"; btnThis.style.background="var(--surface2)"; btnThis.style.color="var(--text3)";
   }
-  // 랭킹 탭도 같이 전환 
+  // 랭킹 탭도 같이 전환
   switchAdventWeek(week);
 }
 
