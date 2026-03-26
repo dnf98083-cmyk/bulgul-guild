@@ -1212,6 +1212,27 @@ body::before {
 .card-collapse-btn:hover { color: var(--text2); }
 .collapsible { overflow: hidden; transition: max-height 0.3s ease; }
 
+
+/* ── 알림 뱃지 ── */
+.sb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 0 5px;
+  margin-left: auto;
+  animation: badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes badgePop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
 /* ── 테마 토글 ── */
 .theme-toggle {
   background: none;
@@ -1298,8 +1319,8 @@ body::before {
     <div id="adminNavSection" style="display:none;">
       <div class="sb-divider">관리자</div>
       <button class="sb-item" onclick="switchTab('adminMembers')"><span class="si-icon">👥</span> 길드원 관리</button>
-      <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리</button>
-      <button class="sb-item" onclick="switchTab('adminSuggest')"><span class="si-icon">📬</span> 건의 관리</button>
+      <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리<span id="badge-reports" class="sb-badge" style="display:none;"></span></button>
+      <button class="sb-item" onclick="switchTab('adminSuggest')"><span class="si-icon">📬</span> 건의 관리<span id="badge-suggest" class="sb-badge" style="display:none;"></span></button>
       <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
     </div>
   </nav>
@@ -2305,7 +2326,7 @@ body::before {
       </div>
       <div id="renameStatus" style="font-size:12px;color:var(--text3);margin-top:6px;display:none;"></div>
     </div>
-    <div class="admin-section">
+    <div class="admin-section" id="codeIssueSection">
       <div class="admin-section-title">🔑 입장코드 발급</div>
       <div style="display:flex;gap:8px;">
         <input class="form-input" id="newUserNick2" placeholder="닉네임 입력" style="margin:0;flex:1;">
@@ -2535,11 +2556,16 @@ function enterApp() {
       const tabBar = document.createElement("div");
       tabBar.id = "tabBar";
       const tabs = [
-        ["home","🏠","홈","active"],["notice","📢","공지",""],
         ["attack","⚔️","공격",""],["defense","🛡️","방어",""],
-        ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],["ranking","🏆","랭킹",""],
-        ["suggest","📬","건의",""]
+        ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],
+        ["ranking","🏆","랭킹",""],["suggest","📬","건의",""]
       ];
+      // 홈 버튼 (고정 왼쪽)
+      const homeBtn = document.createElement("button");
+      homeBtn.className = "tab-item active";
+      homeBtn.onclick = function(){ switchTab("home"); };
+      homeBtn.innerHTML = "<div class=\"tab-icon\">🏠</div><div class=\"tab-label\">홈</div>";
+      tabBar.appendChild(homeBtn);
       tabs.forEach(function(t) {
         const btn = document.createElement("button");
         btn.className = "tab-item" + (t[3] ? " active" : "");
@@ -2560,6 +2586,7 @@ function enterApp() {
   switchTab("home");
   renderRanking();
   loadDefenseTeamsListener();
+  initBadgeListeners();
   loadHomeBanner();
   loadHomeAdventGraph();
 }
@@ -2581,9 +2608,11 @@ function showAdminNav() {
   // 연구원은 길드원/승패관리 탭 숨기기
   if(myRole==="연구원"){
     const allSbItems=document.querySelectorAll(".sb-item");
-    // adminMembers(index 5), adminScores(index 7) 숨기기
     if(allSbItems[8]) allSbItems[8].style.display="none";
     if(allSbItems[11]) allSbItems[11].style.display="none";
+    // 연구원은 코드 발급 섹션 숨김
+    const codeSection = document.getElementById("codeIssueSection");
+    if(codeSection) codeSection.style.display="none";
   }
 }
 
@@ -3671,7 +3700,7 @@ function switchTab(tab) {
   if(tab==="suggest"){ loadMySuggests(); }
   if(tab==="adminSuggest") loadAdminSuggests();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
-  if(tab==="adminReports") loadAdminReports();
+  if(tab==="adminReports"){ loadAdminReports(); markReportsAsRead(); }
   if(tab==="adminScores") loadAdminScores();
 }
 
@@ -4316,7 +4345,8 @@ function loadAdminMembers(){
     if(!d){ div.innerHTML='<div class="empty-state">등록된 길드원 없음</div>'; return; }
     Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,v])=>{
       const r=document.createElement("div"); r.className="member-row";
-      r.innerHTML=`<div><div class="member-name">${n}</div><div class="member-code">코드: ${v.code}</div></div><button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;flex-shrink:0;">삭제</button>`;
+      const isAdmin = myRole === "관리자";
+      r.innerHTML=`<div><div class="member-name">${n}</div><div class="member-code">코드: ${isAdmin ? v.code : '••••••'}</div></div>${isAdmin ? `<button onclick="deleteUser('${n}')" class="btn-sm btn-red" style="padding:7px 14px;flex-shrink:0;">삭제</button>` : ''}`;
       div.appendChild(r);
     });
     filterKeys2();
@@ -4338,7 +4368,7 @@ function loadAdminReports(){
         count++;
         const d=document.createElement("div"); d.className="report-row";
         const resultTag = v.result==="win"?'<span style="color:#27ae60;font-size:10px;font-weight:900;margin-left:4px;">🏆 승리</span>':v.result==="lose"?'<span style="color:#e74c3c;font-size:10px;font-weight:900;margin-left:4px;">💀 패배</span>':"";
-d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}] ${v.name}${resultTag}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토·수정</button></div>`;
+d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}] ${v.name}${resultTag}${!v.confirmed?'<span style="background:#e74c3c;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:900;margin-left:6px;">NEW</span>':''}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('attack','${dk}','${sk}')">검토·수정</button></div>`;
         div.appendChild(d);
       });
     });
@@ -4351,7 +4381,7 @@ d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}
     if(!all){ div.innerHTML='<div class="empty-state">제보 없음</div>'; return; }
     Object.entries(all).forEach(([k,v])=>{
       const d=document.createElement("div"); d.className="report-row";
-      d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">${v.name}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('defense','${k}','')">검토·수정</button></div>`;
+      d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">${v.name}${!v.confirmed?'<span style="background:#e74c3c;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:900;margin-left:6px;">NEW</span>':''}</div><div class="report-sub">제보자: ${v.suggester}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn-sm btn-blue" style="padding:7px 10px;" onclick="openAdminReview('defense','${k}','')">검토·수정</button></div>`;
       div.appendChild(d);
     });
   });
@@ -4428,6 +4458,8 @@ function openAdminReview(type,k1,k2){
   switchReviewTab("view");
 
   const path=type==="attack"?`suggestions/attack/${k1}/${k2}`:`suggestions/defense/${k1}`;
+  // 검토 시 확인 처리 → 뱃지에서 제외
+  db.ref(path+"/confirmed").set(true);
   db.ref(path).get().then(snap=>{
     const data=snap.val();
     if(!data){ document.getElementById("adminReviewBody").innerHTML="데이터 없음"; return; }
@@ -5876,6 +5908,57 @@ async function moveSiegeWeek(){
 
 
 
+
+// ══ 알림 뱃지 실시간 감지 ══
+function initBadgeListeners(){
+  if(myRole !== "관리자" && myRole !== "연구원") return;
+
+  // 제보 뱃지 — confirmed 필드 없는 미처리 제보
+  function updateReportsBadge(){
+    Promise.all([
+      db.ref("suggestions/attack").once("value"),
+      db.ref("suggestions/defense").once("value"),
+      db.ref("suggestions/defense_team").once("value")
+    ]).then(([a, d, dt])=>{
+      let count = 0;
+      // attack은 중첩구조 (defense → attack)
+      const aVal = a.val();
+      if(aVal) Object.values(aVal).forEach(sub=>{ if(typeof sub === "object") Object.values(sub).forEach(v=>{ if(!v.confirmed) count++; }); });
+      [d, dt].forEach(snap=>{
+        const val = snap.val();
+        if(!val) return;
+        Object.values(val).forEach(v=>{ if(!v.confirmed) count++; });
+      });
+      const badge = document.getElementById("badge-reports");
+      if(badge){
+        if(count > 0){ badge.textContent = count > 99 ? "99+" : count; badge.style.display="inline-flex"; }
+        else { badge.style.display="none"; }
+      }
+    });
+  }
+
+  // 건의사항 뱃지 — 검토중인 건의
+  function updateSuggestBadge(){
+    db.ref("suggestions/guild").orderByChild("status").equalTo("검토중").once("value").then(snap=>{
+      const count = snap.numChildren();
+      const badge = document.getElementById("badge-suggest");
+      if(badge){
+        if(count > 0){ badge.textContent = count > 99 ? "99+" : count; badge.style.display="inline-flex"; }
+        else { badge.style.display="none"; }
+      }
+    });
+  }
+
+  // 실시간 감지
+  db.ref("suggestions/attack").on("value", updateReportsBadge);
+  db.ref("suggestions/defense").on("value", updateReportsBadge);
+  db.ref("suggestions/defense_team").on("value", updateReportsBadge);
+  db.ref("suggestions/guild").on("value", updateSuggestBadge);
+}
+
+// 탭 진입 시 자동 읽음 처리 제거 — 관리자가 직접 처리해야 뱃지 사라짐
+function markReportsAsRead(){ /* 자동 처리 안 함 */ }
+
 // ══ 건의사항 ══
 let suggestAdminFilter = 'all';
 // 익명 ID (로컬스토리지에 저장)
@@ -5893,9 +5976,12 @@ function submitSuggest(){
   if(content.length < 5) return toast('내용을 5자 이상 입력해주세요');
 
   const anonId = getAnonId();
+  // 닉네임을 base64로 인코딩해서 저장 (일반 관리자에게 직접 노출 방지)
+  const hiddenWriter = btoa(encodeURIComponent(myNick));
   db.ref('suggestions/guild').push({
     category, content,
     anonId,
+    hiddenWriter,
     date: new Date().toISOString().slice(0,10),
     time: Date.now(),
     reply: '',
@@ -5946,6 +6032,7 @@ function loadAdminSuggests(){
           <span style="font-size:11px;color:var(--text3);">${v.date}</span>
           <span style="margin-left:auto;font-size:11px;font-weight:700;color:${v.status==='완료'?'#27ae60':v.status==='검토중'?'var(--accent)':'var(--text3)'};">${v.status}</span>
           <button onclick="deleteSuggest('${k}')" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;">🗑️</button>
+          ${myNick === "파멸" ? `<button onclick="revealWriter('${k}', this)" style="background:rgba(255,77,46,0.08);border:1px solid rgba(255,77,46,0.25);border-radius:6px;padding:2px 10px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;font-family:inherit;">👤 작성자 확인</button>` : ''}
         </div>
         <div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px;">${v.content}</div>
         ${v.reply ? `<div style="margin-bottom:10px;background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);border-left:3px solid var(--accent);">💬 답변: ${v.reply}</div>` : ''}
@@ -5956,6 +6043,23 @@ function loadAdminSuggests(){
         </div>
       </div>
     `).join('');
+  });
+}
+
+function revealWriter(key, btn){
+  db.ref('suggestions/guild/' + key + '/hiddenWriter').once('value').then(snap=>{
+    const encoded = snap.val();
+    if(!encoded){ toast('작성자 정보 없음'); return; }
+    try {
+      const nick = decodeURIComponent(atob(encoded));
+      btn.textContent = '👤 ' + nick;
+      btn.style.background = 'rgba(39,174,96,0.12)';
+      btn.style.borderColor = '#27ae60';
+      btn.style.color = '#27ae60';
+      btn.onclick = null;
+    } catch(e) {
+      toast('복호화 오류');
+    }
   });
 }
 
