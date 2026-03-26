@@ -2582,14 +2582,18 @@ function enterApp() {
       // 홈 버튼 (고정 왼쪽)
       const homeBtn = document.createElement("button");
       homeBtn.className = "tab-item active";
+      homeBtn.style.position = "relative";
       homeBtn.onclick = function(){ switchTab("home"); };
-      homeBtn.innerHTML = "<div class=\"tab-icon\">🏠</div><div class=\"tab-label\">홈</div>";
+      homeBtn.innerHTML = "<div class=\"tab-icon\">🏠</div><div class=\"tab-label\">홈</div><span id=\"tab-badge-notice\" style=\"display:none;position:absolute;top:4px;right:8px;background:#e74c3c;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:1px 5px;min-width:16px;text-align:center;\">N</span>";
       tabBar.appendChild(homeBtn);
       tabs.forEach(function(t) {
         const btn = document.createElement("button");
         btn.className = "tab-item" + (t[3] ? " active" : "");
         btn.onclick = function(){ switchTab(t[0]); };
-        btn.innerHTML = "<div class=\"tab-icon\">" + t[1] + "</div><div class=\"tab-label\">" + t[2] + "</div>";
+        // 건의 탭에 답변 뱃지 추가
+        const badgeHtml = t[0]==="suggest" ? '<span id="tab-badge-suggest" style="display:none;position:absolute;top:4px;right:8px;background:#27ae60;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:1px 5px;min-width:16px;text-align:center;">답변</span>' : "";
+        btn.style.position = "relative";
+        btn.innerHTML = "<div class=\"tab-icon\">" + t[1] + "</div><div class=\"tab-label\">" + t[2] + "</div>" + badgeHtml;
         tabBar.appendChild(btn);
       });
       document.body.appendChild(tabBar);
@@ -6099,16 +6103,18 @@ function setSuggestMode(isAnon){
 function checkNoticeNew(){
   db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
     const badge = document.getElementById("noticeNewBadge");
-    if(!badge) return;
+    const tabBadge = document.getElementById("tab-badge-notice");
     const data = snap.val();
-    if(!data){ badge.style.display="none"; return; }
+    if(!data){
+      if(badge) badge.style.display="none";
+      if(tabBadge) tabBadge.style.display="none";
+      return;
+    }
     const latest = Object.values(data)[0];
     const lastRead = localStorage.getItem("lastReadNotice");
-    if(latest.createdAt && (!lastRead || latest.createdAt > parseInt(lastRead))){
-      badge.style.display="inline";
-    } else {
-      badge.style.display="none";
-    }
+    const isNew = latest.createdAt && (!lastRead || latest.createdAt > parseInt(lastRead));
+    if(badge) badge.style.display = isNew ? "inline" : "none";
+    if(tabBadge) tabBadge.style.display = isNew ? "inline-block" : "none";
   });
 }
 function markNoticeRead(){
@@ -6119,6 +6125,8 @@ function markNoticeRead(){
     if(latest.createdAt) localStorage.setItem("lastReadNotice", latest.createdAt);
     const badge = document.getElementById("noticeNewBadge");
     if(badge) badge.style.display="none";
+    const tabBadge = document.getElementById("tab-badge-notice");
+    if(tabBadge) tabBadge.style.display="none";
   });
 }
 
@@ -6133,7 +6141,7 @@ function checkSuggestReply(){
     Object.values(data).forEach(v=>{
       if(v.reply && v.replyTime && v.replyTime > lastRead) hasNew = true;
     });
-    // 건의사항 탭 사이드바 뱃지
+    // 사이드바 뱃지
     const sbItems = document.querySelectorAll(".sb-item");
     sbItems.forEach(btn=>{
       if(btn.getAttribute("onclick")==="switchTab('suggest')"){
@@ -6149,11 +6157,18 @@ function checkSuggestReply(){
         }
       }
     });
+    // 모바일 탭바 뱃지
+    const tabBadge = document.getElementById("tab-badge-suggest");
+    if(tabBadge){
+      tabBadge.style.display = hasNew ? "inline-block" : "none";
+    }
   });
 }
 function markSuggestReplyRead(){
   localStorage.setItem("lastReadSuggestReply", Date.now().toString());
   document.querySelectorAll(".sb-reply-badge").forEach(b=>b.remove());
+  const tabBadge = document.getElementById("tab-badge-suggest");
+  if(tabBadge) tabBadge.style.display = "none";
 }
 
 // ══ 건의사항 ══
