@@ -1434,7 +1434,7 @@ body::before {
   </div>
 
   <!-- 공격 -->
-  <div id="attackScreen" class="screen">
+  <div id="attackScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">⚔️ 길드전</div>
       <div style="display:flex;gap:8px;"><button class="btn-icon" onclick="showPageGuide('attack')" style="padding:7px 10px;">❓</button><button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button></div>
@@ -1578,7 +1578,7 @@ body::before {
   </div>
 
   <!-- 방어 -->
-  <div id="defenseScreen" class="screen">
+  <div id="defenseScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">🛡️ 추천 방어</div>
       <button class="btn-icon" id="defAdminBtn" onclick="toggleDefenseAdmin()">관리자</button>
@@ -1631,7 +1631,7 @@ body::before {
   </div>
 
   <!-- PVE -->
-  <div id="pveScreen" class="screen">
+  <div id="pveScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header"><div class="page-title">🏰 PVE 공략</div><button class="btn-icon" onclick="showPageGuide('pve')" style="padding:7px 10px;">❓</button></div>
     <div class="search-bar-wrap">
       <input type="text" id="pveSearchBar" placeholder="PVE 공략 검색..." oninput="filterPveList()">
@@ -1717,7 +1717,7 @@ body::before {
 
   <!-- ══ 관리자: 길드원 관리 ══ -->
   <!-- 공지사항 -->
-  <div id="noticeScreen" class="screen">
+  <div id="noticeScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">📢 공지사항</div>
     </div>
@@ -1784,7 +1784,7 @@ body::before {
   </div>
 
   <!-- ══ 건의사항 관리자 탭 ══ -->
-  <div id="adminSuggestScreen" class="screen">
+  <div id="adminSuggestScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">📬 건의사항 관리</div>
     </div>
@@ -2066,7 +2066,7 @@ body::before {
   </div>
 
   <!-- ══ 랭킹 ══ -->
-  <div id="rankingScreen" class="screen">
+  <div id="rankingScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 160px);">
     <div class="page-header">
       <div class="page-title">🏆 랭킹</div>
       <button class="btn-icon" onclick="showPageGuide('ranking')" style="padding:7px 10px;">❓</button>
@@ -2312,7 +2312,7 @@ body::before {
     </div>
   </div>
 
-  <div id="adminMembersScreen" class="screen">
+  <div id="adminMembersScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">👥 길드원 관리</div>
     </div>
@@ -2363,7 +2363,7 @@ body::before {
   </div>
 
   <!-- ══ 관리자: 제보 관리 ══ -->
-  <div id="adminReportsScreen" class="screen">
+  <div id="adminReportsScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">📋 제보 관리</div>
       <button class="btn-icon" onclick="loadAdminReports()">새로고침</button>
@@ -2389,7 +2389,7 @@ body::before {
   </div>
 
   <!-- ══ 관리자: 승패 관리 ══ -->
-  <div id="adminScoresScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 80px);">
+  <div id="adminScoresScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 120px);">
     <div class="page-header">
       <div class="page-title">📊 승패 관리</div>
       <button class="btn-icon" onclick="loadAdminScores()">새로고침</button>
