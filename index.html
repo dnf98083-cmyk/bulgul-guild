@@ -298,7 +298,7 @@ body::before {
   /* ── 기본 레이아웃 ── */
   .screen {
     padding: 16px 14px;
-    padding-bottom: calc(var(--tab-h) + 24px);
+    padding-bottom: calc(var(--tab-h) + 48px);
   }
 
   /* ── 공격 화면 1열 ── */
@@ -1357,8 +1357,10 @@ body::before {
         <div class="stat-value" id="homeStatValue"><span>0</span>승 0패</div>
         <div class="stat-rank" id="homeStatRank">로딩중...</div>
       </div>
-      <div class="home-stat-card" id="homeNoticeCard" onclick="switchTab('notice')" style="cursor:pointer;position:relative;overflow:hidden;">
-        <div class="stat-label">📢 최신 공지</div>
+      <div class="home-stat-card" id="homeNoticeCard" onclick="switchTab('notice');markNoticeRead()" style="cursor:pointer;position:relative;overflow:hidden;">
+        <div class="stat-label">📢 최신 공지
+          <span id="noticeNewBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:1px 6px;margin-left:6px;vertical-align:middle;">NEW</span>
+        </div>
         <div id="homeNoticeTitle" style="font-size:14px;font-weight:700;margin-top:4px;color:var(--text);">없음</div>
         <div id="homeNoticeDate" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
         <div style="font-size:11px;color:var(--accent);margin-top:6px;">탭하여 보기 →</div>
@@ -1753,8 +1755,17 @@ body::before {
         <option value="질문">❓ 질문</option>
         <option value="기타">📌 기타</option>
       </select>
-      <textarea class="form-textarea" id="suggestContent" rows="4" placeholder="내용을 입력해주세요 (익명으로 제출됩니다)" style="margin-bottom:8px;"></textarea>
-      <button class="btn-primary" onclick="submitSuggest()" style="margin-top:0;">익명으로 제출하기</button>
+      <textarea class="form-textarea" id="suggestContent" rows="4" placeholder="내용을 입력해주세요" style="margin-bottom:10px;"></textarea>
+      <!-- 익명/실명 토글 -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--text3);">제출 방식:</span>
+        <div style="display:flex;gap:6px;">
+          <button id="suggestAnon" onclick="setSuggestMode(true)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,77,46,0.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🎭 익명</button>
+          <button id="suggestReal" onclick="setSuggestMode(false)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">👤 실명</button>
+        </div>
+        <span id="suggestModeLabel" style="font-size:11px;color:var(--text3);">닉네임이 표시되지 않아요</span>
+      </div>
+      <button class="btn-primary" onclick="submitSuggest()" style="margin-top:0;" id="suggestSubmitBtn">익명으로 제출하기</button>
     </div>
 
     <!-- 내 제출 내역 -->
@@ -2589,6 +2600,8 @@ function enterApp() {
   initBadgeListeners();
   loadHomeBanner();
   loadHomeAdventGraph();
+  checkNoticeNew();
+  checkSuggestReply();
 }
 
 function showAdminNav() {
@@ -3697,7 +3710,7 @@ function switchTab(tab) {
   }
   if(tab==="notice") loadNotices();
   if(tab==="ranking") loadRanking();
-  if(tab==="suggest"){ loadMySuggests(); }
+  if(tab==="suggest"){ loadMySuggests(); markSuggestReplyRead(); }
   if(tab==="adminSuggest") loadAdminSuggests();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports"){ loadAdminReports(); markReportsAsRead(); }
@@ -4663,6 +4676,8 @@ function loadHomeNotice(){
     const val=Object.values(data)[0];
     titleEl.textContent=val.title||"(제목 없음)";
     if(dateEl) dateEl.textContent=(val.date||"")+(val.author?" · "+val.author:"");
+    // NEW 뱃지 체크
+    checkNoticeNew();
   });
 }
 
@@ -5959,6 +5974,89 @@ function initBadgeListeners(){
 // 탭 진입 시 자동 읽음 처리 제거 — 관리자가 직접 처리해야 뱃지 사라짐
 function markReportsAsRead(){ /* 자동 처리 안 함 */ }
 
+
+// ══ 익명/실명 모드 ══
+let suggestIsAnon = true;
+function setSuggestMode(isAnon){
+  suggestIsAnon = isAnon;
+  const anonBtn = document.getElementById("suggestAnon");
+  const realBtn = document.getElementById("suggestReal");
+  const label   = document.getElementById("suggestModeLabel");
+  const submitBtn = document.getElementById("suggestSubmitBtn");
+  if(isAnon){
+    anonBtn.style.border="1px solid var(--accent)"; anonBtn.style.background="rgba(255,77,46,0.12)"; anonBtn.style.color="var(--accent)";
+    realBtn.style.border="1px solid var(--border)"; realBtn.style.background="var(--surface2)"; realBtn.style.color="var(--text3)";
+    label.textContent="닉네임이 표시되지 않아요";
+    if(submitBtn) submitBtn.textContent="익명으로 제출하기";
+  } else {
+    realBtn.style.border="1px solid var(--accent)"; realBtn.style.background="rgba(255,77,46,0.12)"; realBtn.style.color="var(--accent)";
+    anonBtn.style.border="1px solid var(--border)"; anonBtn.style.background="var(--surface2)"; anonBtn.style.color="var(--text3)";
+    label.textContent="닉네임 '" + myNick + "'으로 표시돼요";
+    if(submitBtn) submitBtn.textContent="실명으로 제출하기";
+  }
+}
+
+// ══ 공지 NEW 뱃지 ══
+function checkNoticeNew(){
+  db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
+    const badge = document.getElementById("noticeNewBadge");
+    if(!badge) return;
+    const data = snap.val();
+    if(!data){ badge.style.display="none"; return; }
+    const latest = Object.values(data)[0];
+    const lastRead = localStorage.getItem("lastReadNotice");
+    if(latest.createdAt && (!lastRead || latest.createdAt > parseInt(lastRead))){
+      badge.style.display="inline";
+    } else {
+      badge.style.display="none";
+    }
+  });
+}
+function markNoticeRead(){
+  db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
+    const data = snap.val();
+    if(!data) return;
+    const latest = Object.values(data)[0];
+    if(latest.createdAt) localStorage.setItem("lastReadNotice", latest.createdAt);
+    const badge = document.getElementById("noticeNewBadge");
+    if(badge) badge.style.display="none";
+  });
+}
+
+// ══ 건의 답변 알림 ══
+function checkSuggestReply(){
+  const anonId = getAnonId();
+  db.ref("suggestions/guild").orderByChild("anonId").equalTo(anonId).once("value").then(snap=>{
+    const data = snap.val();
+    if(!data) return;
+    const lastRead = parseInt(localStorage.getItem("lastReadSuggestReply")||"0");
+    let hasNew = false;
+    Object.values(data).forEach(v=>{
+      if(v.reply && v.replyTime && v.replyTime > lastRead) hasNew = true;
+    });
+    // 건의사항 탭 사이드바 뱃지
+    const sbItems = document.querySelectorAll(".sb-item");
+    sbItems.forEach(btn=>{
+      if(btn.getAttribute("onclick")==="switchTab('suggest')"){
+        let badge = btn.querySelector(".sb-reply-badge");
+        if(hasNew && !badge){
+          badge = document.createElement("span");
+          badge.className = "sb-badge sb-reply-badge";
+          badge.textContent = "답변";
+          badge.style.background = "#27ae60";
+          btn.appendChild(badge);
+        } else if(!hasNew && badge){
+          badge.remove();
+        }
+      }
+    });
+  });
+}
+function markSuggestReplyRead(){
+  localStorage.setItem("lastReadSuggestReply", Date.now().toString());
+  document.querySelectorAll(".sb-reply-badge").forEach(b=>b.remove());
+}
+
 // ══ 건의사항 ══
 let suggestAdminFilter = 'all';
 // 익명 ID (로컬스토리지에 저장)
@@ -5976,12 +6074,15 @@ function submitSuggest(){
   if(content.length < 5) return toast('내용을 5자 이상 입력해주세요');
 
   const anonId = getAnonId();
-  // 닉네임을 base64로 인코딩해서 저장 (일반 관리자에게 직접 노출 방지)
   const hiddenWriter = btoa(encodeURIComponent(myNick));
+  // 실명이면 displayNick 표시, 익명이면 null
+  const displayNick = suggestIsAnon ? null : myNick;
   db.ref('suggestions/guild').push({
     category, content,
     anonId,
     hiddenWriter,
+    displayNick,
+    isAnon: suggestIsAnon,
     date: new Date().toISOString().slice(0,10),
     time: Date.now(),
     reply: '',
@@ -6007,10 +6108,11 @@ function loadMySuggests(){
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
           <span style="background:rgba(255,77,46,0.1);border:1px solid rgba(255,77,46,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);">${v.category}</span>
           <span style="font-size:11px;color:var(--text3);">${v.date}</span>
+          ${v.displayNick ? `<span style="font-size:11px;font-weight:700;color:#3498db;">👤 ${v.displayNick}</span>` : '<span style="font-size:11px;color:var(--text3);">🎭 익명</span>'}
           <span style="margin-left:auto;font-size:11px;font-weight:700;color:${v.status==='완료'?'#27ae60':v.status==='검토중'?'var(--accent)':'var(--text3)'};">${v.status}</span>
         </div>
         <div style="font-size:13px;color:var(--text);line-height:1.7;">${v.content}</div>
-        ${v.reply ? `<div style="margin-top:8px;background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);border-left:3px solid var(--accent);">💬 관리자: ${v.reply}</div>` : ''}
+        ${v.reply ? `<div style="margin-top:8px;background:rgba(255,77,46,0.08);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);border-left:3px solid var(--accent);"><span style="font-size:10px;font-weight:900;color:var(--accent);">💬 관리자 답변</span><br>${v.reply}</div>` : '<div style="margin-top:6px;font-size:11px;color:var(--text3);">⏳ 아직 답변이 없어요</div>'}
       </div>
     `).join('');
   });
@@ -6074,7 +6176,7 @@ function replySuggest(key){
   if(!checkAdmin()) return;
   const reply = document.getElementById('reply_'+key)?.value.trim();
   if(!reply) return toast('답변을 입력해주세요');
-  db.ref('suggestions/guild/'+key).update({reply, status:'완료'}).then(()=>{
+  db.ref('suggestions/guild/'+key).update({reply, status:'완료', replyTime:Date.now()}).then(()=>{
     toast('✅ 답변 등록됨'); loadAdminSuggests();
   });
 }
