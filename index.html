@@ -298,7 +298,7 @@ body::before {
   /* ── 기본 레이아웃 ── */
   .screen {
     padding: 16px 14px;
-    padding-bottom: calc(var(--tab-h) + 48px);
+    padding-bottom: calc(var(--tab-h) + 80px);
   }
 
   /* ── 공격 화면 1열 ── */
@@ -1757,15 +1757,19 @@ body::before {
       </select>
       <textarea class="form-textarea" id="suggestContent" rows="4" placeholder="내용을 입력해주세요" style="margin-bottom:10px;"></textarea>
       <!-- 익명/실명 토글 -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <span style="font-size:12px;color:var(--text3);">제출 방식:</span>
-        <div style="display:flex;gap:6px;">
-          <button id="suggestAnon" onclick="setSuggestMode(true)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,77,46,0.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🎭 익명</button>
-          <button id="suggestReal" onclick="setSuggestMode(false)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">👤 실명</button>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <span style="font-size:12px;color:var(--text3);font-weight:600;">제출 방식 선택</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button id="suggestAnon" onclick="setSuggestMode(true)" style="padding:12px;border-radius:10px;border:2px solid var(--accent);background:rgba(255,77,46,0.12);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span style="font-size:20px;">🎭</span>익명
+          </button>
+          <button id="suggestReal" onclick="setSuggestMode(false)" style="padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span style="font-size:20px;">👤</span>실명
+          </button>
         </div>
-        <span id="suggestModeLabel" style="font-size:11px;color:var(--text3);">닉네임이 표시되지 않아요</span>
+        <span id="suggestModeLabel" style="font-size:12px;color:var(--text3);text-align:center;">닉네임이 표시되지 않아요</span>
       </div>
-      <button class="btn-primary" onclick="submitSuggest()" style="margin-top:0;" id="suggestSubmitBtn">익명으로 제출하기</button>
+      <button class="btn-primary" onclick="submitSuggest()" style="margin-top:0;padding:16px;font-size:15px;" id="suggestSubmitBtn">🎭 익명으로 제출하기</button>
     </div>
 
     <!-- 내 제출 내역 -->
@@ -6075,15 +6079,15 @@ function setSuggestMode(isAnon){
   const label   = document.getElementById("suggestModeLabel");
   const submitBtn = document.getElementById("suggestSubmitBtn");
   if(isAnon){
-    anonBtn.style.border="1px solid var(--accent)"; anonBtn.style.background="rgba(255,77,46,0.12)"; anonBtn.style.color="var(--accent)";
-    realBtn.style.border="1px solid var(--border)"; realBtn.style.background="var(--surface2)"; realBtn.style.color="var(--text3)";
+    anonBtn.style.border="2px solid var(--accent)"; anonBtn.style.background="rgba(255,77,46,0.12)"; anonBtn.style.color="var(--accent)";
+    realBtn.style.border="2px solid var(--border)"; realBtn.style.background="var(--surface2)"; realBtn.style.color="var(--text3)";
     label.textContent="닉네임이 표시되지 않아요";
-    if(submitBtn) submitBtn.textContent="익명으로 제출하기";
+    if(submitBtn){ submitBtn.textContent="🎭 익명으로 제출하기"; }
   } else {
-    realBtn.style.border="1px solid var(--accent)"; realBtn.style.background="rgba(255,77,46,0.12)"; realBtn.style.color="var(--accent)";
-    anonBtn.style.border="1px solid var(--border)"; anonBtn.style.background="var(--surface2)"; anonBtn.style.color="var(--text3)";
-    label.textContent="닉네임 '" + myNick + "'으로 표시돼요";
-    if(submitBtn) submitBtn.textContent="실명으로 제출하기";
+    realBtn.style.border="2px solid var(--accent)"; realBtn.style.background="rgba(255,77,46,0.12)"; realBtn.style.color="var(--accent)";
+    anonBtn.style.border="2px solid var(--border)"; anonBtn.style.background="var(--surface2)"; anonBtn.style.color="var(--text3)";
+    label.textContent="👤 '" + myNick + "'으로 표시돼요";
+    if(submitBtn){ submitBtn.textContent="👤 실명으로 제출하기"; }
   }
 }
 
