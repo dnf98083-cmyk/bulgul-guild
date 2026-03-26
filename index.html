@@ -2475,7 +2475,7 @@ function checkAdmin() {
 
 function enterApp() {
   document.getElementById("loginScreen").style.display="none";
-  document.getElementById("mainContent").style.display="block";
+  document.getElementById("mainContent").style.display=isPC()?"flex":"block";
   if(isPC()) {
     document.getElementById("sidebar").style.display="flex";
     document.getElementById("mobileLogout").style.display="none";
@@ -4830,7 +4830,7 @@ function runCalc(){
 
   // 보스 관련
   const bossMult    = isBossMode ? bossRate * (1 + setBossDmg) : 1;
-  const weakDmgCoef = 1 + setWeakDmg + cv('c_weakbuff2')/100; // 세트 약점피해 포함 (weakbuff는 따로)
+  const weakDmgCoef = 1 + setWeakDmg + cv('c_weakbuff2')/100;
 
   // 합산 배율
   const totalMult = dmgIncCoef * bossMult * vulnCoef;
