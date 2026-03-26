@@ -298,7 +298,7 @@ body::before {
   /* ── 기본 레이아웃 ── */
   .screen {
     padding: 16px 14px;
-    padding-bottom: calc(var(--tab-h) + 24px);
+    padding-bottom: calc(var(--tab-h) + 60px);
   }
   #homeScreen {
     padding-bottom: calc(var(--tab-h) + 120px);
@@ -2389,7 +2389,7 @@ body::before {
   </div>
 
   <!-- ══ 관리자: 승패 관리 ══ -->
-  <div id="adminScoresScreen" class="screen">
+  <div id="adminScoresScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 80px);">
     <div class="page-header">
       <div class="page-title">📊 승패 관리</div>
       <button class="btn-icon" onclick="loadAdminScores()">새로고침</button>
