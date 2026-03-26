@@ -3669,6 +3669,97 @@ function delAdventSeason(key){
 }
 
 
+
+// ══ 모바일 UX ══
+
+// 1. 뒤로가기 → 홈화면, 한번 더 누르면 종료
+(function(){
+  // 앱 진입 시 히스토리 스택에 상태 추가
+  function pushHomeState(){
+    history.pushState({page:'home'}, '', '');
+  }
+
+  window.addEventListener('popstate', function(e){
+    const mainContent = document.getElementById('mainContent');
+    if(!mainContent || mainContent.style.display==='none') return;
+
+    const currentScreen = document.querySelector('.screen[style*="display: block"], .screen[style*="display:block"], .screen[style*="display: flex"], .screen[style*="display:flex"]');
+    const isHome = document.getElementById('homeScreen')?.style.display !== 'none' &&
+                   document.getElementById('homeScreen')?.style.display !== '';
+
+    if(!isHome){
+      // 홈이 아니면 → 홈으로
+      switchTab('home');
+      history.pushState({page:'home'}, '', '');
+    } else {
+      // 홈이면 → 한번 더 누르면 종료 토스트 + 2초 내 다시 누르면 종료
+      if(window._backPressTime && Date.now() - window._backPressTime < 2000){
+        // 앱 종료 (안드로이드 PWA)
+        history.go(-1);
+      } else {
+        window._backPressTime = Date.now();
+        toast('한 번 더 누르면 종료됩니다');
+        history.pushState({page:'home'}, '', '');
+      }
+    }
+  });
+
+  // enterApp 후 히스토리 스택 초기화
+  const origEnterApp = window.enterApp;
+  window.addEventListener('load', function(){
+    setTimeout(pushHomeState, 500);
+  });
+})();
+
+// 2. Pull to Refresh (위로 당기면 새로고침)
+(function(){
+  let startY = 0;
+  let isPulling = false;
+  let pullIndicator = null;
+
+  function getIndicator(){
+    if(!pullIndicator){
+      pullIndicator = document.createElement('div');
+      pullIndicator.id = 'pullIndicator';
+      pullIndicator.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:0;height:0;overflow:hidden;background:var(--surface2);transition:height 0.1s;font-size:13px;color:var(--text3);font-weight:700;font-family:inherit;';
+      document.body.appendChild(pullIndicator);
+    }
+    return pullIndicator;
+  }
+
+  document.addEventListener('touchstart', function(e){
+    // 스크롤이 최상단일 때만
+    const el = e.target.closest('.screen') || document.scrollingElement;
+    if(window.scrollY === 0 && el){
+      startY = e.touches[0].clientY;
+      isPulling = true;
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if(!isPulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if(dy > 10 && window.scrollY === 0){
+      const ind = getIndicator();
+      const progress = Math.min(dy, 80);
+      ind.style.height = progress * 0.6 + 'px';
+      ind.textContent = progress > 50 ? '🔄 놓으면 새로고침' : '⬇️ 당겨서 새로고침';
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(e){
+    if(!isPulling) return;
+    isPulling = false;
+    const ind = getIndicator();
+    const h = parseInt(ind.style.height) || 0;
+    ind.style.height = '0';
+    if(h > 28){
+      setTimeout(()=>{ location.reload(); }, 200);
+    }
+    startY = 0;
+  }, {passive:true});
+})();
+
 function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear(); location.reload(); }
 
 // ══ 탭 전환 ══
