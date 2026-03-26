@@ -298,7 +298,11 @@ body::before {
   /* ── 기본 레이아웃 ── */
   .screen {
     padding: 16px 14px;
-    padding-bottom: calc(var(--tab-h) * 2 + 400px);
+    padding-bottom: calc(var(--tab-h) + 24px);
+  }
+  #homeScreen {
+    padding-bottom: calc(var(--tab-h) + 400px);
+    min-height: calc(100vh + 300px);
   }
 
   /* ── 공격 화면 1열 ── */
