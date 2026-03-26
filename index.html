@@ -228,7 +228,7 @@ body::before {
   background: rgba(15,5,5,0.99);
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 }
 #tabBar.hidden { display: none !important; visibility: hidden !important; pointer-events: none !important; opacity: 0 !important; }
 .tab-item {
@@ -2579,13 +2579,11 @@ function enterApp() {
         ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],
         ["ranking","🏆","랭킹",""],["suggest","📬","건의",""]
       ];
-      // 홈 버튼 (고정 왼쪽)
-      const homeBtn = document.createElement("button");
-      homeBtn.className = "tab-item active";
-      homeBtn.style.position = "relative";
-      homeBtn.onclick = function(){ switchTab("home"); };
-      homeBtn.innerHTML = "<div class=\"tab-icon\">🏠</div><div class=\"tab-label\">홈</div><span id=\"tab-badge-notice\" style=\"display:none;position:absolute;top:4px;right:8px;background:#e74c3c;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:1px 5px;min-width:16px;text-align:center;\">N</span>";
-      tabBar.appendChild(homeBtn);
+      // 공지 뱃지용 숨김 span (홈 탭 없애도 뱃지 기능 유지)
+      const noticeBadgeEl = document.createElement("span");
+      noticeBadgeEl.id = "tab-badge-notice";
+      noticeBadgeEl.style.display = "none";
+      document.body.appendChild(noticeBadgeEl);
       tabs.forEach(function(t) {
         const btn = document.createElement("button");
         btn.className = "tab-item" + (t[3] ? " active" : "");
@@ -4394,6 +4392,7 @@ function submitAttackSug(){
   const name=document.getElementById("mName").value.trim();
   if(!name) return toast("이름을 입력하세요");
   const result=document.getElementById("mResult").value;
+  if(!result) return toast("승리 또는 패배를 선택해주세요!");
   db.ref(`suggestions/attack/${currentDefense}`).push({
     name, type:document.getElementById("mType").value,
     ring:document.getElementById("mRing").value,
@@ -4658,7 +4657,9 @@ function saveReviewEdit(){
 function closeAdminReviewModal(){ document.getElementById("adminReviewModal").classList.remove("open"); }
 function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(!d) return;
   // 공격팀 등록
-  db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:0,lose:0,maker:d.suggester});
+  const initWin = d.result==="win" ? 1 : 0;
+  const initLose = d.result==="lose" ? 1 : 0;
+  db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:initWin,lose:initLose,maker:d.suggester});
   // 제보자 승패 자동 기록
   if(d.result==="win"||d.result==="lose"){
     db.ref("logs").push({nick:d.suggester,result:d.result,defense:dk,attack:sk,attackName:d.name,attackType:d.type||"",date:new Date().toISOString().slice(0,10),time:Date.now(),fromSuggest:true});
