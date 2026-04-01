@@ -1638,6 +1638,7 @@ body::before {
       💡 <b>사용법</b><br>
       • <b>빈 슬롯 클릭</b> → 편성 모달 열림 (캐릭터·펫 선택 후 💾 저장)<br>
       • <b>채워진 캐릭터 꾹누름 (0.6초)</b> → 스탯·장비·반지 입력 및 수정<br>
+      • <b>채워진 캐릭터 더블클릭/더블탭</b> → 편성에서 제거<br>
       • <b>✏️ 수정</b> 버튼으로도 편성 모달 열 수 있어요<br>
       • <b>🔗 공유</b> → 제목 입력 후 전체 팀 공유 / 하단 공유 목록에서 이름 클릭 → 팀 확인<br>
       • 공유된 카드에서도 <b>캐릭터 꾹누름</b> → 스탯 정보 보기<br>
@@ -7212,9 +7213,40 @@ function twRenderTeamCards(tier, data){
     el.addEventListener("mouseup",    cancelHold);
     el.addEventListener("mouseleave", cancelHold);
     el.addEventListener("touchstart", startHold, {passive:false});
-    el.addEventListener("touchend",   cancelHold);
+    el.addEventListener("touchend",   e=>{ cancelHold(); });
     el.addEventListener("touchcancel",cancelHold);
     el.addEventListener("contextmenu",e=>e.preventDefault());
+
+    // 더블클릭/더블탭 → 캐릭터 제거
+    let lastTap=0;
+    const removeChar=()=>{
+      const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||{};
+      if(!(d.chars||[])[slotIdx]) return;
+      const charName = d.chars[slotIdx];
+      if(!confirm(charName+"을(를) 편성에서 제거할까요?")) return;
+      const newChars=[...(d.chars||[])];
+      const newStats=[...(d.stats||[])];
+      newChars[slotIdx]="";
+      newStats[slotIdx]={};
+      const saveData={...d, chars:newChars, stats:newStats, updatedAt:Date.now(), updatedBy:myNick};
+      if(!twCachedData[tierId]) twCachedData[tierId]={};
+      twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
+      db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData).catch(()=>{});
+      const tier=TW_TIERS.find(t=>t.id===tierId);
+      if(tier) twRenderTeamCards(tier, twCachedData[tierId]);
+      toast(charName+" 제거됨");
+      lastTap=0; // 제거 후 리셋
+    };
+    el.addEventListener("dblclick", removeChar);
+    el.addEventListener("touchend", e=>{
+      const now=Date.now();
+      if(now-lastTap<350 && lastTap>0){
+        e.preventDefault();
+        cancelHold();
+        removeChar();
+      }
+      lastTap=now;
+    });
   });
 }
 
