@@ -1141,6 +1141,8 @@ body::before {
 @keyframes spin     { to { transform:rotate(360deg); } }
 @keyframes twHoldPulse { 0%{transform:scale(1);box-shadow:none;} 100%{transform:scale(0.88);box-shadow:0 0 0 3px rgba(255,200,50,0.6);} }
 .tw-holding { animation: twHoldPulse 0.6s ease forwards; }
+[data-tier][data-team][data-slot] { cursor: pointer !important; user-select: none !important; -webkit-user-select: none !important; }
+[data-tier][data-team][data-slot] * { cursor: pointer !important; user-select: none !important; -webkit-user-select: none !important; }
 .anim-fade-up { animation: fadeInUp 0.28s ease forwards; }
 .anim-fade    { animation: fadeIn   0.22s ease forwards; }
 .anim-scale   { animation: scaleIn  0.22s ease forwards; }
@@ -1621,16 +1623,17 @@ body::before {
     <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;" id="tw_tier_row"></div>
 
     <!-- 사용 안내 -->
-    <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.25);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.8;">
+    <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.25);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.9;">
       💡 <b>사용법</b><br>
-      • <b>✏️ 수정/+ 편성</b> → 캐릭터 슬롯 클릭해서 선택 → 저장 필수<br>
-      • 편성 모달에서 <b>캐릭터 슬롯 꾹누름</b> → 스탯·장비·반지 입력 가능<br>
-      • 메인 화면에서 <b>캐릭터 꾹누름</b> → 입력된 정보 보기<br>
-      • <b>🔗 공유</b> → 전체 팀 공유 / 공유 목록에서 이름 클릭 → 팀 확인<br>
-      • 공유된 카드에서도 <b>캐릭터 꾹누름</b> → 스탯 정보 보기
+      • <b>빈 슬롯 클릭</b> → 편성 모달 열림 (캐릭터·펫 선택 후 💾 저장)<br>
+      • <b>채워진 캐릭터 꾹누름 (0.6초)</b> → 스탯·장비·반지 입력 및 수정<br>
+      • <b>✏️ 수정</b> 버튼으로도 편성 모달 열 수 있어요<br>
+      • <b>🔗 공유</b> → 제목 입력 후 전체 팀 공유 / 하단 공유 목록에서 이름 클릭 → 팀 확인<br>
+      • 공유된 카드에서도 <b>캐릭터 꾹누름</b> → 스탯 정보 보기<br>
+      • 데이터는 <b>내 닉네임</b> 기준으로 저장돼요 (다른 사람과 분리)
     </div>
     <!-- 팀 목록 -->
-    <div id="tw_teams_grid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;"></div>
+    <div id="tw_teams_grid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;"></div>
 
     <!-- 공유 목록 (인라인) -->
     <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:14px;">
@@ -7086,12 +7089,12 @@ function twRenderTeamCards(tier, data){
         const plus = isBack?"rgba(220,100,120,0.6)":"rgba(100,160,220,0.6)";
         const fs   = !name?"24px":name.length<=2?"14px":name.length<=4?"11px":"9px";
         const id   = `twCard_${twCurrentTier}_${i}_${si}`;
-        if(!name) return `<div style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:26px;color:${plus};line-height:1;">+</span></div>`;
-        return `<div id="${id}"
+        if(!name) return `<div data-tier="${twCurrentTier}" data-team="${i}" data-slot="${si}" data-empty="1" style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;"><span style="font-size:26px;color:${plus};line-height:1;pointer-events:none;">+</span></div>`;
+        return `<div id="${id}" data-tier="${twCurrentTier}" data-team="${i}" data-slot="${si}"
           style="background:${bg};border:${bd};border-radius:14px;width:62px;height:72px;
             display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;
-            cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
-          <span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;">${name}</span>
+            cursor:pointer !important;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
+          <span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;cursor:pointer;user-select:none;-webkit-user-select:none;">${name}</span>
         </div>`;
       };
       const backSlots  = fm.back.map(si=>makeCardSlot(si,true)).join("");
@@ -7123,19 +7126,19 @@ function twRenderTeamCards(tier, data){
           <!-- 후방 -->
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:320px;">
             <div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;">● 후방</div>
-            ${fm.back.map(si=>twMakeSlot(chars[si]||"",true)).join("")}
+            ${fm.back.map(si=>makeCardSlot(si,true)).join("")}
           </div>
 
           <!-- 전방 -->
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:320px;">
             <div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;">● 전방</div>
-            ${fm.front.map(si=>twMakeSlot(chars[si]||"",false)).join("")}
+            ${fm.front.map(si=>makeCardSlot(si,false)).join("")}
           </div>
 
           <!-- 펫 -->
           <div style="width:46px;flex-shrink:0;display:flex;flex-direction:column;gap:5px;justify-content:center;min-height:320px;">
             <div style="font-size:8px;color:transparent;">　</div>
-            <div style="background:var(--surface2);border:1.5px dashed var(--border);border-radius:12px;width:46px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px;">
+            <div onclick="openTwTeamModal('${twCurrentTier}',${i})" style="background:var(--surface2);border:1.5px dashed var(--border);border-radius:12px;width:46px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px;cursor:pointer;">
               <div style="font-size:7px;color:var(--text3);">펫</div>
               <div style="font-size:${(pet||"").length>3?"7px":"10px"};font-weight:700;color:var(--text2);text-align:center;word-break:keep-all;line-height:1.2;">${pet||"+"}</div>
             </div>
@@ -7156,48 +7159,52 @@ function twRenderTeamCards(tier, data){
     }
     grid.innerHTML = html;
 
-  // innerHTML 완료 후 JS로 직접 이벤트 바인딩 (인라인 핸들러 대체)
-  for(let i=0;i<5;i++){
-    const team = data["team"+(i+1)]||null;
-    const chars = team?(team.chars||[]):[];
-    const fm = TW_FM[team?.formation||"기본"]||TW_FM["기본"];
-    const allSlots = [...fm.back, ...fm.front];
-    allSlots.forEach(si=>{
-      const name = chars[si]||"";
-      if(!name) return;
-      const el = document.getElementById("twCard_"+tier.id+"_"+i+"_"+si);
-      if(!el) return;
-      let holdTimer=null, holdFired=false;
-      el.addEventListener("pointerdown", e=>{
-        holdFired=false;
-        el.classList.add("tw-holding");
-        holdTimer=setTimeout(()=>{
-          holdFired=true;
-          holdTimer=null;
-          el.classList.remove("tw-holding");
-          // 스탯 편집 모달 열기
-          const d=(twCachedData[tier.id]||{})["team"+(i+1)]||{};
-          twEditTierIdx={tierId:tier.id, teamIdx:i};
-          twTeamChars=[...(d.chars||["","","","",""])];
-          while(twTeamChars.length<5) twTeamChars.push("");
-          twTeamStats=(d.stats||[]).map(s=>s||{});
-          while(twTeamStats.length<5) twTeamStats.push({});
-          twTeamPet=d.pet||"";
-          window._cardStatSaveHook={tierId:tier.id, teamIdx:i};
-          openTwStatModal(si);
-        },600);
-      });
-      el.addEventListener("pointerup", ()=>{
-        if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+  // 빈 슬롯 클릭 → 편성 모달 열기
+  grid.querySelectorAll("[data-empty='1']").forEach(el=>{
+    const tierId  = el.dataset.tier;
+    const teamIdx = parseInt(el.dataset.team);
+    el.addEventListener("click", ()=>openTwTeamModal(tierId, teamIdx));
+    el.addEventListener("touchend", e=>{ e.preventDefault(); openTwTeamModal(tierId, teamIdx); });
+  });
+
+  // 채워진 슬롯 꾹누름 → 스탯 편집 모달
+  grid.querySelectorAll("[data-tier][data-team][data-slot]:not([data-empty])").forEach(el=>{
+    const tierId = el.dataset.tier;
+    const teamIdx = parseInt(el.dataset.team);
+    const slotIdx = parseInt(el.dataset.slot);
+
+    let holdTimer=null;
+    const startHold = e => {
+      e.preventDefault();
+      el.classList.add("tw-holding");
+      holdTimer = setTimeout(()=>{
+        holdTimer=null;
         el.classList.remove("tw-holding");
-      });
-      el.addEventListener("pointerleave", ()=>{
-        if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
-        el.classList.remove("tw-holding");
-      });
-      el.addEventListener("contextmenu", e=>e.preventDefault());
-    });
-  }
+        const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||{};
+        if(!(d.chars||[])[slotIdx]) return;
+        twEditTierIdx={tierId, teamIdx};
+        twTeamChars=[...(d.chars||["","","","",""])];
+        while(twTeamChars.length<5) twTeamChars.push("");
+        twTeamStats=(d.stats||[]).map(s=>s||{});
+        while(twTeamStats.length<5) twTeamStats.push({});
+        twTeamPet=d.pet||"";
+        window._cardStatSaveHook={tierId, teamIdx};
+        openTwStatModal(slotIdx);
+      }, 600);
+    };
+    const cancelHold = () => {
+      if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+      el.classList.remove("tw-holding");
+    };
+
+    el.addEventListener("mousedown",  startHold);
+    el.addEventListener("mouseup",    cancelHold);
+    el.addEventListener("mouseleave", cancelHold);
+    el.addEventListener("touchstart", startHold, {passive:false});
+    el.addEventListener("touchend",   cancelHold);
+    el.addEventListener("touchcancel",cancelHold);
+    el.addEventListener("contextmenu",e=>e.preventDefault());
+  });
 }
 
 // 진형 ◄ ► 버튼 클릭
@@ -7870,8 +7877,8 @@ function renderTwShareDetail(key, container){
   `).join("");
 
   container.innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">${tierTabs}</div>
-    <div id="twshare_teams_${key}" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;">${tierTabs}</div>
+    <div id="twshare_teams_${key}" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;"></div>
   `;
 
   renderTwShareTeams(key, allTeams, twShareViewTier);
