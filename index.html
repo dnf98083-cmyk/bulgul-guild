@@ -7050,7 +7050,7 @@ function renderTwTeams(){
 function twRenderTeamCards(tier, data){
   const grid = document.getElementById("tw_teams_grid");
   if(!grid) return;
-  const canEdit = myRole==="관리자"||myRole==="연구원";
+  const canEdit = !!myNick;
   let html = "";
 
     for(let i=0;i<5;i++){
@@ -7088,10 +7088,6 @@ function twRenderTeamCards(tier, data){
         const id   = `twCard_${twCurrentTier}_${i}_${si}`;
         if(!name) return `<div style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:26px;color:${plus};line-height:1;">+</span></div>`;
         return `<div id="${id}"
-          onpointerdown="twCardHoldStart('${twCurrentTier}',${i},${si},'${id}')"
-          onpointerup="twCardHoldEnd('${id}')"
-          onpointerleave="twCardHoldEnd('${id}')"
-          oncontextmenu="event.preventDefault();return false;"
           style="background:${bg};border:${bd};border-radius:14px;width:62px;height:72px;
             display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;
             cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
@@ -7159,6 +7155,49 @@ function twRenderTeamCards(tier, data){
       </div>`;
     }
     grid.innerHTML = html;
+
+  // innerHTML 완료 후 JS로 직접 이벤트 바인딩 (인라인 핸들러 대체)
+  for(let i=0;i<5;i++){
+    const team = data["team"+(i+1)]||null;
+    const chars = team?(team.chars||[]):[];
+    const fm = TW_FM[team?.formation||"기본"]||TW_FM["기본"];
+    const allSlots = [...fm.back, ...fm.front];
+    allSlots.forEach(si=>{
+      const name = chars[si]||"";
+      if(!name) return;
+      const el = document.getElementById("twCard_"+tier.id+"_"+i+"_"+si);
+      if(!el) return;
+      let holdTimer=null, holdFired=false;
+      el.addEventListener("pointerdown", e=>{
+        holdFired=false;
+        el.classList.add("tw-holding");
+        holdTimer=setTimeout(()=>{
+          holdFired=true;
+          holdTimer=null;
+          el.classList.remove("tw-holding");
+          // 스탯 편집 모달 열기
+          const d=(twCachedData[tier.id]||{})["team"+(i+1)]||{};
+          twEditTierIdx={tierId:tier.id, teamIdx:i};
+          twTeamChars=[...(d.chars||["","","","",""])];
+          while(twTeamChars.length<5) twTeamChars.push("");
+          twTeamStats=(d.stats||[]).map(s=>s||{});
+          while(twTeamStats.length<5) twTeamStats.push({});
+          twTeamPet=d.pet||"";
+          window._cardStatSaveHook={tierId:tier.id, teamIdx:i};
+          openTwStatModal(si);
+        },600);
+      });
+      el.addEventListener("pointerup", ()=>{
+        if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+        el.classList.remove("tw-holding");
+      });
+      el.addEventListener("pointerleave", ()=>{
+        if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+        el.classList.remove("tw-holding");
+      });
+      el.addEventListener("contextmenu", e=>e.preventDefault());
+    });
+  }
 }
 
 // 진형 ◄ ► 버튼 클릭
@@ -7204,7 +7243,7 @@ function setTwFormation(f){
 }
 
 function openTwTeamModal(tierId,teamIdx){
-  if(myRole!=="관리자"&&myRole!=="연구원") return toast("관리자/연구원만 편성할 수 있어요");
+  if(!myNick) return toast("로그인이 필요해요");
   twEditTierIdx={tierId,teamIdx};
   twPickingSlot=null; twPickMode="char";
   const cached=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||null;
