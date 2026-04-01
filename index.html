@@ -228,7 +228,7 @@ body::before {
   background: rgba(15,5,5,0.99);
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
 }
 #tabBar.hidden { display: none !important; visibility: hidden !important; pointer-events: none !important; opacity: 0 !important; }
 .tab-item {
@@ -1478,6 +1478,7 @@ body::before {
   <nav class="sb-nav">
     <button class="sb-item active" onclick="switchTab('home')"><span class="si-icon">🏠</span> 홈</button>
     <button class="sb-item" onclick="switchTab('notice')"><span class="si-icon">📢</span> 공지사항</button>
+    <button class="sb-item" onclick="switchTab('totalwar')"><span class="si-icon">⚔️</span> 총력전</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
@@ -1607,6 +1608,73 @@ body::before {
   </div>
 
   <!-- 공격 -->
+
+  <!-- ══ 총력전 ══ -->
+  <div id="totalwarScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 80px);">
+    <div class="page-header">
+      <div class="page-title">⚔️ 총력전</div>
+    </div>
+    <!-- 등급 선택 -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;" id="tw_tier_row"></div>
+    <!-- 팀 목록 -->
+    <div id="tw_teams_grid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;"></div>
+  </div>
+
+  <!-- 총력전 편성 모달 -->
+  <div id="twTeamModalOverlay" class="modal-overlay" onclick="closeTwTeamModal(event)">
+    <div class="modal-box" style="max-height:92vh;overflow-y:auto;">
+      <div class="modal-title" id="twTeamModalTitle">팀 편성</div>
+
+      <!-- 진형 선택 -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">진형</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;">
+        <button type="button" onclick="setTwFormation('기본')"   id="twfbtn_기본"   style="flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2);">기본<br><span style="font-size:9px;opacity:0.6;">후3 전2</span></button>
+        <button type="button" onclick="setTwFormation('밸런스')" id="twfbtn_밸런스" style="flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2);">밸런스<br><span style="font-size:9px;opacity:0.6;">후2 전3</span></button>
+        <button type="button" onclick="setTwFormation('공격')"   id="twfbtn_공격"   style="flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2);">공격<br><span style="font-size:9px;opacity:0.6;">후4 전1</span></button>
+        <button type="button" onclick="setTwFormation('보호')"   id="twfbtn_보호"   style="flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2);">보호<br><span style="font-size:9px;opacity:0.6;">후1 전4</span></button>
+      </div>
+
+      <!-- 슬롯 5개 -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">캐릭터 배치 <span style="font-weight:400;opacity:0.7;">(슬롯 눌러서 선택)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;" id="twTeamSlots"></div>
+
+      <!-- 캐릭터 선택 패널 -->
+      <div id="twCharPickPanel" style="display:none;background:var(--surface2);border-radius:12px;padding:10px;margin-bottom:12px;border:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:6px;">선택할 캐릭터를 고르세요</div>
+        <input class="form-input" id="twCharSearchInput" placeholder="🔍 검색..." oninput="filterTwCharList()" style="margin:0 0 8px;" autocomplete="off">
+        <div id="twCharList" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- 속공 + 펫 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;">⚡ 속공</div>
+          <input class="form-input" id="twt_speed" placeholder="예: 153" type="number" style="margin:0;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;">🐾 펫</div>
+          <div style="position:relative;">
+            <input class="form-input" id="twt_pet" placeholder="펫 선택" oninput="twAutoComplete('twt_pet','twtSugPet',TW_PETS)" autocomplete="off" style="margin:0;">
+            <div id="twtSugPet" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;max-height:130px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,0.4);margin-top:2px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 스킬순서 -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;">🎯 스킬순서</div>
+      <textarea class="form-textarea" id="twt_skill" rows="3" placeholder="예: 파스칼2스 → 소교1스 → 레긴레이프1스" style="margin-bottom:8px;"></textarea>
+
+      <!-- 팁 -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;">💬 팁/메모</div>
+      <textarea class="form-textarea" id="twt_tip" rows="2" placeholder="전략 팁 (선택사항)"></textarea>
+
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn-sm btn-gray" style="flex:1;" onclick="closeTwTeamModal()">취소</button>
+        <button class="btn-sm btn-blue" style="flex:1;" onclick="saveTwTeam()">💾 저장</button>
+      </div>
+    </div>
+  </div>
+
   <div id="attackScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">⚔️ 길드전</div>
@@ -2776,7 +2844,7 @@ function enterApp() {
       const tabBar = document.createElement("div");
       tabBar.id = "tabBar";
       const tabs = [
-        ["attack","⚔️","공격",""],["defense","🛡️","방어",""],
+        ["totalwar","🗡️","총력전",""],["attack","⚔️","공격",""],["defense","🛡️","방어",""],
         ["pve","🏰","PVE",""],["calc","🧮","딜계산",""],
         ["ranking","🏆","랭킹",""],["suggest","📬","건의",""]
       ];
@@ -3219,6 +3287,29 @@ function previewFormation(){
   });
 }
 
+
+// 관리자 수정 폼 진형
+function setReFormationType(type){
+  ["기본","밸런스","공격","보호"].forEach(t=>{
+    const btn = document.getElementById("reft_"+t);
+    if(btn) btn.className = t===type ? "pve-tab-btn active" : "pve-tab-btn";
+  });
+  const input = document.getElementById("re_formation");
+  if(input){
+    const val = input.value.replace(/(기본|밸런스|공격|보호)\s*/,"").trim();
+    input.value = val ? type+" "+val : type+" ";
+  }
+  previewReFormation();
+}
+function previewReFormation(){
+  const input = document.getElementById("re_formation");
+  const preview = document.getElementById("re_formation_preview");
+  if(!input || !preview) return;
+  renderFormation(input.value.trim(), preview, true, (newVal)=>{
+    input.value = newVal;
+  });
+}
+
 function setModalFormationType(type){
   currentModalFormationType = type;
   ["기본","밸런스","공격","보호"].forEach(t=>{
@@ -3648,7 +3739,17 @@ function openMyReportEdit(dk, sk){
 </select>
 <input class="form-input" id="mRing" value="${data.ring||""}" placeholder="반지">
 <input class="form-input" id="mPet" value="${data.pet||""}" placeholder="펫">
-<input class="form-input" id="mFormation" value="${data.formation||""}" placeholder="진형">
+<div>
+  <div style="font-size:11px;font-weight:700;color:var(--text3);margin:4px 0 6px;text-transform:uppercase;letter-spacing:0.5px;">진형</div>
+  <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('기본')" id="mftype_기본" style="font-size:11px;padding:5px 10px;">기본</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('밸런스')" id="mftype_밸런스" style="font-size:11px;padding:5px 10px;">밸런스</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('공격')" id="mftype_공격" style="font-size:11px;padding:5px 10px;">공격</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('보호')" id="mftype_보호" style="font-size:11px;padding:5px 10px;">보호</button>
+  </div>
+  <input class="form-input" id="mFormation" value="${data.formation||""}" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewModalFormation()" style="display:none;">
+  <div id="mFormationPreview" style="margin-top:6px;"></div>
+</div>
 <textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항">${data.armor||""}</textarea>
 <textarea class="form-textarea" id="mSkill" rows="2" placeholder="스킬순서">${data.skill||""}</textarea>
 <div style="font-size:11px;font-weight:700;color:var(--text3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:0.5px;">결과</div>
@@ -3675,6 +3776,10 @@ function openMyReportEdit(dk, sk){
       });
     };
     document.getElementById("modalSubmitBtn").textContent = "💾 수정 저장";
+    // 진형 버튼 초기화
+    const ftype = detectFormationType(data.formation||"");
+    if(ftype) setModalFormationType(ftype, false);
+    previewModalFormation();
   });
 }
 
@@ -4018,7 +4123,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","notice","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest"];
+  const allTabs=["home","notice","totalwar","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -4030,7 +4135,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"attack":2,"defense":3,"pve":4,"calc":5,"ranking":6,"suggest":7,"adminMembers":8,"adminReports":9,"adminSuggest":10,"adminScores":11};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"attack":3,"defense":4,"pve":5,"calc":6,"ranking":7,"suggest":8,"adminMembers":9,"adminReports":10,"adminSuggest":11,"adminScores":12};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -4054,6 +4159,7 @@ function switchTab(tab) {
     }
   }
   if(tab==="notice") loadNotices();
+  if(tab==="totalwar") loadTotalwar();
   if(tab==="ranking") loadRanking();
   if(tab==="suggest"){ loadMySuggests(); markSuggestReplyRead(); }
   if(tab==="adminSuggest") loadAdminSuggests();
@@ -4843,18 +4949,43 @@ function openAdminReview(type,k1,k2){
         </div>
         <div class="calc-field"><label class="calc-label">반지</label><input class="form-input" id="re_ring" value="${data.ring||""}" style="margin:0;"></div>
         <div class="calc-field"><label class="calc-label">펫</label><input class="form-input" id="re_pet" value="${data.pet||""}" style="margin:0;"></div>
-        <div class="calc-field"><label class="calc-label">진형</label><input class="form-input" id="re_formation" value="${data.formation||""}" style="margin:0;"></div>
+        <div class="calc-field"><label class="calc-label">진형</label>
+          <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('기본')" id="reft_기본" style="font-size:11px;padding:4px 8px;">기본</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('밸런스')" id="reft_밸런스" style="font-size:11px;padding:4px 8px;">밸런스</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('공격')" id="reft_공격" style="font-size:11px;padding:4px 8px;">공격</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('보호')" id="reft_보호" style="font-size:11px;padding:4px 8px;">보호</button>
+          </div>
+          <input class="form-input" id="re_formation" value="${data.formation||""}" style="margin:0;display:none;" oninput="previewReFormation()">
+          <div id="re_formation_preview" style="margin-top:6px;"></div>
+        </div>
         <div class="calc-field"><label class="calc-label">장비</label><textarea class="form-textarea" id="re_armor" rows="2" style="margin:0;">${data.armor||""}</textarea></div>
         <div class="calc-field"><label class="calc-label">스킬 순서</label><textarea class="form-textarea" id="re_skill" rows="3" style="margin:0;">${data.skill||""}</textarea></div>`;
     } else {
       document.getElementById("adminReviewEditForm").innerHTML=`
         <div class="calc-field"><label class="calc-label">이름</label><input class="form-input" id="re_name" value="${data.name||""}" style="margin:0;"></div>
         <div class="calc-field"><label class="calc-label">영웅/반지</label><input class="form-input" id="re_heroes" value="${data.heroes||""}" style="margin:0;"></div>
-        <div class="calc-field"><label class="calc-label">진형</label><input class="form-input" id="re_formation" value="${data.formation||""}" style="margin:0;"></div>
+        <div class="calc-field"><label class="calc-label">진형</label>
+          <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('기본')" id="reft_기본" style="font-size:11px;padding:4px 8px;">기본</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('밸런스')" id="reft_밸런스" style="font-size:11px;padding:4px 8px;">밸런스</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('공격')" id="reft_공격" style="font-size:11px;padding:4px 8px;">공격</button>
+            <button type="button" class="pve-tab-btn" onclick="setReFormationType('보호')" id="reft_보호" style="font-size:11px;padding:4px 8px;">보호</button>
+          </div>
+          <input class="form-input" id="re_formation" value="${data.formation||""}" style="margin:0;display:none;" oninput="previewReFormation()">
+          <div id="re_formation_preview" style="margin-top:6px;"></div>
+        </div>
         <div class="calc-field"><label class="calc-label">펫</label><input class="form-input" id="re_pet" value="${data.pet||""}" style="margin:0;"></div>
         <div class="calc-field"><label class="calc-label">스킬</label><input class="form-input" id="re_skill" value="${data.skill||""}" style="margin:0;"></div>
         <div class="calc-field"><label class="calc-label">설명</label><textarea class="form-textarea" id="re_desc" rows="3" style="margin:0;">${data.desc||""}</textarea></div>`;
     }
+
+    // 진형 초기화
+    setTimeout(()=>{
+      const ftype = detectFormationType(data.formation||"");
+      if(ftype) setReFormationType(ftype);
+      else previewReFormation();
+    }, 50);
 
     // 승인/거절 버튼
     if(type==="attack"){
@@ -5678,26 +5809,29 @@ function delPveScore(type, key, id){
   });
 }
 
+let rankingLogsCache = {};
+let rankingSelectedNick = null;
+
 function loadRanking(){
   const list = document.getElementById("rankingListFull");
   if(list) list.innerHTML = "<div class='empty-state'>로딩중...</div>";
-  // 기존 renderRanking과 동일한 logs 기반 집계
   db.ref("logs").once("value").then(snap=>{
     const raw = snap.val()||{};
+    rankingLogsCache = raw;
     const stats = {};
     Object.values(raw).forEach(log=>{
       if(!log.nick) return;
       if(!stats[log.nick]) stats[log.nick] = { logs:[] };
-      stats[log.nick].logs.push({ result:log.result, time:log.time||0 });
+      stats[log.nick].logs.push(log);
     });
     const rankData = Object.entries(stats).map(([nick, d])=>{
-      d.logs.sort((a,b)=>b.time-a.time);
+      d.logs.sort((a,b)=>(b.time||0)-(a.time||0));
       const w=d.logs.filter(l=>l.result==="win").length;
       const l=d.logs.filter(l=>l.result==="lose").length;
       const recent=d.logs.slice(0,30);
       const rw=recent.filter(l=>l.result==="win").length;
       const rl=recent.filter(l=>l.result==="lose").length;
-      return { nick, w, l, rw, rl };
+      return { nick, w, l, rw, rl, logs: d.logs };
     }).sort((a,b)=>b.w-a.w);
 
     if(!rankData.length){ if(list) list.innerHTML="<div class='empty-state'>전적 데이터 없음</div>"; return; }
@@ -5708,16 +5842,73 @@ function loadRanking(){
       const badges=["🥇","🥈","🥉"];
       const badge=i<3?badges[i]:`${i+1}`;
       const isMe=d.nick===myNick;
-      return `<div class="rank-row${isMe?" rank-me":""}">
+      return `<div class="rank-row${isMe?" rank-me":""}" onclick="toggleRankDetail('${d.nick}',${JSON.stringify(d.logs).replace(/'/g,"\'")},${d.w},${d.l})" style="cursor:pointer;">
         <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
         <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
         <div class="rank-stat">
           <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
           <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
         </div>
+      </div>
+      <div id="rankDetail_${d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_')}" style="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);">
       </div>`;
     }).join("");
   });
+}
+
+function toggleRankDetail(nick, logs, w, l){
+  const safeId = nick.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  const panel = document.getElementById('rankDetail_'+safeId);
+  if(!panel) return;
+  if(rankingSelectedNick === nick){
+    panel.style.display='none';
+    rankingSelectedNick = null;
+    return;
+  }
+  // 이전 열린 패널 닫기
+  if(rankingSelectedNick){
+    const prevId = rankingSelectedNick.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+    const prev = document.getElementById('rankDetail_'+prevId);
+    if(prev) prev.style.display='none';
+  }
+  rankingSelectedNick = nick;
+
+  const tot=w+l, rate=tot?Math.round(w/tot*100):0;
+  const recent = logs.slice(0,10);
+
+  panel.innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:12px;">
+      <div style="flex:1;background:var(--surface);border-radius:8px;padding:10px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:18px;font-weight:900;color:var(--green);">${w}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">승리</div>
+      </div>
+      <div style="flex:1;background:var(--surface);border-radius:8px;padding:10px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:18px;font-weight:900;color:var(--red);">${l}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">패배</div>
+      </div>
+      <div style="flex:1;background:var(--surface);border-radius:8px;padding:10px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:18px;font-weight:900;color:var(--accent);">${rate}%</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">승률</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">최근 공격 기록</div>
+    ${recent.length===0
+      ? '<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0;">기록 없음</div>'
+      : recent.map(log=>{
+          const isWin = log.result==="win";
+          const defName = defenseDataCache[log.defense]?.name || log.defense || "-";
+          const dateStr = log.date || "";
+          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+            <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;background:${isWin?"rgba(39,174,96,0.15)":"rgba(231,76,60,0.12)"};color:${isWin?"#27ae60":"#e74c3c"};">${isWin?"승":"패"}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${log.attackName||"-"}</div>
+              <div style="font-size:11px;color:var(--text3);">vs ${defName}</div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);flex-shrink:0;">${dateStr}</div>
+          </div>`;
+        }).join('')}
+  `;
+  panel.style.display='block';
 }
 
 
@@ -6612,6 +6803,326 @@ function deleteSuggest(key){
     toast('삭제됨'); loadAdminSuggests();
   });
 }
+
+
+// ══ 총력전 ══
+const TW_CHARS = ["루디","아일린","레이첼","델론즈","스파이크","제이브","크리스","바네사","파이","로지","쥬리","밀리아","겔리두스","멜키르","콜트","플라튼","브란즈&브란셀","팔라누스","에이스","린","손오공","여포","태오","연희","카르마","카일","타카","오를리","아킬라","키리엘","엘리시아","라이언","클라한","카구라","미호","아멜리아","트루드","프레이야","라드그리드","레긴레이프","에반","카린","유리","리","유이","아리엘","쥬피","스니퍼","헬레니아","헤브니아","카론","빅토리아","루시","벨리카","실비아","조커","샤오","룩","챈슬러","메이","엘리스","아라곤","노호","클로에","비스킷","루리","니아","에스파다","세인","지크","제인","블랙로즈","세라","발리스타","사라","녹스","리나","캐티","진","레이","데이지","백룡","유신","비담","백각","소교","아수라","파스칼","조운","초선","관우","성진우","차해인","유진호","이주희","실베스타","라니아","베인","클레오","호킨","레오","라쿤","풍연","소이"];
+const TW_PETS  = ["루","이린","리첼","크리","파이크","딜로","윈디","유","연지","카람","멜패로","크로아","파라곤","노트","니키","세리","니나","풍소협","뮤뮤","믹","더지","에리","미믹","두","이그리트"];
+const TW_TIERS = [
+  {id:"normal",  label:"일반", teams:2, color:"#888780"},
+  {id:"advanced",label:"고급", teams:3, color:"#185FA5"},
+  {id:"rare",    label:"희귀", teams:4, color:"#0F6E56"},
+  {id:"legend",  label:"전설", teams:5, color:"#993556"},
+];
+// 진형: back=후방(왼쪽,빨강), front=전방(오른쪽,파랑)
+// chars 배열에서 어느 인덱스가 후방/전방인지
+const TW_FM = {
+  "기본":   {back:[0,1,2], front:[3,4]},
+  "밸런스": {back:[0,1],   front:[2,3,4]},
+  "공격":   {back:[0,1,2,3], front:[4]},
+  "보호":   {back:[0],   front:[1,2,3,4]},
+};
+
+let twCurrentTier = "normal";
+let twCachedData  = {};  // 로컬 캐시 — Firebase 없이도 진형 즉시 전환
+let twEditTierIdx  = null;
+// 각 팀의 현재 진형 (인덱스별) — 로드 후 채워짐
+let twTeamFormations = {};
+
+function loadTotalwar(){
+  renderTwTierRow();
+  renderTwTeams();
+}
+
+function renderTwTierRow(){
+  const row = document.getElementById("tw_tier_row");
+  if(!row) return;
+  row.innerHTML = TW_TIERS.map(t=>{
+    const on = twCurrentTier===t.id;
+    return `<button onclick="setTwTier('${t.id}')" style="padding:7px 16px;border-radius:20px;border:1.5px solid ${t.color};background:${on?t.color:"transparent"};color:${on?"#fff":t.color};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">${t.label} (${t.teams}팀)</button>`;
+  }).join("");
+}
+
+function setTwTier(id){ twCurrentTier=id; renderTwTierRow(); renderTwTeams(); }
+
+// 슬롯 렌더 — 스크린샷 스타일 (크고 둥글게, 세로 배치)
+function twMakeSlot(name, isBack){
+  const bg   = isBack  ? "rgba(255,182,193,0.35)" : "rgba(173,216,230,0.35)";
+  const bd   = isBack  ? "2px solid rgba(220,100,120,0.5)" : "2px solid rgba(100,160,220,0.5)";
+  const plus = isBack  ? "rgba(220,100,120,0.6)"  : "rgba(100,160,220,0.6)";
+  const fs   = !name?"24px":name.length<=2?"14px":name.length<=4?"11px":"9px";
+  // 고정 크기 슬롯 — 62x72px
+  if(!name) return `<div style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:26px;color:${plus};line-height:1;">+</span></div>`;
+  return `<div style="background:${bg};border:${bd};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;"><span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;">${name}</span></div>`;
+}
+
+function renderTwTeams(){
+  const tier = TW_TIERS.find(t=>t.id===twCurrentTier);
+  const grid = document.getElementById("tw_teams_grid");
+  if(!grid) return;
+  grid.innerHTML = `<div class='empty-state' style='padding:40px 0;'>⏳ 로딩중...</div>`;
+
+  db.ref("totalwar/teams/"+twCurrentTier).once("value").then(snap=>{
+    const data = snap.val()||{};
+    twCachedData[twCurrentTier] = data;
+    twRenderTeamCards(tier, data);
+  }).catch(()=>{
+    // 캐시 있으면 캐시 사용, 없으면 빈 카드
+    twRenderTeamCards(tier, twCachedData[twCurrentTier]||{});
+  });
+}
+
+function twRenderTeamCards(tier, data){
+  const grid = document.getElementById("tw_teams_grid");
+  if(!grid) return;
+  const canEdit = myRole==="관리자"||myRole==="연구원";
+  let html = "";
+
+    for(let i=0;i<5;i++){
+      const teamKey  = "team"+(i+1);
+      const team     = data[teamKey]||null;
+      const isLocked = i >= tier.teams;
+
+      if(isLocked){
+        const nt = TW_TIERS.find(t=>t.teams===i+1)||TW_TIERS[TW_TIERS.length-1];
+        html += `<div style="background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:140px;min-height:300px;opacity:0.38;flex-shrink:0;"><div style="font-size:22px;">🔒</div><div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center;">${nt.label}<br>등급에서 해금</div></div>`;
+        continue;
+      }
+
+      const chars     = team?(team.chars||[]):[];
+      const pet       = team?(team.pet||""):"";
+      const speed     = team?(team.speed||""):"";
+      const skill     = team?(team.skill||""):"";
+      const tip       = team?(team.tip||""):"";
+      const formation = team?(team.formation||"기본"):"기본";
+      const fm        = TW_FM[formation]||TW_FM["기본"];
+      const isEmpty   = !team||chars.every(c=>!c);
+
+      const fmKeys = Object.keys(TW_FM);
+      const curIdx = fmKeys.indexOf(formation);
+      const prevFm = fmKeys[(curIdx-1+fmKeys.length)%fmKeys.length];
+      const nextFm = fmKeys[(curIdx+1)%fmKeys.length];
+
+      const backSlots  = fm.back.map(si=>twMakeSlot(chars[si]||"", true)).join("");
+      const frontSlots = fm.front.map(si=>twMakeSlot(chars[si]||"", false)).join("");
+      const skillLines = skill?skill.split("→").map(s=>s.trim()).filter(Boolean):[];
+
+      html += `<div style="
+        background:var(--surface);border:1.5px solid var(--border);
+        border-radius:var(--radius);padding:12px;
+        flex-shrink:0;width:210px;
+        display:flex;flex-direction:column;gap:8px;
+      ">
+        <!-- 헤더: 팀번호 + 진형 화살표 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;font-weight:800;color:var(--text);">팀 ${i+1}</span>
+          <div style="display:flex;align-items:center;gap:3px;">
+            ${canEdit?`<button onclick="twChangeFormation('${twCurrentTier}',${i},'${prevFm}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text3);cursor:pointer;padding:1px 7px;line-height:1.4;">◄</button>`:""}
+            <span style="font-size:11px;font-weight:700;color:var(--text2);min-width:28px;text-align:center;">${formation}</span>
+            ${canEdit?`<button onclick="twChangeFormation('${twCurrentTier}',${i},'${nextFm}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text3);cursor:pointer;padding:1px 7px;line-height:1.4;">►</button>`:""}
+          </div>
+        </div>
+
+        <!-- 속공 -->
+        ${speed?`<div style="font-size:11px;font-weight:700;color:#f0a500;">⚡ ${speed}</div>`:""}
+
+        <!-- 캐릭터 배치: 후방(빨강) + 전방(파랑) 세로 나열 -->
+        <div style="display:flex;gap:6px;align-items:stretch;">
+
+          <!-- 후방 -->
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:320px;">
+            <div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;">● 후방</div>
+            ${fm.back.map(si=>twMakeSlot(chars[si]||"",true)).join("")}
+          </div>
+
+          <!-- 전방 -->
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:320px;">
+            <div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;">● 전방</div>
+            ${fm.front.map(si=>twMakeSlot(chars[si]||"",false)).join("")}
+          </div>
+
+          <!-- 펫+스킬 -->
+          <div style="width:46px;flex-shrink:0;display:flex;flex-direction:column;gap:5px;justify-content:center;min-height:320px;">
+            <div style="font-size:8px;color:transparent;">　</div>
+            <div style="background:var(--surface2);border:1.5px dashed var(--border);border-radius:12px;width:46px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px;">
+              <div style="font-size:7px;color:var(--text3);">펫</div>
+              <div style="font-size:${(pet||"").length>3?"7px":"10px"};font-weight:700;color:var(--text2);text-align:center;word-break:keep-all;line-height:1.2;">${pet||"+"}</div>
+            </div>
+            <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;width:46px;flex:1;min-height:70px;display:flex;flex-direction:column;align-items:center;padding:6px 4px;gap:2px;">
+              <div style="font-size:7px;color:var(--text3);margin-bottom:2px;">스킬</div>
+              ${skillLines.length
+                ?skillLines.map((s,idx)=>`<div style="font-size:7px;color:var(--text2);line-height:1.5;word-break:break-all;width:100%;text-align:left;">${idx+1}.${s}</div>`).join("")
+                :`<div style="font-size:9px;color:var(--text3);">-</div>`}
+            </div>
+          </div>
+        </div>
+
+        <!-- 편성/수정 버튼 -->
+        ${canEdit?`<button onclick="openTwTeamModal('${twCurrentTier}',${i})" style="
+          width:100%;padding:8px;border-radius:10px;font-size:12px;font-weight:700;
+          background:${isEmpty?"var(--accent)":"var(--surface2)"};
+          border:1px solid ${isEmpty?"var(--accent)":"var(--border)"};
+          color:${isEmpty?"#fff":"var(--text2)"};
+          cursor:pointer;font-family:inherit;
+        ">${isEmpty?"+ 편성":"✏️ 수정"}</button>`:""}
+        ${tip?`<div style="font-size:10px;color:var(--text2);border-top:1px solid var(--border);padding-top:6px;line-height:1.5;">💬 ${tip}</div>`:""}
+      </div>`;
+    }
+    grid.innerHTML = html;
+}
+
+// 진형 ◄ ► 버튼 클릭
+function twChangeFormation(tierId, teamIdx, newFm){
+  const teamKey = "team"+(teamIdx+1);
+
+  // 1) 로컬 캐시 즉시 업데이트 → 화면 바로 반영
+  if(!twCachedData[tierId]) twCachedData[tierId] = {};
+  const prev = twCachedData[tierId][teamKey]||{};
+  twCachedData[tierId][teamKey] = {...prev, formation:newFm};
+  const tier = TW_TIERS.find(t=>t.id===tierId);
+  twRenderTeamCards(tier, twCachedData[tierId]);
+
+  // 2) Firebase 백그라운드 저장 (실패해도 화면은 이미 바뀜)
+  db.ref("totalwar/teams/"+tierId+"/"+teamKey).once("value").then(snap=>{
+    const d = snap.val()||{};
+    db.ref("totalwar/teams/"+tierId+"/"+teamKey).set({
+      ...d, formation:newFm, updatedAt:Date.now(), updatedBy:myNick
+    }).then(()=>toast(newFm+" 진형 저장됨")).catch(()=>toast(newFm+" 진형 (미저장)"));
+  }).catch(()=>toast(newFm+" 진형 (오프라인)"));
+}
+
+// ── 팀 편성 모달 ──
+let twPickingSlot  = null;
+let twCurFormation = "기본";
+let twTeamChars    = ["","","","",""];
+
+function setTwFormation(f){
+  twCurFormation = f;
+  Object.keys(TW_FM).forEach(name=>{
+    const btn=document.getElementById("twfbtn_"+name); if(!btn) return;
+    const on=name===f;
+    btn.style.background=on?"var(--accent)":"var(--surface2)";
+    btn.style.color=on?"#fff":"var(--text2)";
+    btn.style.borderColor=on?"var(--accent)":"var(--border)";
+    btn.style.fontWeight=on?"700":"500";
+  });
+  renderTwTeamSlots();
+}
+
+function openTwTeamModal(tierId, teamIdx){
+  if(myRole!=="관리자"&&myRole!=="연구원") return toast("관리자/연구원만 편성할 수 있어요");
+  twEditTierIdx={tierId,teamIdx};
+  twPickingSlot=null;
+  db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).once("value").then(snap=>{
+    const d=snap.val()||{};
+    twTeamChars=[...(d.chars||["","","","",""])];
+    while(twTeamChars.length<5) twTeamChars.push("");
+    document.getElementById("twTeamModalTitle").textContent="팀 "+(teamIdx+1)+" 편성";
+    document.getElementById("twt_pet").value=d.pet||"";
+    document.getElementById("twt_speed").value=d.speed||"";
+    document.getElementById("twt_tip").value=d.tip||"";
+    document.getElementById("twt_skill").value=d.skill||"";
+    setTwFormation(d.formation||"기본");
+    document.getElementById("twCharPickPanel").style.display="none";
+    renderTwTeamSlots();
+    renderTwCharList("");
+    document.getElementById("twTeamModalOverlay").classList.add("open");
+  });
+}
+
+function renderTwTeamSlots(){
+  const wrap=document.getElementById("twTeamSlots"); if(!wrap) return;
+  const fm=TW_FM[twCurFormation]||TW_FM["기본"];
+  wrap.innerHTML=twTeamChars.map((c,i)=>{
+    const isBack=fm.back.includes(i);
+    const ac=isBack?"rgba(220,100,120,0.8)":"rgba(100,160,220,0.8)";
+    const isActive=twPickingSlot===i;
+    const bg=isActive?(isBack?"rgba(255,182,193,0.4)":"rgba(173,216,230,0.4)"):c?(isBack?"rgba(255,182,193,0.25)":"rgba(173,216,230,0.25)"):"var(--surface2)";
+    const bd=isActive?`2px solid ${ac}`:c?`1.5px solid ${ac}`:"1.5px dashed var(--border)";
+    return `<div onclick="selectTwSlot(${i})" style="background:${bg};border:${bd};border-radius:12px;aspect-ratio:0.82;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;padding:3px;position:relative;min-height:50px;">
+      <div style="position:absolute;top:3px;left:4px;font-size:8px;font-weight:700;color:${ac};">${isBack?"후":"전"}</div>
+      ${c
+        ?`<button onclick="event.stopPropagation();clearTwSlot(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.35);border:none;border-radius:50%;width:15px;height:15px;font-size:9px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>
+          <div style="background:rgba(0,0,0,0.45);border-radius:5px;padding:2px 3px;width:100%;text-align:center;"><div style="font-size:${c.length>4?"8px":"10px"};font-weight:700;color:#fff;line-height:1.3;word-break:keep-all;">${c}</div></div>`
+        :`<div style="font-size:20px;color:var(--text3);opacity:0.4;margin-bottom:3px;">+</div><div style="font-size:8px;color:var(--text3);">${i+1}번</div>`}
+    </div>`;
+  }).join("");
+}
+
+function selectTwSlot(idx){
+  twPickingSlot=idx; renderTwTeamSlots();
+  document.getElementById("twCharPickPanel").style.display="block";
+  document.getElementById("twCharSearchInput").value="";
+  renderTwCharList(""); document.getElementById("twCharSearchInput").focus();
+}
+
+function clearTwSlot(idx){
+  twTeamChars[idx]=""; twPickingSlot=null;
+  document.getElementById("twCharPickPanel").style.display="none";
+  renderTwTeamSlots();
+}
+
+function filterTwCharList(){ renderTwCharList(document.getElementById("twCharSearchInput").value); }
+
+function renderTwCharList(filter){
+  const list=document.getElementById("twCharList"); if(!list) return;
+  const unique=[...new Set(TW_CHARS)];
+  const filtered=filter?unique.filter(c=>c.includes(filter)):unique;
+  list.innerHTML=filtered.map(c=>{
+    const used=twTeamChars.includes(c);
+    return `<button onclick="pickTwChar('${c}')" style="padding:6px 3px;border-radius:8px;font-size:11px;font-weight:${used?"700":"500"};border:1.5px solid ${used?"var(--accent)":"var(--border)"};background:${used?"rgba(255,85,51,0.12)":"var(--surface)"};color:${used?"var(--accent)":"var(--text2)"};cursor:pointer;font-family:inherit;text-align:center;word-break:keep-all;">${c}${used?" ✓":""}</button>`;
+  }).join("");
+}
+
+function pickTwChar(name){
+  if(twPickingSlot===null) return;
+  twTeamChars=twTeamChars.map((c,i)=>c===name&&i!==twPickingSlot?"":c);
+  twTeamChars[twPickingSlot]=name;
+  const next=twTeamChars.findIndex((c,i)=>!c&&i>twPickingSlot);
+  if(next!==-1){ twPickingSlot=next; }
+  else { const any=twTeamChars.findIndex(c=>!c); if(any!==-1){twPickingSlot=any;}else{twPickingSlot=null;document.getElementById("twCharPickPanel").style.display="none";} }
+  renderTwTeamSlots(); renderTwCharList(document.getElementById("twCharSearchInput").value);
+}
+
+function twAutoComplete(inputId,sugId,list){
+  const input=document.getElementById(inputId),sug=document.getElementById(sugId);
+  if(!input||!sug) return;
+  const val=input.value.trim();
+  if(!val){sug.style.display="none";return;}
+  const filtered=list.filter(c=>c.includes(val)).slice(0,8);
+  if(!filtered.length){sug.style.display="none";return;}
+  sug.innerHTML=filtered.map(c=>`<div onclick="document.getElementById('${inputId}').value='${c}';document.getElementById('${sugId}').style.display='none';" style="padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${c}</div>`).join("");
+  sug.style.display="block";
+}
+
+function saveTwTeam(){
+  if(!twEditTierIdx) return;
+  const {tierId,teamIdx}=twEditTierIdx;
+  if(twTeamChars.every(c=>!c)) return toast("최소 1명은 입력해주세요");
+  const pet=document.getElementById("twt_pet")?.value.trim()||"";
+  const speed=document.getElementById("twt_speed")?.value.trim()||"";
+  const tip=document.getElementById("twt_tip")?.value.trim()||"";
+  const skill=document.getElementById("twt_skill")?.value.trim()||"";
+  db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).set({
+    chars:twTeamChars,pet,speed,tip,skill,formation:twCurFormation,updatedAt:Date.now(),updatedBy:myNick
+  }).then(()=>{ toast("✅ 저장됐어요!"); closeTwTeamModal(); renderTwTeams(); });
+}
+
+function closeTwTeamModal(e){
+  if(!e||e.target===document.getElementById("twTeamModalOverlay"))
+    document.getElementById("twTeamModalOverlay").classList.remove("open");
+}
+
+// 가이드 관련 (사용 안 해도 에러 방지용 유지)
+function switchTotalwarTab(){}
+function loadTwGuide(){}
+function toggleTwGuide(){}
+function openTwGuideModal(){}
+function closeTwGuideModal(){}
+function saveTwGuide(){}
+function deleteTwGuide(){}
+
+
 
 // ══ 닉네임 변경 ══
 function filterRenameNick(){
