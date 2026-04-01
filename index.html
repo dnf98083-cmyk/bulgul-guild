@@ -1704,6 +1704,7 @@ body::before {
         <button onclick="switchTwStatTab('stat')" id="twstab_stat" style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">📊 스탯</button>
         <button onclick="switchTwStatTab('weapon')" id="twstab_weapon" style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:inherit;">⚔️ 무기</button>
         <button onclick="switchTwStatTab('armor')" id="twstab_armor" style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:inherit;">🛡️ 방어구</button>
+        <button onclick="switchTwStatTab('ring')" id="twstab_ring" style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:inherit;">💍 반지</button>
       </div>
 
       <!-- 스탯 탭 -->
@@ -1760,6 +1761,23 @@ body::before {
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px;" id="tws_a2_set"></div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">메인 옵션</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;" id="tws_a2_main"></div>
+        </div>
+      </div>
+
+      <!-- 반지 탭 -->
+      <div id="twstat_panel_ring" style="display:none;">
+        <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:#c084fc;margin-bottom:12px;">💍 반지 선택</div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="tws_ring_list"></div>
+        </div>
+        <!-- 반지 강화 수치 -->
+        <div style="background:var(--surface2);border-radius:12px;padding:14px;" id="tws_ring_val_wrap" style="display:none;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">강화 수치 (+?)</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="tws_ring_val" type="number" placeholder="예: 15" min="0" max="15"
+              style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;">
+            <span style="font-size:13px;color:var(--text3);">강화</span>
+          </div>
         </div>
       </div>
 
@@ -7356,9 +7374,11 @@ const TW_ARMOR_OPTS  = ["받는 피해 감소","막기 확률","모든 공격력
 
 let twStatCurrentTab = "stat";
 
+const TW_RINGS_LIST = ["부활의 반지","불사의 반지","권능의 반지","고급 토벌의 반지"];
+
 function switchTwStatTab(tab){
   twStatCurrentTab = tab;
-  ["stat","weapon","armor"].forEach(t=>{
+  ["stat","weapon","armor","ring"].forEach(t=>{
     const panel=document.getElementById("twstat_panel_"+t);
     const btn=document.getElementById("twstab_"+t);
     if(panel) panel.style.display=t===tab?"block":"none";
@@ -7368,6 +7388,7 @@ function switchTwStatTab(tab){
       btn.style.borderColor=t===tab?"var(--accent)":"var(--border)";
     }
   });
+  if(tab==="ring") renderTwRingList();
 }
 
 function renderTwEquipGrid(gridId, options, selectedVal){
@@ -7394,7 +7415,38 @@ let twEquipState = {
   w2set:"", w2main:"", w2val:"",
   a1set:"", a1main:"", a1val:"",
   a2set:"", a2main:"", a2val:"",
+  ring:"",  ringVal:"",
 };
+
+function renderTwRingList(){
+  const list=document.getElementById("tws_ring_list"); if(!list) return;
+  list.innerHTML=TW_RINGS_LIST.map(r=>{
+    const on=twEquipState.ring===r;
+    return `<div onclick="twSelectRing('${r}')" style="
+      padding:12px 14px;border-radius:12px;cursor:pointer;
+      border:1.5px solid ${on?"#c084fc":"var(--border)"};
+      background:${on?"rgba(192,132,252,0.15)":"var(--surface)"};
+      display:flex;align-items:center;gap:10px;
+    ">
+      <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid ${on?"#c084fc":"var(--text3)"};
+        background:${on?"#c084fc":"transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${on?`<span style="color:#fff;font-size:12px;line-height:1;">✓</span>`:""}
+      </div>
+      <span style="font-size:13px;font-weight:${on?"700":"500"};color:${on?"#c084fc":"var(--text2)"};">💍 ${r}</span>
+    </div>`;
+  }).join("");
+  // 강화 수치 표시
+  const valWrap=document.getElementById("tws_ring_val_wrap");
+  if(valWrap) valWrap.style.display=twEquipState.ring?"block":"none";
+  const valInput=document.getElementById("tws_ring_val");
+  if(valInput) valInput.value=twEquipState.ringVal||"";
+}
+
+function twSelectRing(name){
+  twEquipState.ring=twEquipState.ring===name?"":name;
+  if(!twEquipState.ring) twEquipState.ringVal="";
+  renderTwRingList();
+}
 
 function twToggleEquip(gridId, opt){
   const map={
@@ -7447,6 +7499,7 @@ function openTwStatModal(slotIdx){
     w2set:stat.w2set||"", w2main:stat.w2main||"", w2val:stat.w2val||"",
     a1set:stat.a1set||"", a1main:stat.a1main||"", a1val:stat.a1val||"",
     a2set:stat.a2set||"", a2main:stat.a2main||"", a2val:stat.a2val||"",
+    ring:stat.ring||"",   ringVal:stat.ringVal||"",
   };
   renderTwStatStars(stat.stars||6, stat.overclock||0);
   switchTwStatTab("stat");
@@ -7503,6 +7556,7 @@ function saveTwStat(){
     w2set:twEquipState.w2set, w2main:twEquipState.w2main, w2val:twEquipState.w2val,
     a1set:twEquipState.a1set, a1main:twEquipState.a1main, a1val:twEquipState.a1val,
     a2set:twEquipState.a2set, a2main:twEquipState.a2main, a2val:twEquipState.a2val,
+    ring:twEquipState.ring, ringVal:document.getElementById("tws_ring_val")?.value||"",
   };
   toast("✅ 스탯 적용됨"); closeTwStatModal(); renderTwTeamSlots();
 }
@@ -7587,10 +7641,22 @@ function openTwStatViewModal(name, stat){
       </div>`:""}
       ${mainVal?`<div style="background:var(--surface);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;">
         <span style="font-size:11px;color:var(--text3);">메인 옵션</span>
-        <span style="font-size:12px;font-weight:700;color:${color};">${mainVal}${numVal?" "+numVal+"%":""}</span>
+        <span style="font-size:12px;font-weight:700;color:${color};">${mainVal}${numVal?" +"+numVal+"%":""}</span>
       </div>`:""}
     </div>`);
   });
+
+  // 반지
+  if(stat.ring){
+    const ringVal=stat.ringVal?"  +"+stat.ringVal+"강":"";
+    equipSections.push(`<div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:#c084fc;margin-bottom:8px;">💍 반지</div>
+      <div style="background:var(--surface);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${stat.ring}</span>
+        ${stat.ringVal?`<span style="font-size:12px;color:#c084fc;font-weight:700;">+${stat.ringVal}강</span>`:""}
+      </div>
+    </div>`);
+  }
 
   body.innerHTML = statHTML + equipSections.join("") +
     ((!statRows.some(([,v])=>v)&&!equipSections.length)?
