@@ -1806,8 +1806,8 @@ body::before {
     <div class="modal-box">
       <div class="modal-title">🔗 편성 공유</div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">제목 (선택사항)</div>
-      <input id="twShareTitleInput" class="form-input" placeholder="예: 파멸의 1월 시즌 편성" style="margin-bottom:14px;">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">이름은 <b style="color:var(--text);">${myNick}</b> 으로 자동 표시돼요</div>
+      <input id="twShareTitleInput" class="form-input" placeholder="예: 1월 시즌 편성" style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">이름은 <b id="twShareNickPreview" style="color:var(--text);">-</b> 으로 자동 표시돼요</div>
       <div style="display:flex;gap:8px;">
         <button class="btn-sm btn-gray" style="flex:1;" onclick="document.getElementById('twShareTitleOverlay').classList.remove('open')">취소</button>
         <button class="btn-sm btn-blue" style="flex:1;" onclick="doShareTwTeam()">🔗 공유하기</button>
@@ -7082,9 +7082,10 @@ function twRenderTeamCards(tier, data){
           onpointerdown="twCardHoldStart('${twCurrentTier}',${i},${si},'${id}')"
           onpointerup="twCardHoldEnd('${id}')"
           onpointerleave="twCardHoldEnd('${id}')"
+          oncontextmenu="event.preventDefault();return false;"
           style="background:${bg};border:${bd};border-radius:14px;width:62px;height:72px;
             display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;
-            cursor:pointer;user-select:none;touch-action:none;">
+            cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
           <span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;">${name}</span>
         </div>`;
       };
@@ -7095,7 +7096,7 @@ function twRenderTeamCards(tier, data){
       html += `<div style="
         background:var(--surface);border:1.5px solid var(--border);
         border-radius:var(--radius);padding:12px;
-        flex-shrink:0;width:210px;
+        flex-shrink:0;width:min(210px,75vw);
         display:flex;flex-direction:column;gap:8px;
       ">
         <!-- 헤더: 팀번호 + 진형 화살표 -->
@@ -7357,16 +7358,12 @@ function saveTwTeam(){
 
 // 공유 — 전체 등급 모든 팀
 function shareTwTeam(){
-  // 제목 입력 모달 열기
   const input = document.getElementById("twShareTitleInput");
   if(input) input.value = "";
-  // 이름 미리보기 업데이트
-  const overlay = document.getElementById("twShareTitleOverlay");
-  if(overlay){
-    const desc = overlay.querySelector("div[style*='margin-bottom:14px']");
-    if(desc) desc.innerHTML = `이름은 <b style="color:var(--text);">${myNick}</b> 으로 자동 표시돼요`;
-  }
+  const preview = document.getElementById("twShareNickPreview");
+  if(preview) preview.textContent = myNick||"-";
   document.getElementById("twShareTitleOverlay").classList.add("open");
+  setTimeout(()=>{ if(input) input.focus(); }, 200);
 }
 
 function doShareTwTeam(){
@@ -7595,7 +7592,28 @@ function saveTwStat(){
     a2set:twEquipState.a2set, a2main:twEquipState.a2main, a2val:twEquipState.a2val,
     ring:twEquipState.ring, ringVal:document.getElementById("tws_ring_val")?.value||"",
   };
-  toast("✅ 스탯 적용됨"); closeTwStatModal(); renderTwTeamSlots();
+
+  // 메인 카드에서 열었으면 Firebase에 바로 저장
+  if(window._cardStatSaveHook && twEditTierIdx){
+    const {tierId,teamIdx}=twEditTierIdx;
+    const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||{};
+    const saveData={...d, chars:twTeamChars, stats:twTeamStats, pet:twTeamPet,
+      updatedAt:Date.now(), updatedBy:myNick};
+    if(!twCachedData[tierId]) twCachedData[tierId]={};
+    twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
+    db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).set(saveData)
+      .then(()=>{ toast("✅ 스탯 저장됨!"); })
+      .catch(()=>toast("로컬 저장됨"));
+    window._cardStatSaveHook=null;
+    // 카드 다시 렌더
+    const tier=TW_TIERS.find(t=>t.id===tierId);
+    if(tier) twRenderTeamCards(tier, twCachedData[tierId]);
+  } else {
+    toast("✅ 스탯 적용됨");
+  }
+
+  closeTwStatModal();
+  renderTwTeamSlots();
 }
 
 function closeTwStatModal(e){
@@ -7616,11 +7634,28 @@ function twCardHoldStart(tierId,teamIdx,slotIdx,elId){
     const el2=document.getElementById(twCardHoldElId);
     if(el2) el2.classList.remove("tw-holding");
     twCardHoldElId=null;
-    const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||{};
-    const name=(d.chars||[])[slotIdx]||"";
-    if(!name) return;
-    const stat=(d.stats||[])[slotIdx]||{};
-    openTwStatViewModal(name, stat);
+
+    const openStatEdit=(d)=>{
+      const name=(d.chars||[])[slotIdx]||"";
+      if(!name) return;
+      twEditTierIdx={tierId,teamIdx};
+      twTeamChars=[...(d.chars||["","","","",""])];
+      while(twTeamChars.length<5) twTeamChars.push("");
+      twTeamStats=(d.stats||[]).map(s=>s||{});
+      while(twTeamStats.length<5) twTeamStats.push({});
+      twTeamPet=d.pet||"";
+      window._cardStatSaveHook={tierId,teamIdx};
+      openTwStatModal(slotIdx);
+    };
+
+    const cached=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||null;
+    if(cached){
+      openStatEdit(cached);
+    } else {
+      db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).once("value")
+        .then(snap=>{ openStatEdit(snap.val()||{}); })
+        .catch(()=>toast("데이터를 불러올 수 없어요"));
+    }
   },600);
 }
 function twCardHoldEnd(elId){
@@ -7820,64 +7855,65 @@ function renderTwShareTeams(key, allTeams, tierId){
     const isLocked = i >= tier.teams;
 
     if(isLocked){
-      const nt=TW_TIERS.find(t=>t.teams===i+1)||TW_TIERS[TW_TIERS.length-1];
-      html+='<div style="width:140px;flex-shrink:0;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;opacity:0.4;"><div style="font-size:20px;">🔒</div><div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;">'+nt.label+' 해금</div></div>';
+      html+='<div style="width:130px;flex-shrink:0;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;opacity:0.35;">'
+           +'<div style="font-size:22px;">🔒</div>'
+           +'</div>';
       continue;
     }
 
-    const chars     = team?(team.chars||[]):[];
-    const pet       = team?(team.pet||""):"";
-    const formation = team?(team.formation||"기본"):"기본";
-    const stats     = team?(team.stats||[]):[];
-    const skill     = team?(team.skill||""):"";
-    const tip       = team?(team.tip||""):"";
-    const speed     = team?(team.speed||""):"";
-    const isEmpty   = !team||chars.every(c=>!c);
-    const fm        = TW_FM[formation]||TW_FM["기본"];
+    const chars   = team?(team.chars||[]):[];
+    const pet     = team?(team.pet||""):"";
+    const form    = team?(team.formation||"기본"):"기본";
+    const stats   = team?(team.stats||[]):[];
+    const skill   = team?(team.skill||""):"";
+    const tip     = team?(team.tip||""):"";
+    const speed   = team?(team.speed||""):"";
+    const isEmpty = !team||chars.every(c=>!c);
+    const fm      = TW_FM[form]||TW_FM["기본"];
 
-    // 슬롯 생성 — 스탯은 window에 저장해서 id로 참조
-    const makeShareSlot=(si,isBack)=>{
+    const makeSlot=(si,isBack)=>{
       const name=chars[si]||"";
-      const bg   = isBack?"rgba(255,182,193,0.35)":"rgba(173,216,230,0.35)";
-      const bd   = isBack?"2px solid rgba(220,100,120,0.5)":"2px solid rgba(100,160,220,0.5)";
-      const plus = isBack?"rgba(220,100,120,0.6)":"rgba(100,160,220,0.6)";
-      const fs   = !name?"24px":name.length<=2?"14px":name.length<=4?"11px":"9px";
-      const slotId="twshare_slot_"+key+"_"+i+"_"+si;
-      // 스탯 데이터를 전역 캐시에 저장
+      const bg  =isBack?"rgba(220,100,120,0.25)":"rgba(100,160,220,0.25)";
+      const bd  =isBack?"1.5px solid rgba(220,100,120,0.5)":"1.5px solid rgba(100,160,220,0.5)";
+      const plus=isBack?"rgba(220,100,120,0.4)":"rgba(100,160,220,0.4)";
+      const fs  =!name?"18px":name.length<=2?"13px":name.length<=4?"11px":"9px";
+      const sid ="twshare_slot_"+key+"_"+i+"_"+si;
       if(!window._twShareStats) window._twShareStats={};
-      window._twShareStats[slotId]={name:name, stat:stats[si]||{}};
-      if(!name) return '<div style="background:var(--surface2);border:2px dashed '+plus+';border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:26px;color:'+plus+';line-height:1;">+</span></div>';
-      return '<div id="'+slotId+'" onpointerdown="twShareSlotHoldStart(\''+slotId+'\')" onpointerup="twShareSlotHoldEnd(\''+slotId+'\')" onpointerleave="twShareSlotHoldEnd(\''+slotId+'\')" style="background:'+bg+';border:'+bd+';border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;cursor:pointer;user-select:none;touch-action:none;"><span style="font-size:'+fs+';font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;">'+name+'</span></div>';
+      window._twShareStats[sid]={name:name,stat:stats[si]||{}};
+      if(!name) return '<div style="background:var(--surface2);border:1.5px dashed '+plus+';border-radius:10px;width:56px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:'+plus+';font-size:18px;">+</span></div>';
+      return '<div id="'+sid+'" onpointerdown="twShareSlotHoldStart(\''+sid+'\')" onpointerup="twShareSlotHoldEnd(\''+sid+'\')" onpointerleave="twShareSlotHoldEnd(\''+sid+'\')" oncontextmenu="event.preventDefault()" style="background:'+bg+';border:'+bd+';border-radius:10px;width:56px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;user-select:none;touch-action:none;-webkit-touch-callout:none;"><span style="font-size:'+fs+';font-weight:800;color:var(--text);text-align:center;word-break:keep-all;pointer-events:none;">'+name+'</span></div>';
     };
 
-    const backSlots  = fm.back.map(si=>makeShareSlot(si,true)).join("");
-    const frontSlots = fm.front.map(si=>makeShareSlot(si,false)).join("");
+    const backSlots  = fm.back.map(si=>makeSlot(si,true)).join("");
+    const frontSlots = fm.front.map(si=>makeSlot(si,false)).join("");
 
-    // 하단 정보
-    let bottomHTML = "";
-    if(pet||speed){
-      bottomHTML += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">';
-      if(pet)   bottomHTML += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:9px;color:var(--text3);">🐾</span><span style="font-size:11px;font-weight:700;color:var(--text2);">'+pet+'</span></div>';
-      if(speed) bottomHTML += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:9px;color:#f0a500;">⚡</span><span style="font-size:11px;font-weight:700;color:#f0a500;">'+speed+'</span></div>';
-      bottomHTML += '</div>';
-    }
-    if(skill){
-      bottomHTML += '<div style="font-size:10px;color:var(--text2);line-height:1.7;margin-bottom:3px;"><span style="font-size:9px;color:var(--text3);">🎯 스킬순서</span><br>';
-      bottomHTML += skill.split("→").map(function(s,idx){ return '<span>'+(idx+1)+'. '+s.trim()+'</span>'; }).join('<br>');
-      bottomHTML += '</div>';
-    }
-    if(tip) bottomHTML += '<div style="font-size:10px;color:var(--text2);border-top:1px solid var(--border);padding-top:5px;line-height:1.6;">💬 '+tip+'</div>';
-    const bottomSection = bottomHTML ? '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">'+bottomHTML+'</div>' : "";
+    let bottomHTML="";
+    if(pet||speed) bottomHTML+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:3px;">'+(pet?'<span style="font-size:10px;color:var(--text2);">🐾 '+pet+'</span>':'')+(speed?'<span style="font-size:10px;color:#f0a500;">⚡ '+speed+'</span>':'')+'</div>';
+    if(skill) bottomHTML+='<div style="font-size:10px;color:var(--text2);line-height:1.6;margin-bottom:3px;"><span style="color:var(--text3);font-size:9px;">🎯 스킬순서</span><br>'+skill.split("→").map(function(s,i){return '<span>'+(i+1)+'. '+s.trim()+'</span>';}).join('<br>')+'</div>';
+    if(tip) bottomHTML+='<div style="font-size:10px;color:var(--text3);line-height:1.5;border-top:1px solid var(--border);padding-top:5px;">💬 '+tip+'</div>';
 
     let bodyHTML;
     if(isEmpty){
-      bodyHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px 0;">편성 없음</div>';
+      bodyHTML='<div style="text-align:center;color:var(--text3);font-size:11px;padding:16px 0;">편성 없음</div>';
     } else {
-      bodyHTML = '<div style="display:flex;gap:5px;"><div style="flex:'+fm.back.length+';display:flex;flex-direction:column;gap:4px;"><div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;margin-bottom:2px;">● 후방</div>'+backSlots+'</div><div style="flex:'+fm.front.length+';display:flex;flex-direction:column;gap:4px;"><div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;margin-bottom:2px;">● 전방</div>'+frontSlots+'</div></div>'+bottomSection;
+      bodyHTML='<div style="display:flex;gap:6px;justify-content:center;">'
+        +'<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">'
+        +'<div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;margin-bottom:2px;">● 후방</div>'
+        +backSlots+'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">'
+        +'<div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;margin-bottom:2px;">● 전방</div>'
+        +frontSlots+'</div>'
+        +'</div>';
+      if(bottomHTML) bodyHTML+='<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">'+bottomHTML+'</div>';
     }
-    html += '<div style="width:170px;flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;font-weight:800;color:var(--text);">팀 '+(i+1)+'</span><span style="font-size:10px;color:var(--text3);">'+formation+'</span></div>'+bodyHTML+'</div>';
+
+    html+='<div style="min-width:150px;flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;">'
+         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+         +'<span style="font-size:13px;font-weight:800;color:var(--text);">팀 '+(i+1)+'</span>'
+         +'<span style="font-size:9px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:8px;">'+form+'</span>'
+         +'</div>'+bodyHTML+'</div>';
   }
-  container.innerHTML = html;
+  container.innerHTML=html;
 }
 
 // 공유 목록 모달 함수 (호환성 유지)
