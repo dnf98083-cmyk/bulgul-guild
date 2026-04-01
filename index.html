@@ -1794,24 +1794,47 @@ body::before {
 
       <!-- 반지 탭 -->
       <div id="twstat_panel_ring" style="display:none;">
+        <!-- 반지 선택 -->
         <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;">
           <div style="font-size:12px;font-weight:700;color:#c084fc;margin-bottom:12px;">💍 반지 선택</div>
           <div style="display:flex;flex-direction:column;gap:8px;" id="tws_ring_list"></div>
+          <!-- 기타 선택 시 이름 입력 -->
+          <div id="tws_ring_custom_wrap" style="display:none;margin-top:8px;">
+            <input id="tws_ring_custom" class="form-input" placeholder="반지 이름 직접 입력" style="margin:0;" oninput="twEquipState.ringCustom=this.value">
+          </div>
         </div>
-        <!-- 반지 강화 수치 -->
-        <div style="background:var(--surface2);border-radius:12px;padding:14px;" id="tws_ring_val_wrap" style="display:none;">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">강화 수치 (+?)</div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input id="tws_ring_val" type="number" placeholder="예: 15" min="0" max="15"
-              style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;">
-            <span style="font-size:13px;color:var(--text3);">강화</span>
+        <!-- 반지 선택 후 상세 -->
+        <div id="tws_ring_detail_wrap" style="display:none;">
+          <!-- 성급 선택 -->
+          <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">⭐ 성급</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tws_ring_star_btns">
+              <button onclick="twSelectRingStar(4)" id="twrstar_4" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">4성</button>
+              <button onclick="twSelectRingStar(5)" id="twrstar_5" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">5성</button>
+              <button onclick="twSelectRingStar(6)" id="twrstar_6" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">6성</button>
+            </div>
+          </div>
+          <!-- 강화 수치 -->
+          <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">🔨 강화 수치</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="tws_ring_val" type="number" placeholder="예: 15" min="0" max="20"
+                style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;">
+              <span style="font-size:13px;color:var(--text3);">강화</span>
+            </div>
+          </div>
+          <!-- 세공 입력 -->
+          <div style="background:var(--surface2);border-radius:12px;padding:14px;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">✨ 세공 옵션</div>
+            <textarea id="tws_ring_craft" rows="3" placeholder="예: 물리 공격력 +15%, 치명타 확률 +8%"
+              style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
           </div>
         </div>
       </div>
 
       <!-- 저장/취소 -->
       <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="btn-sm btn-gray" style="flex:1;" onclick="closeTwStatModal()">취소</button>
+        <button class="btn-sm btn-gray" style="flex:1;" onclick="closeTwStatModal()">닫기</button>
         <button class="btn-sm btn-blue" style="flex:1;" id="twStatSaveBtn" onclick="saveTwStat()">✅ 적용</button>
       </div>
     </div>
@@ -1820,6 +1843,13 @@ body::before {
   <div id="twShareTitleOverlay" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal-box">
       <div class="modal-title">🔗 편성 공유</div>
+      <!-- 덮어쓰기 선택 -->
+      <div id="twShareOverwriteWrap" style="display:none;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">기존 공유 덮어쓰기</div>
+        <select id="twShareOverwriteSel" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;">
+          <option value="">새로 공유</option>
+        </select>
+      </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">제목 (선택사항)</div>
       <input id="twShareTitleInput" class="form-input" placeholder="예: 1월 시즌 편성" style="margin-bottom:10px;">
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">이름은 <b id="twShareNickPreview" style="color:var(--text);">-</b> 으로 자동 표시돼요</div>
@@ -7290,32 +7320,50 @@ function setTwFormation(f){
     btn.style.fontWeight=on?"700":"500";
   });
   renderTwTeamSlots();
+  twSaveDraft();
 }
 
 function openTwTeamModal(tierId,teamIdx){
   if(!myNick) return toast("로그인이 필요해요");
   twEditTierIdx={tierId,teamIdx};
   twPickingSlot=null; twPickMode="char";
+
+  // draft 확인
+  let draft=null;
+  try{
+    const raw=localStorage.getItem("twDraft_"+tierId+"_"+teamIdx);
+    if(raw) draft=JSON.parse(raw);
+  }catch(e){}
+
   const cached=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||null;
+
   function loadIntoModal(d){
-    twTeamChars=[...(d.chars||["","","","",""])];
+    // draft가 있고 저장된 것보다 최신이면 draft 우선
+    const src = draft ? draft : d;
+    twTeamChars=[...(src.chars||["","","","",""])];
     while(twTeamChars.length<5) twTeamChars.push("");
-    twTeamPet=d.pet||"";
-    twTeamStats=(d.stats||[]).map(s=>s||{});
+    twTeamPet=src.pet||"";
+    twTeamStats=(src.stats||[]).map(s=>s||{});
     while(twTeamStats.length<5) twTeamStats.push({});
-    document.getElementById("twTeamModalTitle").textContent="팀 "+(teamIdx+1)+" 편성";
-    document.getElementById("twt_speed").value=d.speed||"";
-    document.getElementById("twt_tip").value=d.tip||"";
-    document.getElementById("twt_skill").value=d.skill||"";
+    document.getElementById("twTeamModalTitle").textContent="팀 "+(teamIdx+1)+" 편성"+(draft?" 📝(임시저장 복원)":"");
+    document.getElementById("twt_speed").value=src.speed||"";
+    document.getElementById("twt_tip").value=src.tip||"";
+    document.getElementById("twt_skill").value=src.skill||"";
     const petInput=document.getElementById("twt_pet_input");
     if(petInput) petInput.value=twTeamPet||"";
-    setTwFormation(d.formation||"기본");
+    setTwFormation(src.formation||"기본");
     document.getElementById("twCharPickPanel").style.display="none";
     renderTwTeamSlots(); renderTwCharList("");
     document.getElementById("twTeamModalOverlay").classList.add("open");
+
+    // 입력 중 자동 임시저장
+    ["twt_speed","twt_tip","twt_skill","twt_pet_input"].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.oninput=twSaveDraft;
+    });
   }
   if(cached){ loadIntoModal(cached); }
-  else { db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).once("value").then(snap=>loadIntoModal(snap.val()||{})).catch(()=>loadIntoModal({})); }
+  else{ db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).once("value").then(snap=>loadIntoModal(snap.val()||{})).catch(()=>loadIntoModal({})); }
 }
 
 function renderTwTeamSlots(){
@@ -7422,6 +7470,7 @@ function pickTwChar(name){
   if(next!==-1){ twPickingSlot=next; }
   else { const any=twTeamChars.findIndex(c=>!c); if(any!==-1){twPickingSlot=any;}else{twPickingSlot=null;document.getElementById("twCharPickPanel").style.display="none";} }
   renderTwTeamSlots(); renderTwCharList(document.getElementById("twCharSearchInput").value);
+  twSaveDraft();
 }
 
 function twAutoComplete(inputId,sugId,list){
@@ -7442,7 +7491,6 @@ function saveTwTeam(){
   const speed=document.getElementById("twt_speed")?.value.trim()||"";
   const tip=document.getElementById("twt_tip")?.value.trim()||"";
   const skill=document.getElementById("twt_skill")?.value.trim()||"";
-  // 펫은 입력창에서 읽기
   const petInput=document.getElementById("twt_pet_input");
   if(petInput&&petInput.value.trim()) twTeamPet=petInput.value.trim();
   const saveData={chars:twTeamChars,stats:twTeamStats,pet:twTeamPet,speed,tip,skill,formation:twCurFormation,updatedAt:Date.now(),updatedBy:myNick};
@@ -7451,21 +7499,57 @@ function saveTwTeam(){
   const tier=TW_TIERS.find(t=>t.id===tierId);
   twRenderTeamCards(tier,twCachedData[tierId]);
   db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData).then(()=>toast("✅ 저장됐어요!")).catch(()=>toast("로컬 저장됨"));
+  // 임시저장 제거
+  try{ localStorage.removeItem("twDraft_"+tierId+"_"+teamIdx); }catch(e){}
   closeTwTeamModal();
 }
 
-// 공유 — 전체 등급 모든 팀
+// 편성 모달 임시저장 (입력할 때마다)
+function twSaveDraft(){
+  if(!twEditTierIdx) return;
+  const {tierId,teamIdx}=twEditTierIdx;
+  try{
+    const draft={
+      chars:[...twTeamChars],
+      stats:twTeamStats.map(s=>({...s})),
+      pet:document.getElementById("twt_pet_input")?.value||twTeamPet||"",
+      speed:document.getElementById("twt_speed")?.value||"",
+      skill:document.getElementById("twt_skill")?.value||"",
+      tip:document.getElementById("twt_tip")?.value||"",
+      formation:twCurFormation,
+      savedAt:Date.now()
+    };
+    localStorage.setItem("twDraft_"+tierId+"_"+teamIdx, JSON.stringify(draft));
+  }catch(e){}
+}
+
+// 공유 — 새로 공유 or 덮어쓰기
 function shareTwTeam(){
   const input = document.getElementById("twShareTitleInput");
-  if(input) input.value = "";
+  if(input) input.value="";
   const preview = document.getElementById("twShareNickPreview");
   if(preview) preview.textContent = myNick||"-";
+  const myShares = Object.entries(window._twShareData||{})
+    .filter(([k,v])=>v.sharedBy===myNick)
+    .sort((a,b)=>b[1].sharedAt-a[1].sharedAt);
+  const overwriteWrap = document.getElementById("twShareOverwriteWrap");
+  const overwriteSel  = document.getElementById("twShareOverwriteSel");
+  if(overwriteWrap && overwriteSel){
+    if(myShares.length>0){
+      overwriteSel.innerHTML = '<option value="">새로 공유</option>'
+        + myShares.map(([k,v])=>`<option value="${k}">${v.title||new Date(v.sharedAt).toLocaleDateString("ko")}</option>`).join("");
+      overwriteWrap.style.display="block";
+    } else {
+      overwriteWrap.style.display="none";
+    }
+  }
   document.getElementById("twShareTitleOverlay").classList.add("open");
   setTimeout(()=>{ if(input) input.focus(); }, 200);
 }
 
 function doShareTwTeam(){
   const title = document.getElementById("twShareTitleInput")?.value.trim()||"";
+  const overwriteKey = document.getElementById("twShareOverwriteSel")?.value||"";
   document.getElementById("twShareTitleOverlay").classList.remove("open");
   toast("⏳ 공유 준비 중...");
   const promises=TW_TIERS.map(t=>
@@ -7481,19 +7565,21 @@ function doShareTwTeam(){
       if(Object.values(r.data).some(tm=>tm&&(tm.chars||[]).some(c=>c))) hasData=true;
     });
     if(!hasData) return toast("공유할 편성 데이터가 없어요. 먼저 팀을 편성해주세요.");
-    const key=myNick.replace(/[^a-zA-Z0-9가-힣]/g,"_")+"_"+Date.now();
+    const key = overwriteKey || myNick.replace(/[^a-zA-Z0-9가-힣]/g,"_")+"_"+Date.now();
     db.ref("totalwar/shares/"+key).set({
       allTeams, sharedBy:myNick, sharedAt:Date.now(), title:title||""
     }).then(()=>{
-      toast("🔗 공유 완료!");
-      loadTwInlineShareList(); // 목록 새로고침
+      toast(overwriteKey?"🔄 덮어쓰기 완료!":"🔗 공유 완료!");
+      loadTwInlineShareList();
     }).catch(()=>toast("공유 실패"));
   });
 }
 
 function closeTwTeamModal(e){
-  if(!e||e.target===document.getElementById("twTeamModalOverlay"))
+  if(!e||e.target===document.getElementById("twTeamModalOverlay")){
+    twSaveDraft(); // 닫힐 때 임시저장
     document.getElementById("twTeamModalOverlay").classList.remove("open");
+  }
 }
 
 // ── 스탯 모달 ──
@@ -7506,7 +7592,7 @@ const TW_ARMOR_OPTS  = ["받는 피해 감소","막기 확률","모든 공격력
 
 let twStatCurrentTab = "stat";
 
-const TW_RINGS_LIST = ["부활의 반지","불사의 반지","권능의 반지","고급 토벌의 반지"];
+const TW_RINGS_LIST = ["부활의 반지","불사의 반지","권능의 반지","기타"];
 
 function switchTwStatTab(tab){
   twStatCurrentTab = tab;
@@ -7547,7 +7633,7 @@ let twEquipState = {
   w2set:"", w2main:"", w2val:"",
   a1set:"", a1main:"", a1val:"",
   a2set:"", a2main:"", a2val:"",
-  ring:"",  ringVal:"",
+  ring:"", ringVal:"", ringStar:0, ringCraft:"",
 };
 
 function renderTwRingList(){
@@ -7567,16 +7653,39 @@ function renderTwRingList(){
       <span style="font-size:13px;font-weight:${on?"700":"500"};color:${on?"#c084fc":"var(--text2)"};">💍 ${r}</span>
     </div>`;
   }).join("");
-  // 강화 수치 표시
-  const valWrap=document.getElementById("tws_ring_val_wrap");
-  if(valWrap) valWrap.style.display=twEquipState.ring?"block":"none";
+  // 상세 영역 표시
+  const detail=document.getElementById("tws_ring_detail_wrap");
+  if(detail) detail.style.display=twEquipState.ring?"block":"none";
+  // 성급 버튼 상태
+  [4,5,6].forEach(s=>{
+    const btn=document.getElementById("twrstar_"+s);
+    if(!btn) return;
+    const on=twEquipState.ringStar===s;
+    btn.style.background=on?"#c084fc":"var(--surface)";
+    btn.style.color=on?"#fff":"var(--text3)";
+    btn.style.borderColor=on?"#c084fc":"var(--border)";
+  });
   const valInput=document.getElementById("tws_ring_val");
   if(valInput) valInput.value=twEquipState.ringVal||"";
+  const craftInput=document.getElementById("tws_ring_craft");
+  if(craftInput) craftInput.value=twEquipState.ringCraft||"";
 }
 
 function twSelectRing(name){
   twEquipState.ring=twEquipState.ring===name?"":name;
-  if(!twEquipState.ring) twEquipState.ringVal="";
+  if(!twEquipState.ring){ twEquipState.ringVal=""; twEquipState.ringStar=0; twEquipState.ringCraft=""; twEquipState.ringCustom=""; }
+  renderTwRingList();
+  // 기타 선택 시 이름 입력창 표시
+  const customWrap=document.getElementById("tws_ring_custom_wrap");
+  const customInput=document.getElementById("tws_ring_custom");
+  if(customWrap){
+    customWrap.style.display=(twEquipState.ring==="기타")?"block":"none";
+    if(customInput) customInput.value=twEquipState.ringCustom||"";
+  }
+}
+
+function twSelectRingStar(s){
+  twEquipState.ringStar=twEquipState.ringStar===s?0:s;
   renderTwRingList();
 }
 
@@ -7631,7 +7740,7 @@ function openTwStatModal(slotIdx){
     w2set:stat.w2set||"", w2main:stat.w2main||"", w2val:stat.w2val||"",
     a1set:stat.a1set||"", a1main:stat.a1main||"", a1val:stat.a1val||"",
     a2set:stat.a2set||"", a2main:stat.a2main||"", a2val:stat.a2val||"",
-    ring:stat.ring||"",   ringVal:stat.ringVal||"",
+    ring:stat.ring||"",   ringVal:stat.ringVal||"", ringStar:stat.ringStar||0, ringCraft:stat.ringCraft||"", ringCustom:stat.ringCustom||"",
   };
   renderTwStatStars(stat.stars||6, stat.overclock||0);
   switchTwStatTab("stat");
@@ -7688,7 +7797,8 @@ function saveTwStat(){
     w2set:twEquipState.w2set, w2main:twEquipState.w2main, w2val:twEquipState.w2val,
     a1set:twEquipState.a1set, a1main:twEquipState.a1main, a1val:twEquipState.a1val,
     a2set:twEquipState.a2set, a2main:twEquipState.a2main, a2val:twEquipState.a2val,
-    ring:twEquipState.ring, ringVal:document.getElementById("tws_ring_val")?.value||"",
+    ring:twEquipState.ring, ringCustom:twEquipState.ringCustom||"", ringVal:document.getElementById("tws_ring_val")?.value||"",
+    ringStar:twEquipState.ringStar||0, ringCraft:document.getElementById("tws_ring_craft")?.value||"",
   };
 
   // 메인 카드에서 열었으면 Firebase에 바로 저장
@@ -7715,8 +7825,50 @@ function saveTwStat(){
 }
 
 function closeTwStatModal(e){
-  if(!e||e.target===document.getElementById("twStatModalOverlay"))
+  if(!e||e.target===document.getElementById("twStatModalOverlay")){
+    // 닫힐 때 자동 적용
+    if(twEditStatIdx!==null){
+      twTeamStats[twEditStatIdx]={
+        atk:document.getElementById("tws_atk")?.value||"",
+        def:document.getElementById("tws_def")?.value||"",
+        hp:document.getElementById("tws_hp")?.value||"",
+        spd:document.getElementById("tws_spd")?.value||"",
+        crit:document.getElementById("tws_crit")?.value||"",
+        critdmg:document.getElementById("tws_critdmg")?.value||"",
+        weak:document.getElementById("tws_weak")?.value||"",
+        block:document.getElementById("tws_block")?.value||"",
+        dmgred:document.getElementById("tws_dmgred")?.value||"",
+        acc:document.getElementById("tws_acc")?.value||"",
+        res:document.getElementById("tws_res")?.value||"",
+        stars:twStatStarsCount, overclock:twStatOverclock,
+        w1set:twEquipState.w1set, w1main:twEquipState.w1main, w1val:twEquipState.w1val,
+        w2set:twEquipState.w2set, w2main:twEquipState.w2main, w2val:twEquipState.w2val,
+        a1set:twEquipState.a1set, a1main:twEquipState.a1main, a1val:twEquipState.a1val,
+        a2set:twEquipState.a2set, a2main:twEquipState.a2main, a2val:twEquipState.a2val,
+        ring:twEquipState.ring, ringVal:document.getElementById("tws_ring_val")?.value||"",
+        ringStar:twEquipState.ringStar||0, ringCraft:document.getElementById("tws_ring_craft")?.value||"",
+      };
+
+      // 메인 카드 꾹누름으로 열었으면 Firebase에도 저장
+      if(window._cardStatSaveHook && twEditTierIdx){
+        const {tierId,teamIdx}=twEditTierIdx;
+        const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||{};
+        const saveData={...d, chars:twTeamChars, stats:twTeamStats, pet:twTeamPet,
+          updatedAt:Date.now(), updatedBy:myNick};
+        if(!twCachedData[tierId]) twCachedData[tierId]={};
+        twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
+        db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData)
+          .then(()=>toast("✅ 저장됐어요!"))
+          .catch(()=>toast("로컬 저장됨"));
+        window._cardStatSaveHook=null;
+        const tier=TW_TIERS.find(t=>t.id===tierId);
+        if(tier) twRenderTeamCards(tier, twCachedData[tierId]);
+      } else {
+        twSaveDraft(); // 편성 모달 내에서 열었으면 임시저장
+      }
+    }
     document.getElementById("twStatModalOverlay").classList.remove("open");
+  }
 }
 
 // ── 카드에서 캐릭터 꾹누름 → 스탯 보기 ──
@@ -7818,13 +7970,19 @@ function openTwStatViewModal(name, stat){
 
   // 반지
   if(stat.ring){
-    const ringVal=stat.ringVal?"  +"+stat.ringVal+"강":"";
+    const starStr = stat.ringStar ? stat.ringStar+"성 " : "";
     equipSections.push(`<div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;">
       <div style="font-size:11px;font-weight:700;color:#c084fc;margin-bottom:8px;">💍 반지</div>
-      <div style="background:var(--surface);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${stat.ring}</span>
-        ${stat.ringVal?`<span style="font-size:12px;color:#c084fc;font-weight:700;">+${stat.ringVal}강</span>`:""}
+      <div style="background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:${stat.ringCraft?"6px":"0"};">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${starStr}${stat.ring}</span>
+          ${stat.ringVal?`<span style="font-size:12px;color:#c084fc;font-weight:700;">+${stat.ringVal}강</span>`:""}
+        </div>
       </div>
+      ${stat.ringCraft?`<div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">✨ 세공</div>
+        <div style="font-size:12px;color:var(--text2);white-space:pre-wrap;line-height:1.7;">${stat.ringCraft}</div>
+      </div>`:""}
     </div>`);
   }
 
@@ -7848,7 +8006,8 @@ function loadTwInlineShareList(){
     if(!data){ list.innerHTML="<div style='font-size:12px;color:var(--text3);padding:8px 0;'>공유된 편성이 없어요</div>"; return; }
     const items = Object.entries(data).sort((a,b)=>b[1].sharedAt-a[1].sharedAt);
     list.innerHTML = items.map(([k,v])=>{
-      const isMine = v.sharedBy===myNick;
+      const isMine = v.sharedBy===myNick || myNick==="파멸" || myRole==="관리자";
+      const canDelete = isMine || myNick==="파멸";
       return `
       <div id="twshare_item_${k}">
         <!-- 이름 + 제목 행 -->
@@ -7861,7 +8020,7 @@ function loadTwInlineShareList(){
             <div style="font-size:11px;color:var(--text3);margin-top:3px;">${new Date(v.sharedAt).toLocaleDateString("ko")}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            ${isMine?`<button onclick="deleteTwShare('${k}')" style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:4px 10px;font-size:11px;color:#e74c3c;cursor:pointer;font-family:inherit;">삭제</button>`:""}
+            ${canDelete?`<button onclick="deleteTwShare('${k}')" style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:4px 10px;font-size:11px;color:#e74c3c;cursor:pointer;font-family:inherit;">삭제</button>`:""}
             <span id="twshare_arrow_${k}" onclick="toggleTwShareItem('${k}')" style="font-size:13px;color:var(--text3);cursor:pointer;padding:4px;">▼</span>
           </div>
         </div>
@@ -8020,15 +8179,15 @@ function renderTwShareTeams(key, allTeams, tierId){
 function openTwShareDetailModal(detailId){
   const d=(window._twShareTeamData||{})[detailId];
   if(!d) return;
-  const {chars,pet,speed,skill,tip,form,fm}=d;
+  const {chars,pet,speed,skill,tip,form,fm,stats}=d;
   let html='<div style="margin-bottom:12px;">'
     +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">진형: '+form+'</div>';
-  // 캐릭터 목록
   const backNames=fm.back.map(si=>chars[si]||"").filter(Boolean);
   const frontNames=fm.front.map(si=>chars[si]||"").filter(Boolean);
   if(backNames.length) html+='<div style="margin-bottom:6px;"><span style="font-size:10px;color:rgba(220,100,120,0.9);font-weight:700;">● 후방</span> <span style="font-size:12px;color:var(--text);">'+backNames.join(", ")+'</span></div>';
   if(frontNames.length) html+='<div style="margin-bottom:10px;"><span style="font-size:10px;color:rgba(100,160,220,0.9);font-weight:700;">● 전방</span> <span style="font-size:12px;color:var(--text);">'+frontNames.join(", ")+'</span></div>';
   html+='</div>';
+
   if(pet||speed){
     html+='<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">';
     if(pet)   html+='<div><span style="font-size:10px;color:var(--text3);">🐾 펫</span><br><span style="font-size:13px;font-weight:700;color:var(--text2);">'+pet+'</span></div>';
@@ -8042,11 +8201,31 @@ function openTwShareDetailModal(detailId){
       +'</div>';
   }
   if(tip){
-    html+='<div style="background:var(--surface2);border-radius:10px;padding:10px;">'
+    html+='<div style="margin-bottom:10px;background:var(--surface2);border-radius:10px;padding:10px;">'
       +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">💬 팁/메모</div>'
       +'<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;word-break:break-all;">'+tip+'</div>'
       +'</div>';
   }
+
+  // 캐릭터별 반지 정보
+  if(stats&&stats.length){
+    const allSlots=[...fm.back,...fm.front];
+    allSlots.forEach(si=>{
+      const stat=stats[si]||{};
+      const name=chars[si]||"";
+      if(!name||!stat.ring) return;
+      const starStr=stat.ringStar?stat.ringStar+"성 ":"";
+      html+='<div style="background:var(--surface2);border-radius:10px;padding:10px;margin-bottom:8px;">'
+        +'<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">💍 '+name+'의 반지</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        +'<span style="font-size:12px;font-weight:700;color:#c084fc;">'+starStr+stat.ring+'</span>'
+        +(stat.ringVal?'<span style="font-size:11px;color:#c084fc;">+'+stat.ringVal+'강</span>':'')
+        +'</div>'
+        +(stat.ringCraft?'<div style="font-size:11px;color:var(--text2);white-space:pre-wrap;line-height:1.6;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;">✨ '+stat.ringCraft+'</div>':"")
+        +'</div>';
+    });
+  }
+
   document.getElementById("twShareDetailBody").innerHTML=html;
   document.getElementById("twShareDetailOverlay").classList.add("open");
 }
@@ -8078,8 +8257,10 @@ function twShareSlotHoldEnd(elId){
 function deleteTwShare(key){
   const v=(window._twShareData||{})[key];
   if(!v) return;
-  if(v.sharedBy!==myNick) return toast("내가 공유한 것만 삭제할 수 있어요");
-  if(!confirm(`"${v.title||v.sharedBy}의 편성"을 삭제할까요?`)) return;
+  const isAdmin = myNick==="파멸" || myRole==="관리자";
+  if(v.sharedBy!==myNick && !isAdmin) return toast("내가 공유한 것만 삭제할 수 있어요");
+  const label = v.title ? `"${v.title}" (${v.sharedBy})` : `${v.sharedBy}의 편성`;
+  if(!confirm(`${label}을 삭제할까요?`)) return;
   db.ref("totalwar/shares/"+key).remove()
     .then(()=>{ toast("삭제됐어요"); loadTwInlineShareList(); })
     .catch(()=>toast("삭제 실패"));
