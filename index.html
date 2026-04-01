@@ -1815,6 +1815,15 @@ body::before {
     </div>
   </div>
 
+  <!-- 공유 상세보기 모달 -->
+  <div id="twShareDetailOverlay" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+      <div class="modal-title">📋 팀 상세 정보</div>
+      <div id="twShareDetailBody"></div>
+      <button class="btn-sm btn-gray" style="width:100%;margin-top:14px;" onclick="document.getElementById('twShareDetailOverlay').classList.remove('open')">닫기</button>
+    </div>
+  </div>
+
   <!-- 캐릭터 정보 보기 모달 (읽기전용) -->
   <div id="twStatViewOverlay" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal-box" style="max-height:90vh;overflow-y:auto;padding:16px;">
@@ -7028,7 +7037,7 @@ function renderTwTeams(){
   if(!grid) return;
   grid.innerHTML = `<div class='empty-state' style='padding:40px 0;'>⏳ 로딩중...</div>`;
 
-  db.ref("totalwar/teams/"+twCurrentTier).once("value").then(snap=>{
+  db.ref("totalwar/teams/"+myNick+"/"+twCurrentTier).once("value").then(snap=>{
     const data = snap.val()||{};
     twCachedData[twCurrentTier] = data;
     twRenderTeamCards(tier, data);
@@ -7164,9 +7173,9 @@ function twChangeFormation(tierId, teamIdx, newFm){
   twRenderTeamCards(tier, twCachedData[tierId]);
 
   // 2) Firebase 백그라운드 저장 (실패해도 화면은 이미 바뀜)
-  db.ref("totalwar/teams/"+tierId+"/"+teamKey).once("value").then(snap=>{
+  db.ref("totalwar/teams/"+myNick+"/"+tierId+"/"+teamKey).once("value").then(snap=>{
     const d = snap.val()||{};
-    db.ref("totalwar/teams/"+tierId+"/"+teamKey).set({
+    db.ref("totalwar/teams/"+myNick+"/"+tierId+"/"+teamKey).set({
       ...d, formation:newFm, updatedAt:Date.now(), updatedBy:myNick
     }).then(()=>toast(newFm+" 진형 저장됨")).catch(()=>toast(newFm+" 진형 (미저장)"));
   }).catch(()=>toast(newFm+" 진형 (오프라인)"));
@@ -7217,7 +7226,7 @@ function openTwTeamModal(tierId,teamIdx){
     document.getElementById("twTeamModalOverlay").classList.add("open");
   }
   if(cached){ loadIntoModal(cached); }
-  else { db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).once("value").then(snap=>loadIntoModal(snap.val()||{})).catch(()=>loadIntoModal({})); }
+  else { db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).once("value").then(snap=>loadIntoModal(snap.val()||{})).catch(()=>loadIntoModal({})); }
 }
 
 function renderTwTeamSlots(){
@@ -7352,7 +7361,7 @@ function saveTwTeam(){
   twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
   const tier=TW_TIERS.find(t=>t.id===tierId);
   twRenderTeamCards(tier,twCachedData[tierId]);
-  db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).set(saveData).then(()=>toast("✅ 저장됐어요!")).catch(()=>toast("로컬 저장됨"));
+  db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData).then(()=>toast("✅ 저장됐어요!")).catch(()=>toast("로컬 저장됨"));
   closeTwTeamModal();
 }
 
@@ -7371,7 +7380,7 @@ function doShareTwTeam(){
   document.getElementById("twShareTitleOverlay").classList.remove("open");
   toast("⏳ 공유 준비 중...");
   const promises=TW_TIERS.map(t=>
-    db.ref("totalwar/teams/"+t.id).once("value")
+    db.ref("totalwar/teams/"+myNick+"/"+t.id).once("value")
       .then(snap=>({id:t.id,data:snap.val()||{}}))
       .catch(()=>({id:t.id,data:twCachedData[t.id]||{}}))
   );
@@ -7601,7 +7610,7 @@ function saveTwStat(){
       updatedAt:Date.now(), updatedBy:myNick};
     if(!twCachedData[tierId]) twCachedData[tierId]={};
     twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
-    db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).set(saveData)
+    db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData)
       .then(()=>{ toast("✅ 스탯 저장됨!"); })
       .catch(()=>toast("로컬 저장됨"));
     window._cardStatSaveHook=null;
@@ -7652,7 +7661,7 @@ function twCardHoldStart(tierId,teamIdx,slotIdx,elId){
     if(cached){
       openStatEdit(cached);
     } else {
-      db.ref("totalwar/teams/"+tierId+"/team"+(teamIdx+1)).once("value")
+      db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).once("value")
         .then(snap=>{ openStatEdit(snap.val()||{}); })
         .catch(()=>toast("데이터를 불러올 수 없어요"));
     }
@@ -7855,9 +7864,7 @@ function renderTwShareTeams(key, allTeams, tierId){
     const isLocked = i >= tier.teams;
 
     if(isLocked){
-      html+='<div style="width:130px;flex-shrink:0;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;opacity:0.35;">'
-           +'<div style="font-size:22px;">🔒</div>'
-           +'</div>';
+      html+='<div style="width:80px;flex-shrink:0;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;min-height:140px;opacity:0.35;"><div style="font-size:22px;">🔒</div></div>';
       continue;
     }
 
@@ -7871,49 +7878,91 @@ function renderTwShareTeams(key, allTeams, tierId){
     const isEmpty = !team||chars.every(c=>!c);
     const fm      = TW_FM[form]||TW_FM["기본"];
 
+    // 스탯 캐시 저장
+    if(!window._twShareStats) window._twShareStats={};
+
     const makeSlot=(si,isBack)=>{
       const name=chars[si]||"";
-      const bg  =isBack?"rgba(220,100,120,0.25)":"rgba(100,160,220,0.25)";
-      const bd  =isBack?"1.5px solid rgba(220,100,120,0.5)":"1.5px solid rgba(100,160,220,0.5)";
-      const plus=isBack?"rgba(220,100,120,0.4)":"rgba(100,160,220,0.4)";
-      const fs  =!name?"18px":name.length<=2?"13px":name.length<=4?"11px":"9px";
+      const bg  =isBack?"rgba(255,182,193,0.35)":"rgba(173,216,230,0.35)";
+      const bd  =isBack?"2px solid rgba(220,100,120,0.5)":"2px solid rgba(100,160,220,0.5)";
+      const plus=isBack?"rgba(220,100,120,0.6)":"rgba(100,160,220,0.6)";
+      const fs  =!name?"24px":name.length<=2?"14px":name.length<=4?"11px":"9px";
       const sid ="twshare_slot_"+key+"_"+i+"_"+si;
-      if(!window._twShareStats) window._twShareStats={};
       window._twShareStats[sid]={name:name,stat:stats[si]||{}};
-      if(!name) return '<div style="background:var(--surface2);border:1.5px dashed '+plus+';border-radius:10px;width:56px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:'+plus+';font-size:18px;">+</span></div>';
-      return '<div id="'+sid+'" onpointerdown="twShareSlotHoldStart(\''+sid+'\')" onpointerup="twShareSlotHoldEnd(\''+sid+'\')" onpointerleave="twShareSlotHoldEnd(\''+sid+'\')" oncontextmenu="event.preventDefault()" style="background:'+bg+';border:'+bd+';border-radius:10px;width:56px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;user-select:none;touch-action:none;-webkit-touch-callout:none;"><span style="font-size:'+fs+';font-weight:800;color:var(--text);text-align:center;word-break:keep-all;pointer-events:none;">'+name+'</span></div>';
+      if(!name) return '<div style="background:var(--surface2);border:2px dashed '+plus+';border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:26px;color:'+plus+';">+</span></div>';
+      return '<div id="'+sid+'" onpointerdown="twShareSlotHoldStart(\''+sid+'\')" onpointerup="twShareSlotHoldEnd(\''+sid+'\')" onpointerleave="twShareSlotHoldEnd(\''+sid+'\')" oncontextmenu="event.preventDefault()" style="background:'+bg+';border:'+bd+';border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;cursor:pointer;user-select:none;touch-action:none;-webkit-touch-callout:none;"><span style="font-size:'+fs+';font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;">'+name+'</span></div>';
     };
 
-    const backSlots  = fm.back.map(si=>makeSlot(si,true)).join("");
-    const frontSlots = fm.front.map(si=>makeSlot(si,false)).join("");
+    // 후방열 / 전방열
+    const backCol  = '<div style="display:flex;flex-direction:column;gap:5px;align-items:center;flex-shrink:0;">'
+                   + '<div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;margin-bottom:2px;">● 후방</div>'
+                   + fm.back.map(si=>makeSlot(si,true)).join("")
+                   + '</div>';
+    const frontCol = '<div style="display:flex;flex-direction:column;gap:5px;align-items:center;flex-shrink:0;">'
+                   + '<div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;margin-bottom:2px;">● 전방</div>'
+                   + fm.front.map(si=>makeSlot(si,false)).join("")
+                   + '</div>';
 
-    let bottomHTML="";
-    if(pet||speed) bottomHTML+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:3px;">'+(pet?'<span style="font-size:10px;color:var(--text2);">🐾 '+pet+'</span>':'')+(speed?'<span style="font-size:10px;color:#f0a500;">⚡ '+speed+'</span>':'')+'</div>';
-    if(skill) bottomHTML+='<div style="font-size:10px;color:var(--text2);line-height:1.6;margin-bottom:3px;"><span style="color:var(--text3);font-size:9px;">🎯 스킬순서</span><br>'+skill.split("→").map(function(s,i){return '<span>'+(i+1)+'. '+s.trim()+'</span>';}).join('<br>')+'</div>';
-    if(tip) bottomHTML+='<div style="font-size:10px;color:var(--text3);line-height:1.5;border-top:1px solid var(--border);padding-top:5px;">💬 '+tip+'</div>';
+    // 상세보기 버튼 — 클릭시 모달
+    const detailId = "twshare_detail_data_"+key+"_"+i;
+    // 데이터 저장
+    if(!window._twShareTeamData) window._twShareTeamData={};
+    window._twShareTeamData[detailId]={chars,pet,form,stats,skill,tip,speed,fm};
 
     let bodyHTML;
     if(isEmpty){
-      bodyHTML='<div style="text-align:center;color:var(--text3);font-size:11px;padding:16px 0;">편성 없음</div>';
+      bodyHTML='<div style="text-align:center;color:var(--text3);font-size:11px;padding:20px 0;">편성 없음</div>';
     } else {
-      bodyHTML='<div style="display:flex;gap:6px;justify-content:center;">'
-        +'<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">'
-        +'<div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;margin-bottom:2px;">● 후방</div>'
-        +backSlots+'</div>'
-        +'<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">'
-        +'<div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;margin-bottom:2px;">● 전방</div>'
-        +frontSlots+'</div>'
-        +'</div>';
-      if(bottomHTML) bodyHTML+='<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">'+bottomHTML+'</div>';
+      bodyHTML='<div style="display:flex;gap:6px;align-items:flex-start;">'+backCol+frontCol+'</div>';
     }
 
-    html+='<div style="min-width:150px;flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;">'
+    // 상세보기 버튼 (스킬/팁/펫/속공이 있을 때만)
+    const hasDetail = !!(pet||speed||skill||tip);
+    const detailBtn = hasDetail
+      ? '<button onclick="openTwShareDetailModal(\''+detailId+'\')" style="width:100%;margin-top:8px;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;cursor:pointer;font-family:inherit;">📋 상세보기</button>'
+      : '';
+
+    html+='<div style="flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;">'
          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
          +'<span style="font-size:13px;font-weight:800;color:var(--text);">팀 '+(i+1)+'</span>'
-         +'<span style="font-size:9px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:8px;">'+form+'</span>'
-         +'</div>'+bodyHTML+'</div>';
+         +'<span style="font-size:9px;color:var(--text3);">'+form+'</span>'
+         +'</div>'+bodyHTML+detailBtn+'</div>';
   }
   container.innerHTML=html;
+}
+
+function openTwShareDetailModal(detailId){
+  const d=(window._twShareTeamData||{})[detailId];
+  if(!d) return;
+  const {chars,pet,speed,skill,tip,form,fm}=d;
+  let html='<div style="margin-bottom:12px;">'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">진형: '+form+'</div>';
+  // 캐릭터 목록
+  const backNames=fm.back.map(si=>chars[si]||"").filter(Boolean);
+  const frontNames=fm.front.map(si=>chars[si]||"").filter(Boolean);
+  if(backNames.length) html+='<div style="margin-bottom:6px;"><span style="font-size:10px;color:rgba(220,100,120,0.9);font-weight:700;">● 후방</span> <span style="font-size:12px;color:var(--text);">'+backNames.join(", ")+'</span></div>';
+  if(frontNames.length) html+='<div style="margin-bottom:10px;"><span style="font-size:10px;color:rgba(100,160,220,0.9);font-weight:700;">● 전방</span> <span style="font-size:12px;color:var(--text);">'+frontNames.join(", ")+'</span></div>';
+  html+='</div>';
+  if(pet||speed){
+    html+='<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">';
+    if(pet)   html+='<div><span style="font-size:10px;color:var(--text3);">🐾 펫</span><br><span style="font-size:13px;font-weight:700;color:var(--text2);">'+pet+'</span></div>';
+    if(speed) html+='<div><span style="font-size:10px;color:var(--text3);">⚡ 속공</span><br><span style="font-size:13px;font-weight:700;color:#f0a500;">'+speed+'</span></div>';
+    html+='</div>';
+  }
+  if(skill){
+    html+='<div style="margin-bottom:10px;background:var(--surface2);border-radius:10px;padding:10px;">'
+      +'<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">🎯 스킬순서</div>'
+      +skill.split("→").map(function(s,idx){return '<div style="font-size:12px;color:var(--text);line-height:1.8;">'+(idx+1)+'. '+s.trim()+'</div>';}).join("")
+      +'</div>';
+  }
+  if(tip){
+    html+='<div style="background:var(--surface2);border-radius:10px;padding:10px;">'
+      +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">💬 팁/메모</div>'
+      +'<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;word-break:break-all;">'+tip+'</div>'
+      +'</div>';
+  }
+  document.getElementById("twShareDetailBody").innerHTML=html;
+  document.getElementById("twShareDetailOverlay").classList.add("open");
 }
 
 // 공유 목록 모달 함수 (호환성 유지)
