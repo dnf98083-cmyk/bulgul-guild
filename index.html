@@ -7878,8 +7878,8 @@ function renderTwShareTeams(key, allTeams, tierId){
     const isEmpty = !team||chars.every(c=>!c);
     const fm      = TW_FM[form]||TW_FM["기본"];
 
-    // 스탯 캐시 저장
     if(!window._twShareStats) window._twShareStats={};
+    if(!window._twShareTeamData) window._twShareTeamData={};
 
     const makeSlot=(si,isBack)=>{
       const name=chars[si]||"";
@@ -7893,34 +7893,31 @@ function renderTwShareTeams(key, allTeams, tierId){
       return '<div id="'+sid+'" onpointerdown="twShareSlotHoldStart(\''+sid+'\')" onpointerup="twShareSlotHoldEnd(\''+sid+'\')" onpointerleave="twShareSlotHoldEnd(\''+sid+'\')" oncontextmenu="event.preventDefault()" style="background:'+bg+';border:'+bd+';border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;cursor:pointer;user-select:none;touch-action:none;-webkit-touch-callout:none;"><span style="font-size:'+fs+';font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;">'+name+'</span></div>';
     };
 
-    // 후방열 / 전방열
-    const backCol  = '<div style="display:flex;flex-direction:column;gap:5px;align-items:center;flex-shrink:0;">'
-                   + '<div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;margin-bottom:2px;">● 후방</div>'
+    // 메인 카드와 동일: flex:1 + justify-content:center + min-height
+    const minH = (Math.max(fm.back.length, fm.front.length) * 72 + (Math.max(fm.back.length,fm.front.length)-1)*5 + 24) + 'px';
+    const backCol  = '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:'+minH+';">'
+                   + '<div style="font-size:8px;color:rgba(220,100,120,0.9);font-weight:700;">● 후방</div>'
                    + fm.back.map(si=>makeSlot(si,true)).join("")
                    + '</div>';
-    const frontCol = '<div style="display:flex;flex-direction:column;gap:5px;align-items:center;flex-shrink:0;">'
-                   + '<div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;margin-bottom:2px;">● 전방</div>'
+    const frontCol = '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;min-height:'+minH+';">'
+                   + '<div style="font-size:8px;color:rgba(100,160,220,0.9);font-weight:700;">● 전방</div>'
                    + fm.front.map(si=>makeSlot(si,false)).join("")
                    + '</div>';
 
-    // 상세보기 버튼 — 클릭시 모달
+    // 상세보기
     const detailId = "twshare_detail_data_"+key+"_"+i;
-    // 데이터 저장
-    if(!window._twShareTeamData) window._twShareTeamData={};
     window._twShareTeamData[detailId]={chars,pet,form,stats,skill,tip,speed,fm};
+    const hasDetail = !!(pet||speed||skill||tip);
+    const detailBtn = hasDetail
+      ? '<button onclick="openTwShareDetailModal(\''+detailId+'\')" style="width:100%;margin-top:8px;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;cursor:pointer;font-family:inherit;">📋 상세보기</button>'
+      : '';
 
     let bodyHTML;
     if(isEmpty){
       bodyHTML='<div style="text-align:center;color:var(--text3);font-size:11px;padding:20px 0;">편성 없음</div>';
     } else {
-      bodyHTML='<div style="display:flex;gap:6px;align-items:flex-start;">'+backCol+frontCol+'</div>';
+      bodyHTML='<div style="display:flex;gap:6px;align-items:stretch;">'+backCol+frontCol+'</div>';
     }
-
-    // 상세보기 버튼 (스킬/팁/펫/속공이 있을 때만)
-    const hasDetail = !!(pet||speed||skill||tip);
-    const detailBtn = hasDetail
-      ? '<button onclick="openTwShareDetailModal(\''+detailId+'\')" style="width:100%;margin-top:8px;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;cursor:pointer;font-family:inherit;">📋 상세보기</button>'
-      : '';
 
     html+='<div style="flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;">'
          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
