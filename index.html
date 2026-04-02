@@ -7235,18 +7235,38 @@ function twRenderTeamCards(tier, data){
         </div>
 
         <!-- 편성/수정 버튼 -->
-        ${canEdit?`<button onclick="openTwTeamModal('${twCurrentTier}',${i})" style="
-          width:100%;padding:8px;border-radius:10px;font-size:12px;font-weight:700;
-          background:${isEmpty?"var(--accent)":"var(--surface2)"};
-          border:1px solid ${isEmpty?"var(--accent)":"var(--border)"};
-          color:${isEmpty?"#fff":"var(--text2)"};
-          cursor:pointer;font-family:inherit;
-        ">${isEmpty?"+ 편성":"✏️ 수정"}</button>`:""}
+        <div style="display:flex;gap:6px;margin-top:2px;">
+          ${canEdit?`<button onclick="openTwTeamModal('${twCurrentTier}',${i})" style="
+            flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;
+            background:${isEmpty?"var(--accent)":"var(--surface2)"};
+            border:1px solid ${isEmpty?"var(--accent)":"var(--border)"};
+            color:${isEmpty?"#fff":"var(--text2)"};
+            cursor:pointer;font-family:inherit;
+          ">${isEmpty?"+ 편성":"✏️ 수정"}</button>`:""}
+          ${!isEmpty?`<button onclick="copyTwTeam('${twCurrentTier}',${i})" title="이 팀 복사" style="
+            padding:8px 10px;border-radius:10px;font-size:12px;
+            background:var(--surface2);border:1px solid var(--border);
+            color:var(--text3);cursor:pointer;font-family:inherit;flex-shrink:0;
+          ">📋</button>`:""}
+          <button onclick="pasteTwTeam('${twCurrentTier}',${i})" id="twPasteBtn_${twCurrentTier}_${i}" title="복사한 팀 붙여넣기" style="
+            padding:8px 10px;border-radius:10px;font-size:12px;
+            background:var(--surface2);border:1px solid var(--border);
+            color:var(--text3);cursor:pointer;font-family:inherit;flex-shrink:0;
+            display:none;
+          ">📥</button>
+        </div>
         ${skill?`<div style="font-size:10px;color:var(--text2);border-top:1px solid var(--border);padding-top:6px;line-height:1.7;"><span style="color:var(--text3);font-size:9px;">🎯 스킬순서</span><br>${skill.split("→").map((s,i)=>`<span style="color:var(--text);">${i+1}. ${s.trim()}</span>`).join("<br>")}</div>`:""}
         ${tip?`<div style="font-size:10px;color:var(--text2);border-top:1px solid var(--border);padding-top:6px;line-height:1.5;">💬 ${tip}</div>`:""}
       </div>`;
     }
     grid.innerHTML = html;
+
+  // 복사된 팀이 있으면 📥 버튼 표시
+  if(twCopiedTeam){
+    setTimeout(()=>{
+      document.querySelectorAll("[id^='twPasteBtn_']").forEach(btn=>btn.style.display="block");
+    }, 50);
+  }
 
   // 빈 슬롯 클릭 → 편성 모달 열기
   grid.querySelectorAll("[data-empty='1']").forEach(el=>{
@@ -7328,6 +7348,31 @@ function twRenderTeamCards(tier, data){
 }
 
 // 진형 ◄ ► 버튼 클릭
+// 팀 복사/붙여넣기
+let twCopiedTeam = null;
+
+function copyTwTeam(tierId, teamIdx){
+  const d=(twCachedData[tierId]||{})["team"+(teamIdx+1)]||null;
+  if(!d) return toast("복사할 팀 데이터가 없어요");
+  twCopiedTeam = JSON.parse(JSON.stringify(d));
+  toast("📋 팀 "+(teamIdx+1)+" 복사됨! 다른 팀의 📥 버튼을 누르세요");
+  // 현재 보이는 모든 📥 버튼 표시
+  document.querySelectorAll("[id^='twPasteBtn_']").forEach(btn=>btn.style.display="block");
+}
+
+function pasteTwTeam(tierId, teamIdx){
+  if(!twCopiedTeam) return toast("먼저 복사할 팀의 📋 버튼을 눌러주세요");
+  if(!confirm("팀 "+(teamIdx+1)+"에 복사한 편성을 붙여넣을까요? 기존 데이터가 덮어씌워져요.")) return;
+  const saveData={...twCopiedTeam, updatedAt:Date.now(), updatedBy:myNick};
+  if(!twCachedData[tierId]) twCachedData[tierId]={};
+  twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
+  db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData)
+    .then(()=>toast("✅ 붙여넣기 완료!"))
+    .catch(()=>toast("로컬 저장됨"));
+  const tier=TW_TIERS.find(t=>t.id===tierId);
+  if(tier) twRenderTeamCards(tier, twCachedData[tierId]);
+}
+
 function twChangeFormation(tierId, teamIdx, newFm){
   const teamKey = "team"+(teamIdx+1);
 
@@ -7633,9 +7678,9 @@ function closeTwTeamModal(e){
 // 세트 목록
 const TW_SETS_LIST = ["선봉장","추적자","성기사","수문장","수호사","암살자","복수자","주술사","조율자"];
 // 무기 메인옵션
-const TW_WEAPON_OPTS = ["약점 공격 확률","치명타 확률","치명타 피해","모든 공격력(%)","모든 공격력"];
+const TW_WEAPON_OPTS = ["약점 공격 확률","치명타 확률","치명타 피해","모든 공격력(%)","모든 공격력","방어력(%)","방어력","생명력(%)","생명력","효과 적중"];
 // 방어구 메인옵션
-const TW_ARMOR_OPTS  = ["받는 피해 감소","막기 확률","모든 공격력(%)","방어력(%)","방어력","생명력(%)","생명력","효과 저항"];
+const TW_ARMOR_OPTS  = ["받는 피해 감소","막기 확률","모든 공격력(%)","모든 공격력","방어력(%)","방어력","생명력(%)","생명력","효과 저항"];
 
 let twStatCurrentTab = "stat";
 
@@ -7752,24 +7797,9 @@ function twToggleEquip(gridId, opt){
 }
 
 function renderTwMainValInput2(typeNum){
-  const key=typeNum+"main";
-  const valKey=typeNum+"val";
-  const wrapId="tws_"+typeNum+"_main_wrap";
-  const parentId="tws_"+typeNum+"_main";
-  let wrap=document.getElementById(wrapId);
-  const main=twEquipState[key];
-  if(!main){ if(wrap) wrap.remove(); return; }
-  const parent=document.getElementById(parentId); if(!parent) return;
-  if(!wrap){
-    wrap=document.createElement("div");
-    wrap.id=wrapId;
-    wrap.style="grid-column:1/-1;margin-top:6px;display:flex;align-items:center;gap:8px;";
-    parent.after(wrap);
-  }
-  wrap.innerHTML=`<div style="font-size:11px;color:var(--text2);white-space:nowrap;">${main}</div>
-    <input id="tws_${typeNum}_val" type="number" placeholder="수치" value="${twEquipState[valKey]||""}" oninput="twEquipState['${valKey}']=this.value"
-      style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;">
-    <span style="font-size:12px;color:var(--text3);">%</span>`;
+  // 수치 입력칸 사용 안 함 — 기존 wrap 제거만
+  const wrap=document.getElementById("tws_"+typeNum+"_main_wrap");
+  if(wrap) wrap.remove();
 }
 
 function openTwStatModal(slotIdx){
