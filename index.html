@@ -2127,7 +2127,6 @@ body::before {
       </div>
       <div id="pveViewMode">
         <div class="info-block"><div class="ib-label">⚔️ 덱 조합</div><div class="ib-value" id="viewPveDeck">-</div></div>
-        <!-- PVE 진형 -->
         <div class="info-block">
           <div class="ib-label">🗺️ 진형</div>
           <div id="pveFormationDisplay">-</div>
@@ -2302,39 +2301,89 @@ body::before {
         <div style="font-size:15px;font-weight:900;">📖 딜 계산기 입력 설명</div>
         <button onclick="hideCalcGuide()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;">
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.8;">
+
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">⚔️ 캐릭터</div>
-          <div><b>프로필 공격력</b> — 캐릭터 스탯창에 보이는 공격력</div>
-          <div><b>태생 공격력</b> — 도감에서 확인, 30렙 5강 기준 수치</div>
-          <div><b>진형 보너스 %</b> — 진형이 주는 공격력 증가 %</div>
+          <div style="font-weight:900;color:var(--accent);margin-bottom:8px;">⚔️ 캐릭터</div>
+          <div style="margin-bottom:6px;"><b>프로필 공격력</b><br>
+            <span style="color:var(--text3);">캐릭터 클릭 → 스탯창에 표시되는 공격력 숫자 그대로 입력</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>태생 공격력 (도감)</b><br>
+            <span style="color:var(--text3);">도감에서 해당 캐릭터 클릭 → 30레벨 5성강 기준 공격력 수치.<br>장비·버프 없는 순수 기본 공격력</span>
+          </div>
+          <div><b>진형 보너스 %</b><br>
+            <span style="color:var(--text3);">현재 진형이 주는 공격력 증가 %. 예) 기본진형 후방이면 공격 진형 보너스 확인 후 입력. 없으면 0</span>
+          </div>
         </div>
+
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">🐾 펫</div>
-          <div><b>펫 깡공</b> — 펫이 주는 고정 공격력 수치</div>
-          <div><b>펫 잠재력 %</b> — 펫 잠재력으로 올린 % (태생공에 곱해짐)</div>
+          <div style="font-weight:900;color:var(--accent);margin-bottom:8px;">🐾 펫</div>
+          <div style="margin-bottom:6px;"><b>펫 깡공</b><br>
+            <span style="color:var(--text3);">펫 정보창에서 확인. 펫이 주는 고정 공격력 수치. 펫 없으면 0</span>
+          </div>
+          <div><b>펫 잠재력 %</b><br>
+            <span style="color:var(--text3);">펫 잠재력으로 올린 공격력 % 합산. 태생 공격력에 곱해짐. 펫 없으면 0</span>
+          </div>
         </div>
+
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">✨ 버프</div>
-          <div><b>공격력 버프 %</b> — 물리피해량증가, 공격력 버프 등 합산</div>
+          <div style="font-weight:900;color:var(--accent);margin-bottom:8px;">✨ 버프</div>
+          <div><b>공격력 버프 %</b><br>
+            <span style="color:var(--text3);">전투 중 받는 공격력 증가 버프 전체 합산.<br>예) 물리피해량 증가 스킬, 아군 버프 스킬 등 모두 더해서 입력</span>
+          </div>
         </div>
+
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">💥 스킬</div>
-          <div><b>스킬 계수 %</b> — 스킬 정보창의 배율 (기본 100)</div>
-          <div><b>치명타 피해 %</b> — 스탯창 치명타 피해 수치 + 버프</div>
-          <div><b>약공계수</b> — 기본 1.3, 추적자 4세트 착용 시 1.5</div>
-          <div><b>약점공격 피해증가 %</b> — 약점공격 피해 버프 (예: 23%)</div>
-          <div><b>공격 횟수</b> — 멀티히트 스킬일 때 타수 입력</div>
+          <div style="font-weight:900;color:var(--accent);margin-bottom:8px;">💥 스킬</div>
+          <div style="margin-bottom:6px;"><b>스킬 계수 %</b><br>
+            <span style="color:var(--text3);">스킬 정보창에 표시된 배율 숫자. 예) "공격력의 320%" → 320 입력. 기본 공격이면 100</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>치명타 피해 %</b><br>
+            <span style="color:var(--text3);">스탯창 치명타 피해 수치 + 치명타 피해 버프 합산. 치명타가 터질 때 적용. 기본값은 150</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>약공 계수</b><br>
+            <span style="color:var(--text3);">약점 공격 시 배율. 기본 1.3 / 추적자 4세트 착용 시 1.5 / 약점 없으면 1.0</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>약점공격 피해증가 %</b><br>
+            <span style="color:var(--text3);">약점공격 피해 증가 버프 합산. 예) 약공 피해 23% 버프 → 23 입력. 없으면 0</span>
+          </div>
+          <div><b>공격 횟수</b><br>
+            <span style="color:var(--text3);">멀티히트 스킬의 총 타수. 단타 스킬이면 1. 예) 3타 스킬이면 3 입력</span>
+          </div>
         </div>
+
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;">
-          <div style="font-weight:900;color:var(--accent);margin-bottom:6px;">👾 상대 정보</div>
-          <div><b>방어력</b> — 보스·적의 방어력 수치</div>
-          <div><b>방증 %</b> — 진형이 적에게 주는 방어력 증가</div>
-          <div><b>방감 %</b> — 방어력 감소 버프 합산</div>
-          <div><b>방무 %</b> — 방어 무시 합산</div>
-          <div><b>취약 %</b> — 마법·물리 취약 합산</div>
-          <div><b>피해량 증가 %</b> — 보스배율, 반지, 버프 합산</div>
+          <div style="font-weight:900;color:var(--accent);margin-bottom:8px;">👾 상대 정보</div>
+          <div style="margin-bottom:6px;"><b>방어력</b><br>
+            <span style="color:var(--text3);">보스·적의 방어력 수치. 공략 정보나 커뮤니티에서 확인. 모르면 0</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>방증 %</b><br>
+            <span style="color:var(--text3);">적이 받는 방어력 증가 효과. 진형 보너스로 적 방어 오를 때 입력. 없으면 0</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>방감 %</b><br>
+            <span style="color:var(--text3);">방어력 감소 버프 합산. 아군 스킬 중 적 방어 낮추는 효과 모두 더해서 입력. 없으면 0</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>방무 %</b><br>
+            <span style="color:var(--text3);">방어 무시 합산. 장비·스킬·버프로 얻는 방어무시 % 모두 더해서 입력. 없으면 0</span>
+          </div>
+          <div style="margin-bottom:6px;"><b>취약 %</b><br>
+            <span style="color:var(--text3);">물리·마법 취약 버프 합산. 적에게 취약 디버프 걸었을 때 수치 입력. 없으면 0</span>
+          </div>
+          <div><b>피해량 증가 %</b><br>
+            <span style="color:var(--text3);">보스 추가 배율, 반지 피해 증가, 기타 피해량 증가 버프 모두 합산. 없으면 0</span>
+          </div>
         </div>
+
+        <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.3);border-radius:10px;padding:12px 14px;">
+          <div style="font-weight:900;color:#f0a500;margin-bottom:6px;">💡 계산 팁</div>
+          <div style="color:var(--text2);">
+            • % 입력란에는 숫자만 입력 (예: 23% → 23)<br>
+            • 모르는 값은 0으로 두면 제외됨<br>
+            • 치명타 계산은 치명타가 터진다는 가정하에 계산<br>
+            • 결과는 예상 데미지이며 게임 내 편차 있을 수 있음
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -3397,11 +3446,11 @@ function previewPveFormation(){
   if(!input || !preview) return;
   renderFormation(input.value.trim(), preview, true, (newVal)=>{
     input.value = newVal;
-    // 뷰모드 실시간 반영
     const disp = document.getElementById("pveFormationDisplay");
     if(disp) renderFormation(newVal, disp);
   });
 }
+
 
 function savePveFormation(){
   if(!checkResearcher()) return;
@@ -4720,8 +4769,8 @@ function fetchPveRealData(){
     const details=buildData.details||{};
     if(pveCurrentDetail && !details[pveCurrentDetail]) pveCurrentDetail="";
     const currentData=(pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
+
     document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
-    // PVE 진형 표시
     const pveFormDisp = document.getElementById("pveFormationDisplay");
     if(pveFormDisp) renderFormation(currentData?.formation||"-", pveFormDisp);
     document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
@@ -4758,7 +4807,6 @@ function fillPveEditForm(buildData={}, details={}){
   document.getElementById("editPveDeck").value=deck;
   document.getElementById("editPveSkill").value=(currentData?.skill&&currentData.skill!=="-")?currentData.skill:"";
   document.getElementById("editPveEquip").value=(currentData?.equip&&currentData.equip!=="-")?currentData.equip:"";
-  // 진형 불러오기
   const formVal = currentData?.formation||"";
   const pveFormInput = document.getElementById("pveFormationInput");
   if(pveFormInput) pveFormInput.value = formVal;
@@ -4849,7 +4897,6 @@ function savePveData(){
     }
     Promise.all([p1, p2]).then(()=>{
       toast("저장됨 ✅");
-      document.getElementById("viewPveDeck").textContent=deck||"(등록된 공략 없음)";
       document.getElementById("viewPveSkill").textContent=skill||"-";
       document.getElementById("viewPveEquip").textContent=equip||"-";
       const opt=document.getElementById("pveBuildSelect").querySelector(`option[value="${build}"]`);
