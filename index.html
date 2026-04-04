@@ -5307,7 +5307,7 @@ function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(
     db.ref("logs").push({nick:d.suggester,result:d.result,defense:dk,attack:sk,attackName:d.name,attackType:d.type||"",date:new Date().toISOString().slice(0,10),time:Date.now(),fromSuggest:true});
   }
   db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
-function rejectAtk(dk,sk){ if(confirm("거절?")){ db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("거절됨"); loadAdminReports(); } }
+function rejectAtk(dk,sk){ if(confirm("거절?")){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(snap=>{ const d=snap.val(); if(d && (d.result==="win"||d.result==="lose")){ db.ref("logs").push({nick:d.suggester,result:d.result,defense:dk,attack:sk,attackName:d.name,attackType:d.type||"",date:new Date().toISOString().slice(0,10),time:Date.now(),fromSuggest:true,rejected:true}); } db.ref(`suggestions/attack/${dk}/${sk}`).remove(); toast("거절됨 (전적 기록됨)"); loadAdminReports(); }); } }
 function approveDef(key){ db.ref(`suggestions/defense/${key}`).get().then(snap=>{ const d=snap.val(); if(!d) return; db.ref("recommendedDefenses").push({name:d.name,heroes:d.heroes,formation:d.formation,pet:d.pet,skill:d.skill||"",desc:d.desc,maker:d.suggester}); db.ref(`suggestions/defense/${key}`).remove(); toast("✅ 승인됨"); loadAdminReports(); }); }
 function rejectDef(key){ if(confirm("거절?")){ db.ref(`suggestions/defense/${key}`).remove(); toast("거절됨"); loadAdminReports(); } }
 
