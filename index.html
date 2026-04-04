@@ -4442,15 +4442,73 @@ function loadDefenseTeamsListener() {
   db.ref("defenseTeams").on("value",snap=>{
     defenseDataCache=snap.val()||{};
     const list=document.getElementById("defRealList"); list.innerHTML="";
+
+    // 같은 이름끼리 묶기
+    const grouped = {};
     Object.entries(defenseDataCache).forEach(([k,v])=>{
-      const tW=Object.values(v.attackTeams||{}).reduce((a,b)=>a+(b.win||0),0);
-      const tL=Object.values(v.attackTeams||{}).reduce((a,b)=>a+(b.lose||0),0);
+      const name = (v.name||"").trim();
+      if(!grouped[name]) grouped[name]=[];
+      grouped[name].push({key:k, data:v});
+    });
+
+    Object.entries(grouped).forEach(([name, entries])=>{
+      // 승/패 합산
+      let tW=0, tL=0;
+      entries.forEach(({data:v})=>{
+        tW+=Object.values(v.attackTeams||{}).reduce((a,b)=>a+(b.win||0),0);
+        tL+=Object.values(v.attackTeams||{}).reduce((a,b)=>a+(b.lose||0),0);
+      });
       const rate=(tW+tL)?Math.round(tW/(tW+tL)*100):0;
       const div=document.createElement("div"); div.className="dropdown-item";
-      div.innerHTML=`<span class="d-name">${v.name}</span><span class="d-stat">${rate}% · ${tW}승${tL}패</span>`;
-      div.onclick=()=>{ document.getElementById("defCurrentText").textContent=v.name; closeDefDropdown(); loadAttackTeams(k, v.name); };
+      div.innerHTML=`<span class="d-name">${name}</span><span class="d-stat">${rate}% · ${tW}승${tL}패</span>`;
+      div.onclick=()=>{
+        document.getElementById("defCurrentText").textContent=name;
+        closeDefDropdown();
+        // 모든 key의 공격팀을 합쳐서 로드
+        loadAttackTeamsMerged(entries, name);
+      };
       list.appendChild(div);
     });
+  });
+}
+
+function loadAttackTeamsMerged(entries, dkName) {
+  // 대표 key (승패 기록용)
+  const repKey = entries[0].key;
+  currentDefense=repKey; currentAttack="";
+  const defNameEl = document.getElementById("adminCurrentDefName");
+  if(defNameEl) defNameEl.textContent = dkName;
+  document.getElementById("attackCard").style.display="none";
+  const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns="1fr";
+  document.getElementById("atkSuggestBtn").style.display="block";
+  loadMyReports();
+  ["atkName","ringRec","atkPet","atkFormation","armorRec","skillOrder"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("atkType").value="";
+  const list=document.getElementById("attackList"); list.innerHTML="";
+
+  // 모든 key에서 공격팀 가져와서 합치기
+  const promises = entries.map(({key})=>
+    db.ref(`defenseTeams/${key}/attackTeams`).get().then(snap=>({key, val:snap.val()||{}}))
+  );
+  Promise.all(promises).then(results=>{
+    list.innerHTML="";
+    let hasAny=false;
+    results.forEach(({key, val})=>{
+      Object.entries(val).forEach(([ak,av])=>{
+        hasAny=true;
+        const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
+        const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
+        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+        btn.onclick=()=>{
+          document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
+          btn.classList.add("active");
+          currentDefense=key; // 해당 공격팀이 속한 실제 key로 설정
+          selectAttack(key,ak);
+        };
+        list.appendChild(btn);
+      });
+    });
+    if(!hasAny) list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>';
   });
 }
 function openDefDropdown() {
