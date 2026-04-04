@@ -4588,7 +4588,33 @@ function loadRecentRecord(dk,ak) {
     if(!snap.exists()){ div.innerHTML='<span style="color:var(--text3);font-size:13px">기록 없음</span>'; return; }
     const logs=Object.values(snap.val()).filter(v=>v.defense===dk&&v.attack===ak).sort((a,b)=>b.time-a.time).slice(0,5);
     if(!logs.length){ div.innerHTML='<span style="color:var(--text3);font-size:13px">기록 없음</span>'; return; }
-    logs.forEach(v=>{ const dot=document.createElement("div"); dot.className=`rec-dot ${v.result==="win"?"win":"lose"}`; dot.textContent=v.result==="win"?"W":"L"; div.appendChild(dot); });
+    logs.forEach(v=>{
+      const dot=document.createElement("div");
+      dot.className=`rec-dot ${v.result==="win"?"win":"lose"}`;
+      dot.textContent=v.result==="win"?"W":"L";
+      const who = v.nick||"?";
+      const date = v.date||"";
+      const resultText = v.result==="win"?"🏆 승리":"💀 패배";
+      dot.style.position="relative";
+      dot.style.cursor="pointer";
+      // 커스텀 툴팁 (PC hover + 모바일 탭)
+      dot.addEventListener("mouseenter", e=>{
+        let tip=document.getElementById("recDotTooltip");
+        if(!tip){ tip=document.createElement("div"); tip.id="recDotTooltip";
+          tip.style.cssText="position:fixed;z-index:9999;background:#222;color:#fff;font-size:11px;padding:5px 9px;border-radius:8px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);";
+          document.body.appendChild(tip);
+        }
+        tip.textContent=`${who} ${resultText} · ${date}`;
+        tip.style.display="block";
+        const r=dot.getBoundingClientRect();
+        tip.style.left=(r.left+r.width/2-tip.offsetWidth/2)+"px";
+        tip.style.top=(r.top-32)+"px";
+      });
+      dot.addEventListener("mouseleave", ()=>{
+        const tip=document.getElementById("recDotTooltip"); if(tip) tip.style.display="none";
+      });
+      div.appendChild(dot);
+    });
   });
 }
 function writeLog(res) {
