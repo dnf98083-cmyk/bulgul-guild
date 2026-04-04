@@ -1978,7 +1978,7 @@ body::before {
           <div id="cardExtraInfo" class="collapsible" style="max-height:0;">
             <div class="info-block"><div class="ib-label">장비 · 특이사항</div><div class="ib-value" id="cardArmor">-</div></div>
             <div class="info-block">
-              <div class="ib-label">최근 5경기</div>
+              <div class="ib-label">최근 10경기</div>
               <div id="recentRecord" class="recent-record"></div>
             </div>
           </div>
@@ -4586,7 +4586,7 @@ function loadRecentRecord(dk,ak) {
   db.ref("logs").get().then(snap=>{
     const div=document.getElementById("recentRecord"); div.innerHTML="";
     if(!snap.exists()){ div.innerHTML='<span style="color:var(--text3);font-size:13px">기록 없음</span>'; return; }
-    const logs=Object.values(snap.val()).filter(v=>v.defense===dk&&v.attack===ak).sort((a,b)=>b.time-a.time).slice(0,5);
+    const logs=Object.values(snap.val()).filter(v=>v.defense===dk&&v.attack===ak).sort((a,b)=>b.time-a.time).slice(0,10);
     if(!logs.length){ div.innerHTML='<span style="color:var(--text3);font-size:13px">기록 없음</span>'; return; }
     logs.forEach(v=>{
       const dot=document.createElement("div");
