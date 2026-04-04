@@ -1860,6 +1860,27 @@ body::before {
     </div>
   </div>
 
+  <!-- 직접 기록 모달 -->
+  <div id="directLogOverlay" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box">
+      <div class="modal-title">✏️ 전적 직접 기록</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">공략에 없는 방어팀을 상대로 한 경기를 기록해요</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">상대 방어팀 이름</div>
+      <input id="directLogDefName" class="form-input" placeholder="예: 트루드 겔리두스 에이스" style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">내 공격덱 이름</div>
+      <input id="directLogAtkName" class="form-input" placeholder="예: 카일 파이 풍연" style="margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">결과</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button id="directLogWinBtn" onclick="selectDirectLogResult('win')" style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--surface);color:var(--text3);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🏆 승리</button>
+        <button id="directLogLoseBtn" onclick="selectDirectLogResult('lose')" style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--surface);color:var(--text3);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">💀 패배</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm btn-gray" style="flex:1;" onclick="document.getElementById('directLogOverlay').classList.remove('open')">취소</button>
+        <button class="btn-sm btn-blue" style="flex:1;" onclick="submitDirectLog()">기록하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 공유 상세보기 모달 -->
   <div id="twShareDetailOverlay" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
@@ -1898,7 +1919,11 @@ body::before {
   <div id="attackScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
     <div class="page-header">
       <div class="page-title">⚔️ 길드전</div>
-      <div style="display:flex;gap:8px;"><button class="btn-icon" onclick="showPageGuide('attack')" style="padding:7px 10px;">❓</button><button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-icon" onclick="openDirectLogModal()" style="padding:7px 10px;font-size:12px;">✏️ 직접기록</button>
+        <button class="btn-icon" onclick="showPageGuide('attack')" style="padding:7px 10px;">❓</button>
+        <button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button>
+      </div>
     </div>
     <div class="attack-2col">
       <div class="attack-left-col">
@@ -4675,6 +4700,57 @@ function loadRecentRecord(dk,ak) {
     });
   });
 }
+let directLogResult = null;
+
+function openDirectLogModal(){
+  directLogResult = null;
+  document.getElementById("directLogDefName").value="";
+  document.getElementById("directLogAtkName").value="";
+  ["directLogWinBtn","directLogLoseBtn"].forEach(id=>{
+    const btn=document.getElementById(id);
+    btn.style.borderColor="var(--border)";
+    btn.style.background="var(--surface)";
+    btn.style.color="var(--text3)";
+  });
+  document.getElementById("directLogOverlay").classList.add("open");
+}
+
+function selectDirectLogResult(res){
+  directLogResult=res;
+  const isWin=res==="win";
+  const winBtn=document.getElementById("directLogWinBtn");
+  const loseBtn=document.getElementById("directLogLoseBtn");
+  winBtn.style.borderColor=isWin?"#2ecc71":"var(--border)";
+  winBtn.style.background=isWin?"rgba(46,204,113,0.15)":"var(--surface)";
+  winBtn.style.color=isWin?"#2ecc71":"var(--text3)";
+  loseBtn.style.borderColor=!isWin?"#e74c3c":"var(--border)";
+  loseBtn.style.background=!isWin?"rgba(231,76,60,0.15)":"var(--surface)";
+  loseBtn.style.color=!isWin?"#e74c3c":"var(--text3)";
+}
+
+function submitDirectLog(){
+  const defName=document.getElementById("directLogDefName").value.trim();
+  const atkName=document.getElementById("directLogAtkName").value.trim();
+  if(!defName) return toast("방어팀 이름을 입력하세요");
+  if(!atkName) return toast("공격덱 이름을 입력하세요");
+  if(!directLogResult) return toast("승리/패배를 선택하세요");
+  db.ref("logs").push({
+    nick:myNick,
+    result:directLogResult,
+    defense:"__direct__",
+    attack:"__direct__",
+    attackName:atkName,
+    defenseName:defName,
+    attackType:"직접기록",
+    date:new Date().toISOString().slice(0,10),
+    time:Date.now(),
+    direct:true
+  }).then(()=>{
+    toast(directLogResult==="win"?"🏆 승리 기록됨!":"💀 패배 기록됨");
+    document.getElementById("directLogOverlay").classList.remove("open");
+  }).catch(()=>toast("기록 실패"));
+}
+
 function writeLog(res) {
   if(!currentDefense||!currentAttack) return;
   db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).get().then(snap=>{
@@ -5131,12 +5207,17 @@ function renderRanking(){
     if(!Object.keys(allLogsCache).length){ list.innerHTML='<div class="empty-state">기록 없음</div>'; return; }
     const stats={};
     Object.values(allLogsCache).forEach(v=>{ if(!stats[v.nick]) stats[v.nick]={logs:[]}; stats[v.nick].logs.push(v); });
-    const rankData=Object.entries(stats).map(([n,d])=>{ d.logs.sort((a,b)=>b.time-a.time); const w=d.logs.filter(l=>l.result==="win").length,l=d.logs.filter(l=>l.result==="lose").length; const recent=d.logs.slice(0,30),rw=recent.filter(l=>l.result==="win").length,rl=recent.filter(l=>l.result==="lose").length; return{nick:n,w,l,rw,rl}; }).sort((a,b)=>b.w-a.w);
+    const rankData=Object.entries(stats).map(([n,d])=>{ d.logs.sort((a,b)=>b.time-a.time); const w=d.logs.filter(l=>l.result==="win").length,l=d.logs.filter(l=>l.result==="lose").length; const recent=d.logs.slice(0,30),rw=recent.filter(l=>l.result==="win").length,rl=recent.filter(l=>l.result==="lose").length; return{nick:n,w,l,rw,rl,logs:d.logs}; }).sort((a,b)=>b.w-a.w);
     const myD=rankData.find(x=>x.nick===myNick);
     if(myD){ const tot=myD.w+myD.l; document.getElementById("homeStatValue").innerHTML=`<span>${myD.w}</span>승 ${myD.l}패`; document.getElementById("homeStatRank").textContent=`전체 ${rankData.indexOf(myD)+1}위 · 승률 ${tot?Math.round(myD.w/tot*100):0}%`; }
     const adminOpen=document.getElementById("attackAdminPanel")?.style.display==="block";
     let hide=0;
-    rankData.forEach((d,i)=>{ if(!adminOpen&&i>=10){ hide++; return; } const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0,rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0; const row=document.createElement("div"); row.className="rank-row"; const badges=["🥇","🥈","🥉"]; const badge=i<3?badges[i]:`${i+1}`; const isMe=d.nick===myNick; row.innerHTML=`<div class="rank-num" ${isMe?'style="color:var(--accent)"':''}>${badge}</div><div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div><div class="rank-stat"><div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div><div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div></div>`; list.appendChild(row); });
+    rankData.forEach((d,i)=>{ if(!adminOpen&&i>=10){ hide++; return; } const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0,rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0; const badges=["🥇","🥈","🥉"]; const badge=i<3?badges[i]:`${i+1}`; const isMe=d.nick===myNick;
+      const row=document.createElement("div"); row.className="rank-row"; row.style.cursor="pointer";
+      row.innerHTML=`<div class="rank-num" ${isMe?'style="color:var(--accent)"':''}>${badge}</div><div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div><div class="rank-stat"><div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div><div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div></div>`;
+      row.onclick=()=>toggleRankDetail(d.nick, d.logs, d.w, d.l);
+      const detail=document.createElement("div"); detail.id="rankDetail_"+d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_'); detail.style.cssText="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);";
+      list.appendChild(row); list.appendChild(detail); });
     document.getElementById("moreRankMsg").style.display=hide>0?"block":"none";
   });
 }
@@ -6193,7 +6274,7 @@ function loadRanking(){
       const badges=["🥇","🥈","🥉"];
       const badge=i<3?badges[i]:`${i+1}`;
       const isMe=d.nick===myNick;
-      return `<div class="rank-row${isMe?" rank-me":""}" onclick="toggleRankDetail('${d.nick}',${JSON.stringify(d.logs).replace(/'/g,"\'")},${d.w},${d.l})" style="cursor:pointer;">
+      return `<div class="rank-row${isMe?" rank-me":""}" onclick="toggleRankDetailByNick('${d.nick}',${d.w},${d.l})" style="cursor:pointer;">
         <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
         <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
         <div class="rank-stat">
@@ -6205,6 +6286,14 @@ function loadRanking(){
       </div>`;
     }).join("");
   });
+}
+
+function toggleRankDetailByNick(nick, w, l){
+  // allLogsCache에서 해당 닉 로그 직접 추출
+  const logs = Object.values(allLogsCache||{})
+    .filter(v=>v.nick===nick)
+    .sort((a,b)=>(b.time||0)-(a.time||0));
+  toggleRankDetail(nick, logs, w, l);
 }
 
 function toggleRankDetail(nick, logs, w, l){
@@ -6225,7 +6314,7 @@ function toggleRankDetail(nick, logs, w, l){
   rankingSelectedNick = nick;
 
   const tot=w+l, rate=tot?Math.round(w/tot*100):0;
-  const recent = logs.slice(0,10);
+  const recent = logs.slice(0,20);
 
   panel.innerHTML = `
     <div style="display:flex;gap:12px;margin-bottom:12px;">
@@ -6243,11 +6332,12 @@ function toggleRankDetail(nick, logs, w, l){
       </div>
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">최근 공격 기록</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;" id="rankDots_${safeId}"></div>
     ${recent.length===0
       ? '<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0;">기록 없음</div>'
       : recent.map(log=>{
           const isWin = log.result==="win";
-          const defName = defenseDataCache[log.defense]?.name || log.defense || "-";
+          const defName = (log.defenseName) || defenseDataCache[log.defense]?.name || log.defense || "-";
           const dateStr = log.date || "";
           return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
             <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;background:${isWin?"rgba(39,174,96,0.15)":"rgba(231,76,60,0.12)"};color:${isWin?"#27ae60":"#e74c3c"};">${isWin?"승":"패"}</div>
@@ -6260,6 +6350,38 @@ function toggleRankDetail(nick, logs, w, l){
         }).join('')}
   `;
   panel.style.display='block';
+
+  // W/L 도트 생성 (툴팁 포함)
+  const dotsWrap = document.getElementById('rankDots_'+safeId);
+  if(dotsWrap && recent.length>0){
+    dotsWrap.innerHTML='';
+    recent.forEach(log=>{
+      const isWin=log.result==="win";
+      const dot=document.createElement("div");
+      dot.className=`rec-dot ${isWin?"win":"lose"}`;
+      dot.textContent=isWin?"W":"L";
+      dot.style.cursor="pointer";
+      const defName=(log.defenseName)||defenseDataCache[log.defense]?.name||log.defense||"-";
+      const atkName=log.attackName||"-";
+      const dateStr=log.date||"";
+      const resultText=isWin?"🏆 승리":"💀 패배";
+      dot.addEventListener("mouseenter",e=>{
+        let tip=document.getElementById("recDotTooltip");
+        if(!tip){tip=document.createElement("div");tip.id="recDotTooltip";
+          tip.style.cssText="position:fixed;z-index:9999;background:#222;color:#fff;font-size:11px;padding:6px 10px;border-radius:8px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);line-height:1.6;";
+          document.body.appendChild(tip);}
+        tip.innerHTML=`${resultText} · ${dateStr}<br><span style="color:#aaa;">vs ${defName}</span><br><span style="color:#aaa;">${atkName}</span>`;
+        tip.style.display="block";
+        const r=dot.getBoundingClientRect();
+        tip.style.left=(r.left+r.width/2-tip.offsetWidth/2)+"px";
+        tip.style.top=(r.top-tip.offsetHeight-6)+"px";
+      });
+      dot.addEventListener("mouseleave",()=>{
+        const tip=document.getElementById("recDotTooltip");if(tip)tip.style.display="none";
+      });
+      dotsWrap.appendChild(dot);
+    });
+  }
 }
 
 
