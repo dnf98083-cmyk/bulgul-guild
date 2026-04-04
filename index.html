@@ -6268,31 +6268,48 @@ function loadRanking(){
 
     if(!rankData.length){ if(list) list.innerHTML="<div class='empty-state'>전적 데이터 없음</div>"; return; }
 
-    if(list) list.innerHTML = rankData.map((d,i)=>{
-      const tot=d.w+d.l, r=tot?Math.round(d.w/tot*100):0;
-      const rTot=d.rw+d.rl, rr=rTot?Math.round(d.rw/rTot*100):0;
-      const badges=["🥇","🥈","🥉"];
-      const badge=i<3?badges[i]:`${i+1}`;
-      const isMe=d.nick===myNick;
-      return `<div class="rank-row${isMe?" rank-me":""}" onclick="toggleRankDetailByNick('${d.nick}',${d.w},${d.l})" style="cursor:pointer;">
-        <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
-        <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
-        <div class="rank-stat">
-          <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
-          <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
+    if(list){
+      list.innerHTML = rankData.map((d,i)=>{
+        const tot=d.w+d.l, r=tot?Math.round(d.w/tot*100):0;
+        const rTot=d.rw+d.rl, rr=rTot?Math.round(d.rw/rTot*100):0;
+        const badges=["🥇","🥈","🥉"];
+        const badge=i<3?badges[i]:`${i+1}`;
+        const isMe=d.nick===myNick;
+        const safeId=d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+        return `<div class="rank-row${isMe?" rank-me":""}" data-nick="${d.nick.replace(/"/g,'&quot;')}" data-w="${d.w}" data-l="${d.l}" style="cursor:pointer;">
+          <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-stat">
+            <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
+            <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
+          </div>
         </div>
-      </div>
-      <div id="rankDetail_${d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_')}" style="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);">
-      </div>`;
-    }).join("");
+        <div id="rankDetail_${safeId}" style="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);">
+        </div>`;
+      }).join("");
+      // data 속성으로 이벤트 바인딩
+      list.querySelectorAll(".rank-row[data-nick]").forEach(row=>{
+        row.addEventListener("click", ()=>{
+          const nick=row.dataset.nick;
+          const w=parseInt(row.dataset.w)||0;
+          const l=parseInt(row.dataset.l)||0;
+          toggleRankDetailByNick(nick, w, l);
+        });
+      });
+    }
   });
 }
 
 function toggleRankDetailByNick(nick, w, l){
-  // allLogsCache에서 해당 닉 로그 직접 추출
-  const logs = Object.values(allLogsCache||{})
+  const cache = Object.keys(rankingLogsCache||{}).length > 0 ? rankingLogsCache : (allLogsCache||{});
+  console.log("toggleRankDetailByNick 호출:", nick, "캐시 크기:", Object.keys(cache).length);
+  const logs = Object.values(cache)
     .filter(v=>v.nick===nick)
     .sort((a,b)=>(b.time||0)-(a.time||0));
+  console.log("logs 수:", logs.length);
+  const safeId = nick.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  const panel = document.getElementById('rankDetail_'+safeId);
+  console.log("패널 찾기:", 'rankDetail_'+safeId, panel ? "있음" : "없음(null)");
   toggleRankDetail(nick, logs, w, l);
 }
 
