@@ -2090,8 +2090,13 @@ body::before {
         <div id="rdCaseTabs" style="display:flex;gap:7px;flex-wrap:wrap;"></div>
       </div>
       <div class="info-block"><div class="ib-label">반지 추천</div><div class="ib-value" id="rdHeroes">-</div></div>
+      <!-- 진형 (별도 블록) -->
+      <div class="info-block" id="rdFormationBlock">
+        <div class="ib-label">진형</div>
+        <div id="rdFormation">-</div>
+      </div>
+      <!-- 펫/속공 칩 -->
       <div class="info-chips">
-        <div class="chip"><span class="chip-label">진형</span><span class="chip-value" id="rdFormation">-</span></div>
         <div class="chip"><span class="chip-label">펫</span><span class="chip-value" id="rdPet">-</span></div>
         <div class="chip"><span class="chip-label">속공</span><span class="chip-value" id="rdSpeed">-</span></div>
       </div>
@@ -2114,6 +2119,10 @@ body::before {
         <div id="rdCaseAdminList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
         <div style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border);">
           <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;" id="rdCaseFormTitle">+ 새 케이스 추가</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button onclick="rdCopyCase()" class="btn-sm btn-gray" style="flex:1;">📋 케이스 복사</button>
+            <button onclick="rdPasteCase()" class="btn-sm btn-gray" style="flex:1;">📥 케이스 붙여넣기</button>
+          </div>
           <input class="form-input" id="rdCaseName"   placeholder="케이스 이름 (예: 조건1 - 전부 6초이상)">
           <input class="form-input" id="rdCaseHeroes" placeholder="반지 추천">
           <input class="form-input" id="rdCaseSpeed"  placeholder="속공 (예: 130~170)">
@@ -4967,6 +4976,70 @@ function toggleDefenseAdmin() {
 // ══ 방어 ══
 let rdCurrentCaseKey = null;
 let rdCurrentCaseData = {};
+let rdCurrentTeamPet = "";
+
+let rdCopiedCase = null;
+
+function rdCopyCaseById(caseKey){
+  const c=(rdCurrentCaseData||{})[caseKey]; if(!c) return;
+  rdCopiedCase={...c};
+  const code=btoa(encodeURIComponent(JSON.stringify(rdCopiedCase)));
+  navigator.clipboard.writeText(code).catch(()=>{});
+  toast(`📋 "${c.name||'케이스'}" 복사됨!`);
+}
+
+function rdCopyCase(){
+  // 현재 폼에 입력된 내용을 복사
+  const data = {
+    name:      document.getElementById("rdCaseName").value.trim(),
+    heroes:    document.getElementById("rdCaseHeroes").value.trim(),
+    speed:     document.getElementById("rdCaseSpeed").value.trim(),
+    formation: document.getElementById("rdInputFormation").value.trim(),
+    skill:     document.getElementById("rdCaseSkill").value.trim(),
+    equip:     document.getElementById("rdCaseEquip").value.trim(),
+    desc:      document.getElementById("rdCaseDesc").value.trim(),
+  };
+  // 현재 보고 있는 케이스가 있으면 그걸 복사
+  if(rdCurrentCaseKey && rdCurrentCaseData[rdCurrentCaseKey]){
+    rdCopiedCase = {...rdCurrentCaseData[rdCurrentCaseKey]};
+  } else if(Object.values(data).some(v=>v)) {
+    rdCopiedCase = data;
+  } else {
+    return toast("복사할 케이스를 먼저 선택하거나 폼을 입력하세요");
+  }
+  // 클립보드에도 코드로 복사
+  const code = btoa(encodeURIComponent(JSON.stringify(rdCopiedCase)));
+  navigator.clipboard.writeText(code).catch(()=>{});
+  toast("📋 케이스 복사됨! 붙여넣기 버튼으로 다른 팀에 적용하세요");
+}
+
+function rdPasteCase(){
+  if(!rdCopiedCase){
+    // 클립보드에서 코드 붙여넣기 시도
+    const code = prompt("케이스 코드를 붙여넣으세요 (또는 취소하면 최근 복사본 사용):");
+    if(code){
+      try {
+        rdCopiedCase = JSON.parse(decodeURIComponent(atob(code.trim())));
+      } catch(e) { return toast("잘못된 코드예요"); }
+    } else {
+      return toast("먼저 케이스를 복사하세요");
+    }
+  }
+  const c = rdCopiedCase;
+  document.getElementById("rdCaseName").value   = c.name   || "";
+  document.getElementById("rdCaseHeroes").value = c.heroes || "";
+  document.getElementById("rdCaseSpeed").value  = c.speed  || "";
+  document.getElementById("rdInputFormation").value = c.formation || "";
+  document.getElementById("rdCaseSkill").value  = c.skill  || "";
+  document.getElementById("rdCaseEquip").value  = c.equip  || "";
+  document.getElementById("rdCaseDesc").value   = c.desc   || "";
+  const ftype = detectFormationType(c.formation||"");
+  if(ftype) setRdFormationType(ftype, false);
+  previewRdFormation();
+  // 케이스 이름은 "복사본 - " 접두사
+  document.getElementById("rdCaseName").value = (c.name ? "복사본 - "+c.name : "");
+  toast("📥 붙여넣기 완료! 이름을 수정하고 저장하세요");
+}
 
 function loadRecDefenseList(){
   showLoader();
@@ -4985,7 +5058,7 @@ function loadRecDefenseList(){
 }
 
 function showRecDefDetail(key,val){
-  currentRecDef=key; rdCurrentCaseData=val.cases||{};
+  currentRecDef=key; rdCurrentCaseData=val.cases||{}; rdCurrentTeamPet=val.pet||"";
   document.getElementById("recDefCard").style.display="block";
   document.getElementById("rdName").textContent=val.name;
   document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:"";
@@ -5005,6 +5078,7 @@ function renderRdCaseTabs(cases,val){
     document.getElementById("rdHeroes").textContent=val.heroes||"-";
     renderFormation(val.formation||"-",document.getElementById("rdFormation"));
     document.getElementById("rdPet").textContent=val.pet||"-";
+    rdCurrentTeamPet=val.pet||"";
     document.getElementById("rdSpeed").textContent="-";
     document.getElementById("rdSkill").textContent=val.skill||"-";
     document.getElementById("rdEquip").textContent="-";
@@ -5024,7 +5098,7 @@ function showRdCase(caseKey){
   const tab=document.getElementById("rdCaseTab_"+caseKey); if(tab) tab.classList.add("active");
   document.getElementById("rdHeroes").textContent=c.heroes||"-";
   renderFormation(c.formation||"-",document.getElementById("rdFormation"));
-  document.getElementById("rdPet").textContent=c.pet||"-";
+  document.getElementById("rdPet").textContent=c.pet||rdCurrentTeamPet||"-";
   document.getElementById("rdSpeed").textContent=c.speed||"-";
   document.getElementById("rdSkill").textContent=c.skill||"-";
   document.getElementById("rdEquip").textContent=c.equip||"-";
@@ -5038,6 +5112,7 @@ function renderRdAdminCaseList(teamKey,cases){
   el.innerHTML=entries.map(([ck,cv],i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:8px 12px;border:1px solid var(--border);">
       <span style="flex:1;font-size:12px;font-weight:700;color:var(--text);">${cv.name||"케이스"+(i+1)}</span>
+      <button onclick="rdCopyCaseById('${ck}')" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-family:inherit;">📋</button>
       <button onclick="rdEditCase('${ck}')" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-family:inherit;">✏️</button>
       <button onclick="rdDeleteCase('${teamKey}','${ck}')" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.08);color:#e74c3c;cursor:pointer;font-family:inherit;">🗑️</button>
     </div>`).join("");
