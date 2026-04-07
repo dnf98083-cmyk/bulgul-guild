@@ -2190,7 +2190,7 @@ body::before {
         <div class="info-block"><div class="ib-label">⚔️ 덱 조합</div><div class="ib-value" id="viewPveDeck">-</div></div>
         <div class="info-block">
           <div class="ib-label">🗺️ 진형</div>
-          <div id="pveFormationDisplay">-</div>
+          <div id="pveFormationDisplay" style="display:flex;flex-direction:column;align-items:center;">-</div>
         </div>
         <div class="info-block"><div class="ib-label">📜 스킬 순서</div><div class="ib-value" id="viewPveSkill">-</div></div>
         <div class="info-block"><div class="ib-label">🛡️ 장비 세팅</div><div class="ib-value" id="viewPveEquip">-</div></div>
@@ -5433,14 +5433,35 @@ function savePveData(){
 
 function renderPveFormations(data, container){
   container.innerHTML="";
-  // formations 배열 우선, 없으면 구 formation 문자열 폴백
-  const list = data?.formations?.length ? data.formations : (data?.formation ? [{val:data.formation, label:""}] : []);
+  const list = data?.formations?.length ? data.formations : (data?.formation ? [{val:data.formation, label:"", pet:""}] : []);
   if(!list.length){ container.textContent="-"; return; }
   list.forEach((f,i)=>{
     const wrap=document.createElement("div");
-    wrap.style.cssText="margin-bottom:"+(i<list.length-1?"14px":"0");
-    if(f.label){ const lbl=document.createElement("div"); lbl.style.cssText="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;"; lbl.textContent=f.label; wrap.appendChild(lbl); }
-    const fDiv=document.createElement("div"); renderFormation(f.val||"-", fDiv); wrap.appendChild(fDiv);
+    wrap.style.cssText="margin-bottom:"+(i<list.length-1?"18px":"0")+";";
+    // 라벨 구분선
+    if(f.label){
+      const lbl=document.createElement("div");
+      lbl.style.cssText="font-size:12px;font-weight:900;color:var(--accent);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,77,46,0.2);";
+      lbl.textContent=f.label;
+      wrap.appendChild(lbl);
+    }
+    // 진형 + 펫 가로 배치 (중앙 정렬)
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;gap:12px;align-items:center;justify-content:center;";
+    const fDiv=document.createElement("div"); renderFormation(f.val||"-", fDiv); row.appendChild(fDiv);
+    if(f.pet){
+      const petDiv=document.createElement("div");
+      petDiv.style.cssText="display:flex;flex-direction:column;align-items:center;gap:5px;";
+      const petLbl=document.createElement("div");
+      petLbl.style.cssText="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:0.5px;";
+      petLbl.textContent="펫";
+      const petChip=document.createElement("div");
+      petChip.style.cssText="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;";
+      petChip.textContent=f.pet;
+      petDiv.appendChild(petLbl); petDiv.appendChild(petChip);
+      row.appendChild(petDiv);
+    }
+    wrap.appendChild(row);
     container.appendChild(wrap);
   });
 }
@@ -5448,7 +5469,7 @@ function renderPveFormations(data, container){
 function renderPveFormationEditor(formations=[]){
   const list=document.getElementById("pveFormationList"); if(!list) return;
   list.innerHTML="";
-  if(!formations.length) formations=[{val:"",label:""}];
+  if(!formations.length) formations=[{val:"",label:"",pet:""}];
   formations.forEach((f,i)=>{ list.appendChild(createPveFormationItem(f,i)); });
 }
 
@@ -5498,7 +5519,28 @@ function createPveFormationItem(f={}, idx){
     btnRow.appendChild(btn);
   });
   wrap.appendChild(btnRow);
-  wrap.appendChild(formPreview);
+
+  // 진형 + 펫 가로 배치
+  const rowDiv=document.createElement("div");
+  rowDiv.style.cssText="display:flex;gap:10px;align-items:flex-start;";
+  rowDiv.appendChild(formPreview);
+
+  // 펫 입력칸
+  const petWrap=document.createElement("div");
+  petWrap.style.cssText="display:flex;flex-direction:column;gap:6px;min-width:72px;";
+  const petLabel=document.createElement("div");
+  petLabel.style.cssText="font-size:10px;font-weight:700;color:var(--text3);text-align:center;";
+  petLabel.textContent="펫";
+  const petInput=document.createElement("input");
+  petInput.className="form-input pve-pet-input";
+  petInput.placeholder="펫 이름";
+  petInput.value=f.pet||"";
+  petInput.style.cssText="text-align:center;font-size:12px;padding:8px 6px;min-width:0;";
+  petWrap.appendChild(petLabel);
+  petWrap.appendChild(petInput);
+  rowDiv.appendChild(petWrap);
+  wrap.appendChild(rowDiv);
+
   if(curType) refreshPreview();
 
   // 삭제 버튼
@@ -5522,7 +5564,8 @@ function getPveFormationsData(){
   list.querySelectorAll("[data-idx]").forEach(wrap=>{
     const label=wrap.querySelector("input.form-input")?.value.trim()||"";
     const val=wrap._formVal||"";
-    if(val) result.push({label, val});
+    const pet=wrap.querySelector(".pve-pet-input")?.value.trim()||"";
+    if(val||pet) result.push({label, val, pet});
   });
   return result;
 }
