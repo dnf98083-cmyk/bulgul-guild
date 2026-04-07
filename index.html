@@ -1614,8 +1614,8 @@ body::before {
           <div style="font-size:12px;color:var(--text3);">시즌별 길드 총점 추이</div>
           <div id="home_advent_latest" style="font-size:13px;font-weight:900;color:var(--accent);">-</div>
         </div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:90px;" id="home_advent_bars"></div>
-        <div style="display:flex;gap:4px;margin-top:4px;" id="home_advent_labels"></div>
+        <div style="margin-top:4px;" id="home_advent_diffs"></div>
+        <div style="display:none;" id="home_advent_labels"></div>
         <div id="home_advent_empty" style="text-align:center;font-size:12px;color:var(--text3);padding:20px 0;display:none;">등록된 시즌 데이터 없음</div>
       </div>
     </div>
@@ -2769,8 +2769,8 @@ body::before {
 
           <!-- 시즌 그래프 -->
           <div id="advent_season_chart" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:flex-end;gap:4px;height:90px;" id="advent_season_bars"></div>
-            <div style="display:flex;gap:4px;margin-top:4px;" id="advent_season_labels"></div>
+            <div style="margin-top:4px;" id="advent_season_diffs"></div>
+            <div style="display:none;" id="advent_season_labels"></div>
             <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:6px;" id="advent_season_empty">등록된 시즌 데이터 없음</div>
           </div>
 
@@ -4103,19 +4103,116 @@ async function moveAdventWeek(){
 }
 
 
+function renderLineChart(diffsEl, seasons){
+  if(!diffsEl) return;
+  if(seasons.length<2){
+    diffsEl.innerHTML='<div style="font-size:9px;color:var(--text3);text-align:center;padding:6px 0;">시즌 2개 이상부터 표시</div>';
+    return;
+  }
+
+  const vals = seasons.map(s=>s.total);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+  const pad = (maxV - minV) * 0.1 || 1000000;
+
+  diffsEl.innerHTML='<div style="position:relative;width:100%;height:130px;"><canvas id="adventLineChart_'+diffsEl.id+'"></canvas></div>';
+  const canvas = diffsEl.querySelector('canvas');
+  if(!canvas) return;
+
+  const draw = () => {
+    if(typeof Chart === "undefined"){
+      const s=document.createElement("script");
+      s.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js";
+      s.onload=draw; document.head.appendChild(s); return;
+    }
+    const existing = Chart.getChart(canvas);
+    if(existing) existing.destroy();
+
+    // 증감 표시 플러그인
+    const diffLabelPlugin = {
+      id: 'diffLabel',
+      afterDatasetsDraw(chart){
+        const {ctx, data, scales:{x,y}} = chart;
+        data.datasets[0].data.forEach((v,i)=>{
+          if(i===0) return;
+          const diff = v - data.datasets[0].data[i-1];
+          const diffStr = (diff>=0?'+':'') + (Math.abs(diff)>=10000?(diff/10000).toFixed(1)+'만':Number(diff).toLocaleString());
+          const color = diff>=0 ? '#2ecc71' : '#e74c3c';
+          const cx = x.getPixelForValue(i);
+          const cy = y.getPixelForValue(v);
+          ctx.save();
+          ctx.font = 'bold 8px sans-serif';
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          ctx.fillText(diffStr, cx, cy-12);
+          ctx.restore();
+        });
+      }
+    };
+
+    new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: seasons.map(s=>s.season),
+        datasets: [{
+          data: vals,
+          borderColor: "#27ae60",
+          backgroundColor: "rgba(39,174,96,0.10)",
+          borderWidth: 2,
+          pointBackgroundColor: "#27ae60",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      plugins: [diffLabelPlugin],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 18 } },
+        plugins: {
+          legend: {display:false},
+          tooltip: {
+            callbacks: {
+              title: (items) => seasons[items[0].dataIndex].season,
+              label: (item) => {
+                const v = item.parsed.y;
+                return (v/10000).toFixed(1)+'만';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            ticks: { color:"rgba(180,180,180,0.7)", font:{size:8}, maxRotation:0, autoSkip:false },
+            grid: {display:false}
+          },
+          y: {
+            display: false,
+            min: Math.max(0, minV - pad),
+            max: maxV + pad * 2
+          }
+        }
+      }
+    });
+  };
+  draw();
+}
+
 // ══ 홈 파괴신 시즌 그래프 ══
 function loadHomeAdventGraph(){
-  const barsEl   = document.getElementById("home_advent_bars");
+  const diffsEl  = document.getElementById("home_advent_diffs");
   const labelsEl = document.getElementById("home_advent_labels");
   const emptyEl  = document.getElementById("home_advent_empty");
   const latestEl = document.getElementById("home_advent_latest");
-  if(!barsEl) return;
 
   db.ref("pveScores/advent/파괴신/seasons").orderByChild("createdAt").once("value").then(snap=>{
     const data = snap.val();
     if(!data){
-      if(emptyEl){ emptyEl.style.display="block"; }
-      barsEl.innerHTML=""; labelsEl.innerHTML="";
+      if(emptyEl) emptyEl.style.display="block";
       if(latestEl) latestEl.textContent="-";
       return;
     }
@@ -4126,21 +4223,7 @@ function loadHomeAdventGraph(){
     const latest = seasons[seasons.length-1];
     if(latestEl) latestEl.textContent = "최신: " + Number(latest.total).toLocaleString();
 
-    const maxScore = Math.max(...seasons.map(s=>s.total));
-
-    barsEl.innerHTML = seasons.map((s,i)=>{
-      const pct = Math.round((s.total / maxScore) * 90) + 5; // 0기준, 최대값=95%
-      const prev = seasons[i-1];
-      const isUp = prev ? s.total >= prev.total : true;
-      const color = isUp ? "#27ae60" : "#e74c3c";
-      const scoreLabel = s.total >= 10000
-        ? (s.total/10000).toFixed(1)+"만"
-        : Number(s.total).toLocaleString();
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;" title="${s.season}: ${Number(s.total).toLocaleString()}">
-        <div style="font-size:8px;color:${color};font-weight:700;text-align:center;">${scoreLabel}</div>
-        <div style="width:80%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:4px;opacity:0.85;transition:height 0.4s;"></div>
-      </div>`;
-    }).join("");
+    setTimeout(()=>renderLineChart(diffsEl, seasons), 50);
 
     labelsEl.innerHTML = seasons.map((s,i)=>{
       const prev = seasons[i-1];
@@ -4156,7 +4239,6 @@ function loadHomeAdventGraph(){
 // ══ 파괴신 시즌 총합 ══
 function loadAdventTotal(){
   const boss = "파괴신";
-  const barsEl   = document.getElementById("advent_season_bars");
   const labelsEl = document.getElementById("advent_season_labels");
   const emptyEl  = document.getElementById("advent_season_empty");
   const latestEl = document.getElementById("advent_latest_total");
@@ -4179,24 +4261,9 @@ function loadAdventTotal(){
     const latest = seasons[seasons.length-1];
     if(latestEl) latestEl.textContent = "최신: " + Number(latest.total).toLocaleString();
 
-    // 그래프 그리기 (0 기준 절대값)
-    const maxScore = Math.max(...seasons.map(s=>s.total));
-
-    if(barsEl){
-      barsEl.innerHTML = seasons.map((s,i)=>{
-        const pct = Math.round((s.total / maxScore) * 90) + 5;
-        const prev = seasons[i-1];
-        const isUp = prev ? s.total >= prev.total : true;
-        const color = isUp ? "#27ae60" : "#e74c3c";
-        const scoreLabel = s.total >= 10000
-          ? (s.total/10000).toFixed(1)+"만"
-          : Number(s.total).toLocaleString();
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;" title="${s.season}: ${Number(s.total).toLocaleString()}">
-          <div style="font-size:8px;color:${color};font-weight:700;text-align:center;">${scoreLabel}</div>
-          <div style="width:80%;background:${color};border-radius:3px 3px 0 0;height:${pct}%;min-height:4px;opacity:0.85;transition:height 0.4s;"></div>
-        </div>`;
-      }).join("");
-    }
+    // 그래프 그리기 - 선그래프
+    const diffsEl = document.getElementById("advent_season_diffs");
+    setTimeout(()=>renderLineChart(diffsEl, seasons), 50);
     if(labelsEl){
       labelsEl.innerHTML = seasons.map((s,i)=>{
         const prev = seasons[i-1];
