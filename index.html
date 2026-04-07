@@ -2174,9 +2174,13 @@ body::before {
       </div>
       <div id="pveBuildArea" style="display:none;margin-bottom:14px;">
         <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px;">🛠️ 빌드</div>
-        <select id="pveBuildSelect" class="pve-sel" onchange="changePveBuild()" style="width:auto;min-width:120px;">
-          <option value="build1">빌드 1</option><option value="build2">빌드 2</option><option value="build3">빌드 3</option><option value="build4">빌드 4</option>
-        </select>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="pveBuildSelect" class="pve-sel" onchange="changePveBuild()" style="width:auto;min-width:120px;">
+            <option value="build1">빌드 1</option><option value="build2">빌드 2</option><option value="build3">빌드 3</option><option value="build4">빌드 4</option>
+          </select>
+          <button onclick="addPveBuild()" id="pveBuildAddBtn" style="display:none;padding:7px 12px;border-radius:9px;border:1px dashed var(--accent);background:rgba(255,77,46,0.08);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ 빌드 추가</button>
+          <button onclick="deletePveBuild()" id="pveBuildDelBtn" style="display:none;padding:7px 10px;border-radius:9px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.08);color:#e74c3c;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🗑️ 삭제</button>
+        </div>
       </div>
       <div id="pveDetailArea" class="pve-detail-wrap" style="display:none;">
         <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px;">📌 세부사항</div>
@@ -2210,14 +2214,9 @@ body::before {
           <div id="pveDetailAdminList" class="pve-detail-list-admin"></div>
         </div>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">🗺️ 진형</div>
-        <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
-          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('기본')" id="pftype_기본" style="font-size:11px;padding:5px 8px;">기본</button>
-          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('밸런스')" id="pftype_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
-          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('공격')" id="pftype_공격" style="font-size:11px;padding:5px 8px;">공격</button>
-          <button type="button" class="pve-tab-btn" onclick="setPveFormationType('보호')" id="pftype_보호" style="font-size:11px;padding:5px 8px;">보호</button>
-        </div>
-        <input class="form-input" id="pveFormationInput" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewPveFormation()" style="display:none;">
-        <div id="pveFormationPreview" style="margin-bottom:12px;"></div>
+        <!-- 진형 목록 -->
+        <div id="pveFormationList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px;"></div>
+        <button onclick="pveAddFormation()" style="width:100%;padding:9px;border-radius:10px;border:1px dashed var(--accent);background:rgba(255,77,46,0.06);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;">+ 진형 추가</button>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">덱 조합</div>
         <textarea class="form-textarea" id="editPveDeck" rows="3"></textarea>
         <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:4px;">스킬 순서</div>
@@ -3238,7 +3237,7 @@ function enterApp() {
   const sidebarNick=document.getElementById("sidebarNick");
   if(sidebarNick) sidebarNick.textContent=myNick;
   // 관리자 탭 표시
-  if(myRole==="관리자"||myRole==="연구원"){ showAdminNav(); buildMobileAdminMenu(); }
+  if(myRole==="관리자"||myRole==="연구원"){ showAdminNav(); buildMobileAdminMenu(); showPveBuildAdminBtns(); }
   if(localStorage.getItem("theme")==="light"){ document.body.classList.add("light-mode"); }
   updateThemeBtn();
   switchTab("home");
@@ -5251,7 +5250,7 @@ function fetchPveRealData(){
 
     document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
     const pveFormDisp = document.getElementById("pveFormationDisplay");
-    if(pveFormDisp) renderFormation(currentData?.formation||"-", pveFormDisp);
+    if(pveFormDisp) renderPveFormations(currentData, pveFormDisp);
     document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
     document.getElementById("viewPveEquip").textContent=currentData?.equip||"-";
     // 작성자 표시
@@ -5286,15 +5285,8 @@ function fillPveEditForm(buildData={}, details={}){
   document.getElementById("editPveDeck").value=deck;
   document.getElementById("editPveSkill").value=(currentData?.skill&&currentData.skill!=="-")?currentData.skill:"";
   document.getElementById("editPveEquip").value=(currentData?.equip&&currentData.equip!=="-")?currentData.equip:"";
-  const formVal = currentData?.formation||"";
-  const pveFormInput = document.getElementById("pveFormationInput");
-  if(pveFormInput) pveFormInput.value = formVal;
-  const ftype = detectFormationType(formVal);
-  ["기본","밸런스","공격","보호"].forEach(t=>{
-    const btn=document.getElementById("pftype_"+t);
-    if(btn) btn.className=t===ftype?"pve-tab-btn active":"pve-tab-btn";
-  });
-  previewPveFormation();
+  // 진형 다중 목록 렌더링
+  renderPveFormationEditor(currentData?.formations||( currentData?.formation ? [{val:currentData.formation,label:""}] : [] ));
   const sel=document.getElementById("pveBuildSelect");
   const curOpt=sel.querySelector(`option[value="${sel.value}"]`);
   const defNames={"build1":"빌드 1","build2":"빌드 2","build3":"빌드 3","build4":"빌드 4"};
@@ -5345,7 +5337,55 @@ function enablePveEdit(){
     fillPveEditForm(buildData, buildData.details||{});
   });
 }
-function cancelPveEdit(){ document.getElementById("pveViewMode").style.display="block"; document.getElementById("pveEditMode").style.display="none"; }
+function cancelPveEdit(){
+  document.getElementById("pveViewMode").style.display="block";
+  document.getElementById("pveEditMode").style.display="none";
+}
+
+function addPveBuild(){
+  if(!checkResearcher()) return;
+  const sel=document.getElementById("pveBuildSelect");
+  // 현재 빌드 키 목록
+  const existing=Array.from(sel.options).map(o=>o.value);
+  // build1~buildN 중 없는 번호 찾기
+  let n=1; while(existing.includes("build"+n)) n++;
+  const newKey="build"+n;
+  const newName="빌드 "+n;
+  const opt=document.createElement("option");
+  opt.value=newKey; opt.textContent=newName;
+  sel.appendChild(opt);
+  sel.value=newKey;
+  // Firebase에 기본 구조 생성
+  const basePath=getPveBasePath()+(pveCurrentType==="turn_build"?`/${document.getElementById("pveTurnSelect").value}`:"");
+  db.ref(`${basePath}/${newKey}`).update({buildName:newName, createdAt:Date.now()}).then(()=>{
+    toast(`✅ ${newName} 추가됨`);
+    fetchPveRealData();
+  });
+}
+
+function deletePveBuild(){
+  if(!checkResearcher()) return;
+  const sel=document.getElementById("pveBuildSelect");
+  const val=sel.value;
+  if(["build1","build2","build3","build4"].includes(val)) return toast("기본 빌드(1~4)는 삭제할 수 없어요");
+  if(!confirm(`"${sel.options[sel.selectedIndex].textContent}" 빌드를 삭제할까요?`)) return;
+  const basePath=getPveBasePath()+(pveCurrentType==="turn_build"?`/${document.getElementById("pveTurnSelect").value}`:"");
+  db.ref(`${basePath}/${val}`).remove().then(()=>{
+    sel.removeChild(sel.querySelector(`option[value="${val}"]`));
+    sel.value="build1";
+    toast("🗑️ 빌드 삭제됨");
+    fetchPveRealData();
+  });
+}
+
+// 관리자/연구원 로그인 시 빌드 추가/삭제 버튼 표시
+function showPveBuildAdminBtns(){
+  const addBtn=document.getElementById("pveBuildAddBtn");
+  const delBtn=document.getElementById("pveBuildDelBtn");
+  if(addBtn) addBtn.style.display="inline-flex";
+  if(delBtn) delBtn.style.display="inline-flex";
+}
+
 
 // ✅ 버그1 수정: 세부사항 이름 비워도 기존 이름 보존
 function savePveData(){
@@ -5363,16 +5403,15 @@ function savePveData(){
   const dataPath = savedDetail ? `${buildPath}/details/${savedDetail}` : buildPath;
 
   const doSave=(existingDetailName)=>{
-    const formationVal = document.getElementById("pveFormationInput")?.value.trim()||"";
-  const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now(), maker:myNick});
+    // 진형 목록 수집
+    const formationsData = getPveFormationsData();
+    const p1 = db.ref(buildPath).update({buildName, updatedAt:Date.now(), maker:myNick});
     let p2;
     if(savedDetail){
-      // 세부사항: set으로 덮어쓰기 (이름 보존)
       const finalName = detailNameInput || existingDetailName || "세부사항";
-      p2 = db.ref(dataPath).update({name:finalName, deck, skill, equip, formation:formationVal, updatedAt:Date.now()});
+      p2 = db.ref(dataPath).update({name:finalName, deck, skill, equip, formations:formationsData, updatedAt:Date.now()});
     } else {
-      // 기본 빌드: buildName 등 기존 필드 보존하며 update
-      p2 = db.ref(dataPath).update({deck, skill, equip, formation:formationVal, updatedAt:Date.now()});
+      p2 = db.ref(dataPath).update({deck, skill, equip, formations:formationsData, updatedAt:Date.now()});
     }
     Promise.all([p1, p2]).then(()=>{
       toast("저장됨 ✅");
@@ -5390,6 +5429,102 @@ function savePveData(){
   } else {
     doSave(detailNameInput);
   }
+}
+
+function renderPveFormations(data, container){
+  container.innerHTML="";
+  // formations 배열 우선, 없으면 구 formation 문자열 폴백
+  const list = data?.formations?.length ? data.formations : (data?.formation ? [{val:data.formation, label:""}] : []);
+  if(!list.length){ container.textContent="-"; return; }
+  list.forEach((f,i)=>{
+    const wrap=document.createElement("div");
+    wrap.style.cssText="margin-bottom:"+(i<list.length-1?"14px":"0");
+    if(f.label){ const lbl=document.createElement("div"); lbl.style.cssText="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;"; lbl.textContent=f.label; wrap.appendChild(lbl); }
+    const fDiv=document.createElement("div"); renderFormation(f.val||"-", fDiv); wrap.appendChild(fDiv);
+    container.appendChild(wrap);
+  });
+}
+
+function renderPveFormationEditor(formations=[]){
+  const list=document.getElementById("pveFormationList"); if(!list) return;
+  list.innerHTML="";
+  if(!formations.length) formations=[{val:"",label:""}];
+  formations.forEach((f,i)=>{ list.appendChild(createPveFormationItem(f,i)); });
+}
+
+function createPveFormationItem(f={}, idx){
+  const wrap=document.createElement("div");
+  wrap.style.cssText="background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border);position:relative;";
+  wrap.dataset.idx=idx;
+
+  // 라벨 입력
+  const labelInput=document.createElement("input");
+  labelInput.className="form-input"; labelInput.placeholder="라벨 (선택, 예: 1라, 2라)";
+  labelInput.value=f.label||""; labelInput.style.marginBottom="8px";
+  wrap.appendChild(labelInput);
+
+  // 진형 타입 버튼
+  const btnRow=document.createElement("div");
+  btnRow.style.cssText="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;";
+  const types=["기본","밸런스","공격","보호"];
+  let currentVal=f.val||"";
+  const curType=detectFormationType(currentVal);
+
+  const formPreview=document.createElement("div");
+  formPreview.className="pve-form-preview";
+
+  const refreshPreview=()=>{
+    const activeType=wrap.querySelector(".pve-tab-btn.active")?.dataset?.ftype||"";
+    if(!activeType){ formPreview.innerHTML=""; return; }
+    const raw=currentVal.replace(/(기본|밸런스|공격|보호)\s*/,"").trim();
+    renderFormation((activeType+" "+raw).trim(), formPreview, true, (newVal)=>{
+      currentVal=newVal;
+      wrap._formVal=newVal;
+    });
+    wrap._formVal=(activeType+" "+raw).trim();
+  };
+
+  types.forEach(t=>{
+    const btn=document.createElement("button");
+    btn.type="button"; btn.textContent=t; btn.dataset.ftype=t;
+    btn.className="pve-tab-btn"+(t===curType?" active":"");
+    btn.style.cssText="font-size:11px;padding:5px 8px;";
+    btn.onclick=()=>{
+      btnRow.querySelectorAll("[data-ftype]").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      currentVal="";
+      refreshPreview();
+    };
+    btnRow.appendChild(btn);
+  });
+  wrap.appendChild(btnRow);
+  wrap.appendChild(formPreview);
+  if(curType) refreshPreview();
+
+  // 삭제 버튼
+  const delBtn=document.createElement("button");
+  delBtn.style.cssText="position:absolute;top:8px;right:8px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;border-radius:8px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;";
+  delBtn.textContent="🗑️";
+  delBtn.onclick=()=>{ wrap.remove(); };
+  wrap.appendChild(delBtn);
+
+  return wrap;
+}
+
+function pveAddFormation(){
+  const list=document.getElementById("pveFormationList"); if(!list) return;
+  list.appendChild(createPveFormationItem({}, list.children.length));
+}
+
+function getPveFormationsData(){
+  const list=document.getElementById("pveFormationList"); if(!list) return [];
+  const result=[];
+  list.querySelectorAll("[data-idx]").forEach(wrap=>{
+    const label=wrap.querySelector("input.form-input")?.value.trim()||"";
+    const val=wrap._formVal||"";
+    if(val) result.push({label, val});
+  });
+  return result;
 }
 
 function addPveDetail(){
