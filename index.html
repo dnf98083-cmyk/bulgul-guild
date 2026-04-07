@@ -1474,12 +1474,12 @@ body::before {
   <div class="login-card">
     <label>닉네임</label>
     <div style="position:relative;">
-      <input id="nickInput" type="text" placeholder="게임 닉네임" autocomplete="off" oninput="filterLoginNick()" onkeydown="loginNickKeyDown(event)">
+      <input id="nickInput" type="text" placeholder="게임 닉네임" autocomplete="off">
       <div id="loginNickSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:4px;"></div>
     </div>
     <label>입장 코드</label>
     <input id="codeInput" type="password" placeholder="6자리 코드" autocomplete="off">
-    <button class="btn-primary" onclick="tryLogin()">입장하기 →</button>
+    <button class="btn-primary" id="loginBtn">입장하기 →</button>
   </div>
 </div>
 
@@ -2080,38 +2080,61 @@ body::before {
         <button onclick="openMyDefReportsPopup()" class="btn-icon" style="padding:13px 12px;border-radius:12px;font-size:13px;white-space:nowrap;">📨 내 제보</button>
       </div>
     </div>
-    <div id="recDefCard" class="atk-card">
+    <div id="recDefCard" class="atk-card" style="display:none;">
       <div class="atk-card-header" style="margin-bottom:12px;padding-bottom:12px;">
         <div><div class="atk-card-name" id="rdName"></div><div class="atk-card-maker" id="rdMaker"></div></div>
+      </div>
+      <!-- 케이스 탭 -->
+      <div id="rdCaseTabsWrap" style="display:none;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">📌 세부사항</div>
+        <div id="rdCaseTabs" style="display:flex;gap:7px;flex-wrap:wrap;"></div>
       </div>
       <div class="info-block"><div class="ib-label">반지 추천</div><div class="ib-value" id="rdHeroes">-</div></div>
       <div class="info-chips">
         <div class="chip"><span class="chip-label">진형</span><span class="chip-value" id="rdFormation">-</span></div>
         <div class="chip"><span class="chip-label">펫</span><span class="chip-value" id="rdPet">-</span></div>
+        <div class="chip"><span class="chip-label">속공</span><span class="chip-value" id="rdSpeed">-</span></div>
       </div>
-      <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="rdSkill">-</div></div>
-      <div class="info-block"><div class="ib-label">설명 · 팁</div><div class="ib-value" id="rdDesc">-</div></div>
+      <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="rdSkill" style="white-space:pre-wrap;">-</div></div>
+      <div class="info-block"><div class="ib-label">장비 세팅</div><div class="ib-value" id="rdEquip" style="white-space:pre-wrap;">-</div></div>
+      <div class="info-block"><div class="ib-label">조건 · 설명</div><div class="ib-value" id="rdDesc" style="white-space:pre-wrap;">-</div></div>
     </div>
     <div id="defenseAdminPanel" style="display:none; margin-top:24px; padding-top:24px; padding-bottom:80px; border-top:2px solid var(--border);">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px;">🛠️ 방어 관리자</div>
       <div class="admin-section">
         <div class="admin-section-title">📝 추천 방어팀 관리</div>
-        <input class="form-input" id="rdInputName" placeholder="팀 이름">
-        <input class="form-input" id="rdInputHeroes" placeholder="반지 추천">
-        <div>
-          <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
-            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('기본')" id="rdft_기본" style="font-size:11px;padding:5px 8px;">기본</button>
-            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('밸런스')" id="rdft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
-            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('공격')" id="rdft_공격" style="font-size:11px;padding:5px 8px;">공격</button>
-            <button type="button" class="pve-tab-btn" onclick="setRdFormationType('보호')" id="rdft_보호" style="font-size:11px;padding:5px 8px;">보호</button>
-          </div>
-          <input class="form-input" id="rdInputFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewRdFormation()" style="display:none;">
-          <div id="rdFormationPreview" style="margin-top:6px;"></div>
+        <input class="form-input" id="rdInputName" placeholder="팀 이름 (예: 란여파+이린)">
+        <input class="form-input" id="rdInputPet" placeholder="대표 펫">
+        <div class="btn-row">
+          <button class="btn-sm btn-blue" onclick="addRecDefense()">+ 팀 추가</button>
+          <button class="btn-sm btn-blue" onclick="editRecDefense()">팀 정보 수정</button>
+          <button class="btn-sm btn-red"  onclick="delRecDefense()">팀 삭제</button>
         </div>
-        <input class="form-input" id="rdInputPet" placeholder="펫">
-        <textarea class="form-textarea" id="rdInputSkill" rows="2" placeholder="스킬순서"></textarea>
-        <textarea class="form-textarea" id="rdInputDesc" rows="3" placeholder="설명"></textarea>
-        <div class="btn-row"><button class="btn-sm btn-blue" onclick="addRecDefense()">추가</button><button class="btn-sm btn-blue" onclick="editRecDefense()">수정</button><button class="btn-sm btn-red" onclick="delRecDefense()">삭제</button></div>
+        <div style="margin-top:16px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--accent);">📋 조건/케이스 관리</div>
+        <div id="rdCaseAdminList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+        <div style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;" id="rdCaseFormTitle">+ 새 케이스 추가</div>
+          <input class="form-input" id="rdCaseName"   placeholder="케이스 이름 (예: 조건1 - 전부 6초이상)">
+          <input class="form-input" id="rdCaseHeroes" placeholder="반지 추천">
+          <input class="form-input" id="rdCaseSpeed"  placeholder="속공 (예: 130~170)">
+          <div>
+            <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+              <button type="button" class="pve-tab-btn" onclick="setRdFormationType('기본')"   id="rdft_기본"   style="font-size:11px;padding:5px 8px;">기본</button>
+              <button type="button" class="pve-tab-btn" onclick="setRdFormationType('밸런스')" id="rdft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
+              <button type="button" class="pve-tab-btn" onclick="setRdFormationType('공격')"   id="rdft_공격"   style="font-size:11px;padding:5px 8px;">공격</button>
+              <button type="button" class="pve-tab-btn" onclick="setRdFormationType('보호')"   id="rdft_보호"   style="font-size:11px;padding:5px 8px;">보호</button>
+            </div>
+            <input class="form-input" id="rdInputFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewRdFormation()" style="display:none;">
+            <div id="rdFormationPreview" style="margin-top:6px;"></div>
+          </div>
+          <textarea class="form-textarea" id="rdCaseSkill" rows="3" placeholder="스킬순서&#10;예) 1. 여포1 파이2 여포2"></textarea>
+          <textarea class="form-textarea" id="rdCaseEquip" rows="2" placeholder="장비 세팅 (예: 전부 추적자 or 암살자 내실세팅)"></textarea>
+          <textarea class="form-textarea" id="rdCaseDesc"  rows="3" placeholder="조건/설명/팁"></textarea>
+          <div class="btn-row">
+            <button class="btn-sm btn-blue" onclick="rdSaveCase()">💾 케이스 저장</button>
+            <button class="btn-sm btn-gray" onclick="rdClearCaseForm()">초기화</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -3048,10 +3071,59 @@ body::before {
 </div>
 
 <script>
+// ══ 로그인 함수 최상단 ══
+let loginNickList = [];
+let loginSuggestIdx = -1;
+
+function tryLogin(){
+  const nick = document.getElementById("nickInput")?.value.trim();
+  const key  = document.getElementById("codeInput")?.value.trim();
+  if(!nick||!key){ toast("닉네임과 코드를 입력해주세요"); return; }
+  checkLogin(nick, key, false);
+}
+function filterLoginNick(){
+  const input=document.getElementById("nickInput"), suggest=document.getElementById("loginNickSuggest");
+  if(!input||!suggest) return;
+  const val=input.value.trim().toLowerCase(); loginSuggestIdx=-1;
+  if(!val){ suggest.style.display="none"; return; }
+  const matches=loginNickList.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){ suggest.style.display="none"; return; }
+  suggest.innerHTML=matches.map((nick,i)=>`<div class="login-suggest-item" id="lsi_${i}" onmousedown="selectLoginNick('${nick}')" onmouseover="loginSuggestIdx=${i};highlightLoginSuggest()" style="padding:11px 16px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">${nick}</div>`).join("");
+  suggest.style.display="block";
+}
+function selectLoginNick(nick){
+  document.getElementById("nickInput").value=nick;
+  const s=document.getElementById("loginNickSuggest"); if(s) s.style.display="none";
+  document.getElementById("codeInput")?.focus();
+}
+function highlightLoginSuggest(){
+  document.querySelectorAll(".login-suggest-item").forEach((el,i)=>{ el.style.background=i===loginSuggestIdx?"rgba(255,85,51,0.12)":""; });
+}
+function loginNickKeyDown(e){
+  const suggest=document.getElementById("loginNickSuggest");
+  const items=suggest?.querySelectorAll(".login-suggest-item");
+  if(items?.length&&suggest.style.display!=="none"){
+    if(e.key==="ArrowDown"){e.preventDefault();loginSuggestIdx=Math.min(loginSuggestIdx+1,items.length-1);highlightLoginSuggest();return;}
+    if(e.key==="ArrowUp"){e.preventDefault();loginSuggestIdx=Math.max(loginSuggestIdx-1,0);highlightLoginSuggest();return;}
+    if(e.key==="Enter"&&loginSuggestIdx>=0){e.preventDefault();selectLoginNick(items[loginSuggestIdx].textContent.trim());return;}
+    if(e.key==="Escape"){suggest.style.display="none";return;}
+  }
+  if(e.key==="Enter") tryLogin();
+}
+function preloadNickList(){
+  db.ref("allowedUsers").once("value").then(snap=>{ if(snap.exists()) loginNickList=Object.keys(snap.val()); });
+}
+window.addEventListener("DOMContentLoaded",()=>{
+  const ni=document.getElementById("nickInput");
+  if(ni){ ni.addEventListener("input",filterLoginNick); ni.addEventListener("keydown",loginNickKeyDown); }
+  const lb=document.getElementById("loginBtn"); if(lb) lb.addEventListener("click",tryLogin);
+  const ci=document.getElementById("codeInput"); if(ci) ci.addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
+  document.addEventListener("click",e=>{ const s=document.getElementById("loginNickSuggest"); if(s&&!s.contains(e.target)&&e.target.id!=="nickInput") s.style.display="none"; });
+  setTimeout(()=>{ if(typeof db!=="undefined") preloadNickList(); },1000);
+});
 // ══ Firebase ══
 const firebaseConfig = {
   apiKey: "AIzaSyApb6tEmdyHrLDEF36CLGhfJhJcJti3llM",
-  authDomain: "bulgul-guild.firebaseapp.com",
   databaseURL: "https://bulgul-guild-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "bulgul-guild",
   storageBucket: "bulgul-guild.firebasestorage.app",
@@ -3079,8 +3151,6 @@ window.onload = () => {
   if(nick&&key){
     checkLogin(nick,key,true);
   }
-  document.getElementById("codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
-  document.getElementById("nickInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
 };
 
 function isPC() { return window.innerWidth >= 900; }
@@ -3091,11 +3161,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
 });
 
 // ══ 로그인 ══
-function tryLogin() {
-  const nick=document.getElementById("nickInput").value.trim(), key=document.getElementById("codeInput").value.trim();
-  if(!nick||!key) return toast("닉네임과 코드를 입력해주세요");
-  checkLogin(nick,key,false);
-}
 function checkLogin(nick,key,isAuto) {
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
@@ -4900,7 +4965,10 @@ function toggleDefenseAdmin() {
 }
 
 // ══ 방어 ══
-function loadRecDefenseList() {
+let rdCurrentCaseKey = null;
+let rdCurrentCaseData = {};
+
+function loadRecDefenseList(){
   showLoader();
   db.ref("recommendedDefenses").on("value",snap=>{
     hideLoader();
@@ -4908,16 +4976,125 @@ function loadRecDefenseList() {
     document.getElementById("recDefCard").style.display="none";
     const data=snap.val();
     if(!data){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">추천 방어팀 없음</div>'; return; }
-    Object.entries(data).forEach(([key,val])=>{ const div=document.createElement("div"); div.className="def-btn"; div.textContent=val.name; div.onclick=()=>{ document.querySelectorAll(".def-btn").forEach(x=>x.classList.remove("active")); div.classList.add("active"); showRecDefDetail(key,val); }; list.appendChild(div); });
+    Object.entries(data).forEach(([key,val])=>{
+      const div=document.createElement("div"); div.className="def-btn"; div.textContent=val.name;
+      div.onclick=()=>{ document.querySelectorAll(".def-btn").forEach(x=>x.classList.remove("active")); div.classList.add("active"); showRecDefDetail(key,val); };
+      list.appendChild(div);
+    });
   });
 }
-function showRecDefDetail(key,val){ currentRecDef=key; document.getElementById("recDefCard").style.display="block"; document.getElementById("rdName").textContent=val.name; document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:""; document.getElementById("rdHeroes").textContent=val.heroes||"-"; renderFormation(val.formation||"-", document.getElementById("rdFormation")); document.getElementById("rdPet").textContent=val.pet||"-"; document.getElementById("rdSkill").textContent=val.skill||"-"; document.getElementById("rdDesc").textContent=val.desc||"-"; document.getElementById("rdInputName").value=val.name; document.getElementById("rdInputHeroes").value=val.heroes||""; document.getElementById("rdInputFormation").value=val.formation||"";
-  const rdft=detectFormationType(val.formation||"");
-  if(rdft) setRdFormationType(rdft,false);
-  previewRdFormation(); document.getElementById("rdInputPet").value=val.pet||""; document.getElementById("rdInputSkill").value=val.skill||""; document.getElementById("rdInputDesc").value=val.desc||""; document.getElementById("recDefCard").scrollIntoView({behavior:"smooth",block:"nearest"}); }
-function addRecDefense(){ if(checkResearcher()){ db.ref("recommendedDefenses").push({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value,maker:"관리자"}); toast("추가됨"); } }
-function editRecDefense(){ if(!checkResearcher()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value,heroes:document.getElementById("rdInputHeroes").value,formation:document.getElementById("rdInputFormation").value,pet:document.getElementById("rdInputPet").value,skill:document.getElementById("rdInputSkill").value,desc:document.getElementById("rdInputDesc").value}); toast("수정됨"); }
-function delRecDefense(){ if(checkResearcher()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); } }
+
+function showRecDefDetail(key,val){
+  currentRecDef=key; rdCurrentCaseData=val.cases||{};
+  document.getElementById("recDefCard").style.display="block";
+  document.getElementById("rdName").textContent=val.name;
+  document.getElementById("rdMaker").textContent=val.maker?`By. ${val.maker}`:"";
+  renderRdCaseTabs(val.cases||{},val);
+  document.getElementById("rdInputName").value=val.name;
+  document.getElementById("rdInputPet").value=val.pet||"";
+  renderRdAdminCaseList(key,val.cases||{});
+  document.getElementById("recDefCard").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function renderRdCaseTabs(cases,val){
+  const tabsEl=document.getElementById("rdCaseTabs"); if(!tabsEl) return;
+  const tabsWrap=document.getElementById("rdCaseTabsWrap");
+  const entries=Object.entries(cases||{});
+  if(!entries.length){
+    if(tabsWrap) tabsWrap.style.display="none";
+    document.getElementById("rdHeroes").textContent=val.heroes||"-";
+    renderFormation(val.formation||"-",document.getElementById("rdFormation"));
+    document.getElementById("rdPet").textContent=val.pet||"-";
+    document.getElementById("rdSpeed").textContent="-";
+    document.getElementById("rdSkill").textContent=val.skill||"-";
+    document.getElementById("rdEquip").textContent="-";
+    document.getElementById("rdDesc").textContent=val.desc||"-";
+    return;
+  }
+  if(tabsWrap) tabsWrap.style.display="block";
+  tabsEl.innerHTML=entries.map(([ck,cv],i)=>
+    `<button onclick="showRdCase('${ck}')" id="rdCaseTab_${ck}" class="pve-detail-chip${i===0?" active":""}">${cv.name||"케이스"+(i+1)}</button>`
+  ).join("");
+  showRdCase(entries[0][0]);
+}
+
+function showRdCase(caseKey){
+  const c=(rdCurrentCaseData||{})[caseKey]; if(!c) return;
+  document.querySelectorAll("[id^='rdCaseTab_']").forEach(b=>b.classList.remove("active"));
+  const tab=document.getElementById("rdCaseTab_"+caseKey); if(tab) tab.classList.add("active");
+  document.getElementById("rdHeroes").textContent=c.heroes||"-";
+  renderFormation(c.formation||"-",document.getElementById("rdFormation"));
+  document.getElementById("rdPet").textContent=c.pet||"-";
+  document.getElementById("rdSpeed").textContent=c.speed||"-";
+  document.getElementById("rdSkill").textContent=c.skill||"-";
+  document.getElementById("rdEquip").textContent=c.equip||"-";
+  document.getElementById("rdDesc").textContent=c.desc||"-";
+}
+
+function renderRdAdminCaseList(teamKey,cases){
+  const el=document.getElementById("rdCaseAdminList"); if(!el) return;
+  const entries=Object.entries(cases||{});
+  if(!entries.length){ el.innerHTML='<div style="font-size:11px;color:var(--text3);">케이스 없음 — 아래에서 추가하세요</div>'; return; }
+  el.innerHTML=entries.map(([ck,cv],i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:8px 12px;border:1px solid var(--border);">
+      <span style="flex:1;font-size:12px;font-weight:700;color:var(--text);">${cv.name||"케이스"+(i+1)}</span>
+      <button onclick="rdEditCase('${ck}')" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-family:inherit;">✏️</button>
+      <button onclick="rdDeleteCase('${teamKey}','${ck}')" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.08);color:#e74c3c;cursor:pointer;font-family:inherit;">🗑️</button>
+    </div>`).join("");
+}
+
+function rdEditCase(caseKey){
+  const c=(rdCurrentCaseData||{})[caseKey]; if(!c) return;
+  rdCurrentCaseKey=caseKey;
+  document.getElementById("rdCaseFormTitle").textContent="✏️ 케이스 수정: "+(c.name||"");
+  document.getElementById("rdCaseName").value=c.name||"";
+  document.getElementById("rdCaseHeroes").value=c.heroes||"";
+  document.getElementById("rdCaseSpeed").value=c.speed||"";
+  document.getElementById("rdInputFormation").value=c.formation||"";
+  const ftype=detectFormationType(c.formation||""); if(ftype) setRdFormationType(ftype,false); previewRdFormation();
+  document.getElementById("rdCaseSkill").value=c.skill||"";
+  document.getElementById("rdCaseEquip").value=c.equip||"";
+  document.getElementById("rdCaseDesc").value=c.desc||"";
+}
+
+function rdDeleteCase(teamKey,caseKey){
+  if(!confirm("이 케이스를 삭제할까요?")) return;
+  db.ref(`recommendedDefenses/${teamKey}/cases/${caseKey}`).remove().then(()=>{
+    toast("케이스 삭제됨"); delete rdCurrentCaseData[caseKey];
+    renderRdAdminCaseList(teamKey,rdCurrentCaseData); renderRdCaseTabs(rdCurrentCaseData,{});
+  });
+}
+
+function rdSaveCase(){
+  if(!checkResearcher()||!currentRecDef) return toast("팀을 먼저 선택하세요");
+  const name=document.getElementById("rdCaseName").value.trim();
+  if(!name) return toast("케이스 이름을 입력하세요");
+  const caseData={name,heroes:document.getElementById("rdCaseHeroes").value.trim(),speed:document.getElementById("rdCaseSpeed").value.trim(),formation:document.getElementById("rdInputFormation").value.trim(),skill:document.getElementById("rdCaseSkill").value.trim(),equip:document.getElementById("rdCaseEquip").value.trim(),desc:document.getElementById("rdCaseDesc").value.trim()};
+  const path=`recommendedDefenses/${currentRecDef}/cases`;
+  if(rdCurrentCaseKey){
+    db.ref(`${path}/${rdCurrentCaseKey}`).update(caseData).then(()=>{ toast("✅ 케이스 수정됨"); rdCurrentCaseData[rdCurrentCaseKey]={...rdCurrentCaseData[rdCurrentCaseKey],...caseData}; renderRdAdminCaseList(currentRecDef,rdCurrentCaseData); renderRdCaseTabs(rdCurrentCaseData,{}); rdClearCaseForm(); });
+  } else {
+    db.ref(path).push(caseData).then(snap=>{ toast("✅ 케이스 추가됨"); rdCurrentCaseData[snap.key]=caseData; renderRdAdminCaseList(currentRecDef,rdCurrentCaseData); renderRdCaseTabs(rdCurrentCaseData,{}); rdClearCaseForm(); });
+  }
+}
+
+function rdClearCaseForm(){
+  rdCurrentCaseKey=null;
+  document.getElementById("rdCaseFormTitle").textContent="+ 새 케이스 추가";
+  ["rdCaseName","rdCaseHeroes","rdCaseSpeed","rdInputFormation","rdCaseSkill","rdCaseEquip","rdCaseDesc"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  const prev=document.getElementById("rdFormationPreview"); if(prev) prev.innerHTML="";
+  ["기본","밸런스","공격","보호"].forEach(t=>{ const btn=document.getElementById("rdft_"+t); if(btn) btn.className="pve-tab-btn"; });
+}
+
+function addRecDefense(){
+  if(!checkResearcher()) return;
+  const name=document.getElementById("rdInputName").value.trim();
+  if(!name) return toast("팀 이름을 입력하세요");
+  db.ref("recommendedDefenses").push({name,pet:document.getElementById("rdInputPet").value.trim(),maker:myNick,cases:{}})
+    .then(snap=>{ toast("✅ 팀 추가됨! 이제 케이스를 추가하세요"); currentRecDef=snap.key; rdCurrentCaseData={}; renderRdAdminCaseList(snap.key,{}); });
+}
+function editRecDefense(){ if(!checkResearcher()||!currentRecDef) return; db.ref(`recommendedDefenses/${currentRecDef}`).update({name:document.getElementById("rdInputName").value.trim(),pet:document.getElementById("rdInputPet").value.trim()}); toast("팀 정보 수정됨"); }
+function delRecDefense(){ if(checkResearcher()&&currentRecDef&&confirm("삭제?")){ db.ref(`recommendedDefenses/${currentRecDef}`).remove(); toast("삭제됨"); currentRecDef=null; document.getElementById("recDefCard").style.display="none"; } }
 
 // ══ PVE ══
 const PVE_DATA_KEYS={
@@ -6468,82 +6645,6 @@ function toggleRankDetail(nick, logs, w, l){
   }
 }
 
-
-// ══ 로그인 닉네임 자동완성 ══
-let loginNickList = [];
-let loginSuggestIdx = -1;
-
-// 앱 시작 시 닉네임 목록 미리 로드
-function preloadNickList(){
-  db.ref("allowedUsers").once("value").then(snap=>{
-    const data = snap.val()||{};
-    loginNickList = Object.keys(data);
-  });
-}
-
-function filterLoginNick(){
-  const input = document.getElementById("nickInput");
-  const suggest = document.getElementById("loginNickSuggest");
-  const val = input.value.trim().toLowerCase();
-  loginSuggestIdx = -1;
-
-  if(!val){ suggest.style.display="none"; return; }
-
-  const matches = loginNickList.filter(n => n.toLowerCase().includes(val));
-  if(!matches.length){ suggest.style.display="none"; return; }
-
-  suggest.innerHTML = matches.map((nick, i) => `
-    <div class="login-suggest-item" id="lsi_${i}"
-      onmousedown="selectLoginNick('${nick}')"
-      onmouseover="loginSuggestIdx=${i};highlightLoginSuggest()"
-      style="padding:11px 16px;cursor:pointer;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">
-      ${nick}
-    </div>`).join("");
-  suggest.style.display = "block";
-}
-
-function selectLoginNick(nick){
-  document.getElementById("nickInput").value = nick;
-  document.getElementById("loginNickSuggest").style.display = "none";
-  // 코드 입력칸으로 포커스 이동
-  document.getElementById("codeInput").focus();
-}
-
-function highlightLoginSuggest(){
-  document.querySelectorAll(".login-suggest-item").forEach((el, i) => {
-    el.style.background = i === loginSuggestIdx ? "rgba(255,85,51,0.12)" : "";
-  });
-}
-
-function loginNickKeyDown(e){
-  const suggest = document.getElementById("loginNickSuggest");
-  const items = suggest.querySelectorAll(".login-suggest-item");
-  if(!items.length || suggest.style.display==="none") return;
-
-  if(e.key==="ArrowDown"){
-    e.preventDefault();
-    loginSuggestIdx = Math.min(loginSuggestIdx+1, items.length-1);
-    highlightLoginSuggest();
-  } else if(e.key==="ArrowUp"){
-    e.preventDefault();
-    loginSuggestIdx = Math.max(loginSuggestIdx-1, 0);
-    highlightLoginSuggest();
-  } else if(e.key==="Enter" && loginSuggestIdx >= 0){
-    e.preventDefault();
-    const nick = items[loginSuggestIdx].textContent.trim();
-    selectLoginNick(nick);
-  } else if(e.key==="Escape"){
-    suggest.style.display="none";
-  }
-}
-
-// 외부 클릭 시 드롭다운 닫기
-document.addEventListener("click", e=>{
-  const suggest = document.getElementById("loginNickSuggest");
-  if(suggest && !suggest.contains(e.target) && e.target.id !== "nickInput"){
-    suggest.style.display = "none";
-  }
-});
 
 
 // ══ 점수 입력 닉네임 자동완성 ══
