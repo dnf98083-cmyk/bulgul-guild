@@ -2231,6 +2231,19 @@ body::before {
           <button onclick="cancelPveEdit()" class="btn-sm btn-gray" style="flex:1;padding:12px;">취소</button>
         </div>
       </div>
+
+      <!-- 공성전 점수 등록 섹션 -->
+      <div id="siegeScoreSection" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="font-size:13px;font-weight:900;color:var(--accent);margin-bottom:10px;">🏆 내 점수 등록</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">이번 주 공성전 고점 점수를 등록해요. 랭킹에 자동 반영돼요.</div>
+        <div id="myCurrentSiegeScore" style="display:none;background:rgba(255,85,51,0.08);border:1px solid rgba(255,85,51,0.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;">
+          <span style="color:var(--text3);">현재 등록 점수: </span><span id="myCurrentSiegeScoreVal" style="color:var(--accent);font-weight:900;"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" type="number" id="pveSiegeScoreInput" placeholder="점수 입력 (쉼표 없이)" style="margin:0;flex:1;">
+          <button class="btn-sm btn-blue" onclick="submitMySiegeScore()">등록</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5238,7 +5251,28 @@ function renderPveSubList(subCat, parentName){
     list.appendChild(div);
   });
 }
-function loadPveData(cat,id,title,type){ pveCurrentId=id; pveCurrentType=type; pveCurrentDetail=""; document.getElementById("pveDetailCard").style.display="block"; document.getElementById("pveCardTitle").textContent=title; document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none"; document.getElementById("pveBuildArea").style.display="block"; if(type==="turn_build") document.getElementById("pveTurnSelect").value="8"; document.getElementById("pveBuildSelect").value="build1"; fetchPveRealData(); }
+function loadPveData(cat,id,title,type){
+  pveCurrentId=id; pveCurrentType=type; pveCurrentDetail="";
+  document.getElementById("pveDetailCard").style.display="block";
+  document.getElementById("pveCardTitle").textContent=title;
+  document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none";
+  document.getElementById("pveBuildArea").style.display="block";
+  if(type==="turn_build") document.getElementById("pveTurnSelect").value="8";
+  document.getElementById("pveBuildSelect").value="build1";
+  fetchPveRealData();
+  // 공성전이면 점수 등록 섹션 표시
+  const scoreSection = document.getElementById("siegeScoreSection");
+  if(cat==="siege" && scoreSection){
+    scoreSection.style.display="block";
+    // 요일 id → 한글 매핑
+    const dayMap={mon:"월",tue:"화",wed:"수",thu:"목",fri:"금",sat:"토",sun:"일"};
+    window._pveSiegeDayKey = dayMap[id]||id;
+    document.getElementById("pveSiegeScoreInput").value="";
+    loadMyCurrentSiegeScore();
+  } else if(scoreSection){
+    scoreSection.style.display="none";
+  }
+}
 function changePveTurn(){ pveCurrentDetail=""; fetchPveRealData(); }
 function changePveBuild(){ pveCurrentDetail=""; fetchPveRealData(); }
 // 경로 헬퍼
@@ -7367,6 +7401,49 @@ function applyAdventAiResult(){ applyAiResult("advent"); }
 
 
 // ══ 공성전 주차 이동 (이번주 → 저번주) ══
+// 내 현재 점수 조회
+async function loadMyCurrentSiegeScore(){
+  const day = window._pveSiegeDayKey;
+  if(!day||!myNick) return;
+  const snap = await db.ref(`pveScores/siege/${day}/this`).orderByChild("nick").equalTo(myNick).once("value");
+  const el = document.getElementById("myCurrentSiegeScore");
+  const valEl = document.getElementById("myCurrentSiegeScoreVal");
+  if(!el||!valEl) return;
+  if(snap.exists()){
+    const scores = Object.values(snap.val()).map(v=>v.score);
+    const best = Math.max(...scores);
+    valEl.textContent = Number(best).toLocaleString();
+    el.style.display="block";
+    window._myCurrentSiegeKey = Object.keys(snap.val())[0];
+  } else {
+    el.style.display="none";
+    window._myCurrentSiegeKey = null;
+  }
+}
+
+// 본인 점수 등록
+async function submitMySiegeScore(){
+  if(!myNick){ toast("로그인이 필요해요"); return; }
+  const day = window._pveSiegeDayKey;
+  if(!day){ toast("요일을 먼저 선택하세요"); return; }
+  const input = document.getElementById("pveSiegeScoreInput");
+  const score = parseInt(input.value);
+  if(!score||score<=0){ toast("점수를 올바르게 입력해주세요"); return; }
+  const date = new Date().toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"});
+
+  // 기존 점수 있으면 더 높을 때만 업데이트
+  const snap = await db.ref(`pveScores/siege/${day}/this`).orderByChild("nick").equalTo(myNick).once("value");
+  if(snap.exists()){
+    const existing = Object.entries(snap.val());
+    // 기존 항목 모두 삭제 후 새 점수 등록
+    for(const [k] of existing) await db.ref(`pveScores/siege/${day}/this/${k}`).remove();
+  }
+  await db.ref(`pveScores/siege/${day}/this`).push({nick:myNick, score, date, createdAt:Date.now()});
+  toast(`✅ ${Number(score).toLocaleString()} 점 등록 완료!`);
+  input.value="";
+  loadMyCurrentSiegeScore();
+}
+
 async function moveSiegeWeek(){
   if(!checkAdmin()) return;
   const daySelect = document.getElementById("siegeMoveDay").value;
@@ -7381,11 +7458,16 @@ async function moveSiegeWeek(){
   for(const day of days){
     const thisSnap = await db.ref(`pveScores/siege/${day}/this`).once("value");
     const thisData = thisSnap.val();
+    const lastSnap = await db.ref(`pveScores/siege/${day}/last`).once("value");
+    const lastData = lastSnap.val();
 
-    // 저번주 기존 데이터 삭제 후 이번주 데이터로 덮어쓰기
+    // 이번주 데이터를 저번주로 이동
     await db.ref(`pveScores/siege/${day}/last`).remove();
     if(thisData){
       await db.ref(`pveScores/siege/${day}/last`).set(thisData);
+    } else if(lastData){
+      // 이번주 점수 없으면 저번주 데이터 그대로 유지
+      await db.ref(`pveScores/siege/${day}/last`).set(lastData);
     }
     // 이번주 초기화
     await db.ref(`pveScores/siege/${day}/this`).remove();
