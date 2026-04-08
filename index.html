@@ -7941,7 +7941,9 @@ function twRenderTeamCards(tier, data){
         twEditTierIdx={tierId, teamIdx};
         twTeamChars=[...(d.chars||["","","","",""])];
         while(twTeamChars.length<5) twTeamChars.push("");
-        twTeamStats=(d.stats||[]).map(s=>s||{});
+        const rawStats=d.stats||[];
+        const statsArr=Array.isArray(rawStats)?rawStats:Object.values(rawStats);
+        twTeamStats=statsArr.map(s=>s||{});
         while(twTeamStats.length<5) twTeamStats.push({});
         twTeamPet=d.pet||"";
         window._cardStatSaveHook={tierId, teamIdx};
