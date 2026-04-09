@@ -1964,8 +1964,14 @@ body::before {
         <div id="atkSuggestBtn" style="display:none;"></div>
 
         <!-- 오늘의 추천덱 섹션 -->
-        <div id="todayDeckSection" style="display:none;margin-bottom:16px;background:rgba(255,85,51,0.04);border:1px solid rgba(255,85,51,0.15);border-radius:14px;padding:14px 14px 10px;">
-          <div style="font-size:13px;font-weight:900;color:var(--accent);margin-bottom:10px;">🎯 오늘의 추천덱</div>
+        <div id="todayDeckSection" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,rgba(255,85,51,0.12),rgba(255,60,30,0.06));border:2px solid rgba(255,85,51,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 4px 20px rgba(255,85,51,0.15);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-size:18px;">🎯</span>
+            <div>
+              <div style="font-size:14px;font-weight:900;color:var(--accent);letter-spacing:-0.3px;">오늘의 추천덱</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px;">탭하면 해당 공략으로 이동해요</div>
+            </div>
+          </div>
           <div id="todayDeckInlineList" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
 
@@ -9361,14 +9367,15 @@ function renderTodayDeckInline(){
     const w = defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.win||0;
     const l = defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.lose||0;
     const wr = (w+l)>0 ? Math.round(w/(w+l)*100) : null;
-    const wrBadge = wr!==null ? `<span style="font-size:10px;background:rgba(255,85,51,0.15);color:var(--accent);padding:2px 6px;border-radius:20px;font-weight:700;">${wr}%</span>` : "";
-    return `<div onclick="goToTodayDeck('${v.defKey}','${v.atkKey}')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-        <div style="font-size:13px;font-weight:900;color:var(--text);">${v.atkName||""}</div>
+    const wrBadge = wr!==null ? `<span style="font-size:11px;background:rgba(255,85,51,0.2);color:var(--accent);padding:3px 8px;border-radius:20px;font-weight:900;">${wr}% · ${w}승${l}패</span>` : "";
+    return `<div onclick="goToTodayDeck('${v.defKey}','${v.atkKey}')" style="background:var(--surface);border:1px solid rgba(255,85,51,0.25);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.15s;active:scale(0.98);" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(255,85,51,0.06)'" onmouseout="this.style.borderColor='rgba(255,85,51,0.25)';this.style.background='var(--surface)'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:14px;font-weight:900;color:var(--text);">⚔️ ${v.atkName||""}</div>
         ${wrBadge}
       </div>
-      <div style="font-size:11px;color:var(--text3);">vs ${v.defName||""}</div>
-      ${v.memo ? `<div style="font-size:11px;color:var(--text2);margin-top:5px;padding:4px 8px;background:rgba(255,85,51,0.07);border-radius:6px;">💬 ${v.memo}</div>` : ""}
+      <div style="font-size:11px;color:var(--text3);">🛡️ vs ${v.defName||""}</div>
+      ${v.memo ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;padding:5px 9px;background:rgba(255,85,51,0.08);border-radius:7px;border-left:2px solid var(--accent);">💬 ${v.memo}</div>` : ""}
+      <div style="font-size:10px;color:var(--accent);margin-top:5px;font-weight:700;">공략 보기 →</div>
     </div>`;
   }).join("");
 }
