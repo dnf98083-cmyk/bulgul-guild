@@ -1921,11 +1921,6 @@ body::before {
     <div class="page-header">
       <div class="page-title">⚔️ 길드전</div>
       <div style="display:flex;gap:8px;">
-        <button class="btn-icon" onclick="openDirectLogModal()" style="padding:5px 10px;font-size:10px;line-height:1.3;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px;">
-          <span>✏️ 직접기록</span>
-          <span style="font-size:9px;color:var(--text3);font-weight:500;">(없는팀기록)</span>
-        </button>
-
         <button class="btn-icon" onclick="showPageGuide('attack')" style="padding:7px 10px;">❓</button>
         <button class="btn-icon" id="atkAdminBtn" onclick="toggleAttackAdmin()">관리자</button>
       </div>
@@ -4992,15 +4987,143 @@ function submitDirectLog(){
   }).catch(()=>toast("기록 실패"));
 }
 
-function writeLog(res) {
+function checkNoTeamDefExists(){
+  const defName = document.getElementById("noTeamDefInput").value.trim();
+  const msg = document.getElementById("noTeamDefExistsMsg");
+  if(!msg) return;
+  const exists = Object.values(defenseDataCache||{}).some(v=>(v.name||"").trim()===defName);
+  msg.style.display = (defName && exists) ? "block" : "none";
+}
+
+function noTeamReport(){
+  const defName = document.getElementById("noTeamDefInput").value.trim();
+  const atkName = document.getElementById("noTeamAtkInput")?.value.trim()||"";
+  if(!defName){ toast("상대 방어팀 이름을 입력하세요"); return; }
+  const exists = Object.values(defenseDataCache||{}).some(v=>(v.name||"").trim()===defName);
+  if(exists){ toast("이미 공략에 있는 방어팀이에요!"); return; }
+  // 방어팀+공격덱 제보 - 공격덱 공략 모달 열기
+  window._noTeamReportDef = defName;
+  document.getElementById("noTeamLogOverlay").style.display="none";
+  // 공격덱 제보 모달 오픈 (방어팀명 표시)
+  document.getElementById("modalOverlay").classList.add("open");
+  const body = document.getElementById("modalBody");
+  document.getElementById("modalTitle").textContent="⚔️ 공격덱 제보";
+  document.getElementById("modalPasteRow").style.display="block";
+  body.innerHTML=`
+<div style="background:rgba(255,85,51,0.08);border:1px solid rgba(255,85,51,0.2);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;">
+  🛡️ 방어팀: <b style="color:var(--accent);">${defName}</b>
+</div>
+<input class="form-input" id="mName" placeholder="공격팀 이름 (필수)" value="${atkName}">
+<select class="form-select" id="mType"><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select>
+<input class="form-input" id="mRing" placeholder="반지">
+<input class="form-input" id="mPet" placeholder="펫">
+<div>
+  <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('기본')" id="mftype_기본" style="font-size:11px;padding:5px 10px;">기본</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('밸런스')" id="mftype_밸런스" style="font-size:11px;padding:5px 10px;">밸런스</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('공격')" id="mftype_공격" style="font-size:11px;padding:5px 10px;">공격</button>
+    <button type="button" class="pve-tab-btn" onclick="setModalFormationType('보호')" id="mftype_보호" style="font-size:11px;padding:5px 10px;">보호</button>
+  </div>
+  <input class="form-input" id="mFormation" placeholder="캐릭터 이름 (예: 브브 여포 풍연)" oninput="previewModalFormation()" style="display:none;">
+  <div id="mFormationPreview" style="margin-top:6px;"></div>
+</div>
+<textarea class="form-textarea" id="mArmor" rows="2" placeholder="장비/특이사항"></textarea>
+<textarea class="form-textarea" id="mSkill" rows="2" placeholder="스킬순서"></textarea>
+<input type="hidden" id="mResult" value="${window._noTeamPendingResult||''}">`;
+  document.getElementById("modalSubmitBtn").onclick = submitNoTeamAttackSug;
+}
+
+function submitNoTeamAttackSug(){
+  const name = document.getElementById("mName").value.trim();
+  if(!name) return toast("공격팀 이름을 입력하세요");
+  const result = document.getElementById("mResult").value;
+  if(!result) return toast("승리 또는 패배를 선택해주세요!");
+  const defName = window._noTeamReportDef||"";
+  // suggestions/defense_team에 방어팀+공격덱 공략 같이 저장
+  db.ref("suggestions/defense_team").push({
+    name: defName,
+    suggester: myNick,
+    hasAttack: true,
+    attackData: {
+      name, type: document.getElementById("mType").value,
+      ring: document.getElementById("mRing").value,
+      pet: document.getElementById("mPet").value,
+      formation: document.getElementById("mFormation").value,
+      armor: document.getElementById("mArmor").value,
+      skill: document.getElementById("mSkill").value,
+      result, maker: myNick
+    },
+    timestamp: Date.now()
+  });
+  toast("📨 제보 완료! 관리자 승인 후 추가돼요");
+  window._noTeamReportDef = null;
+  closeModal();
+}
+
+function confirmNoTeamLog(res){
+  const defName = document.getElementById("noTeamDefInput").value.trim();
+  const atkName = document.getElementById("noTeamAtkInput")?.value.trim()||"";
+  if(!defName){ toast("상대 방어팀 이름을 입력하세요"); return; }
+  const result = res || window._noTeamPendingResult;
+  if(!result) return;
+  if(result==="win"){
+    const w=+document.getElementById("cardWin").textContent;
+    db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:w+1});
+    toast("🏆 승리!");
+  } else {
+    const l=+document.getElementById("cardLose").textContent;
+    db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1});
+    toast("💀 패배");
+  }
+  const cardAtkName = document.getElementById("cardName")?.textContent||"";
+  const finalAtkName = atkName || cardAtkName;
+  db.ref("logs").push({
+    nick:myNick, result, defense:currentDefense, attack:currentAttack,
+    attackName:finalAtkName, defenseName:defName,
+    attackType:"없는팀", date:new Date().toISOString().slice(0,10), time:Date.now(), direct:true
+  });
+  document.getElementById("noTeamLogOverlay").style.display="none";
+  window._noTeamPendingResult=null;
+}
+
+
+function writeLog(res){
   if(!currentDefense||!currentAttack) return;
   db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).get().then(snap=>{
     const atk=snap.val();
     db.ref("logs").push({nick:myNick,result:res,defense:currentDefense,attack:currentAttack,attackName:atk.name,attackType:atk.type,date:new Date().toISOString().slice(0,10),time:Date.now()});
   });
 }
-function addWin() { if(!confirm("승리를 기록할까요?")) return; const w=+document.getElementById("cardWin").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:w+1}); writeLog("win"); toast("🏆 승리!"); }
-function addLose() { if(!confirm("패배를 기록할까요?")) return; const l=+document.getElementById("cardLose").textContent; db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1}); writeLog("lose"); toast("💀 패배"); }
+function addWin() {
+  if(defenseDataCache[currentDefense]?.name==="없는팀"){
+    window._noTeamPendingResult="win";
+    document.getElementById("noTeamDefInput").value="";
+    document.getElementById("noTeamAtkInput").value="";
+    document.getElementById("noTeamLogOverlay").style.display="flex";
+    const badge=document.getElementById("noTeamResultBadge");
+    if(badge){ badge.textContent="🏆 승리로 기록"; badge.style.background="rgba(39,174,96,0.15)"; badge.style.color="#27ae60"; }
+    return;
+  }
+  if(!confirm("승리를 기록할까요?")) return;
+  const w=+document.getElementById("cardWin").textContent;
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:w+1});
+  writeLog("win"); toast("🏆 승리!");
+}
+function addLose() {
+  if(defenseDataCache[currentDefense]?.name==="없는팀"){
+    window._noTeamPendingResult="lose";
+    document.getElementById("noTeamDefInput").value="";
+    document.getElementById("noTeamAtkInput").value="";
+    document.getElementById("noTeamLogOverlay").style.display="flex";
+    const badge=document.getElementById("noTeamResultBadge");
+    if(badge){ badge.textContent="💀 패배로 기록"; badge.style.background="rgba(231,76,60,0.12)"; badge.style.color="#e74c3c"; }
+    return;
+  }
+  if(!confirm("패배를 기록할까요?")) return;
+  const l=+document.getElementById("cardLose").textContent;
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1});
+  writeLog("lose"); toast("💀 패배");
+}
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
 function delDefense() { if(checkResearcher()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
@@ -5910,7 +6033,8 @@ d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}
       const d=document.createElement("div"); d.className="report-row";
       d.innerHTML=`
         <div style="flex:1;min-width:0;">
-          <div class="report-name">➕ ${v.name}</div>
+          <div class="report-name">➕ ${v.name} ${v.hasAttack ? '<span style="font-size:10px;background:rgba(255,85,51,0.15);color:var(--accent);padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">공격덱 포함</span>' : ""}</div>
+          ${v.attackData ? `<div class="report-sub" style="color:var(--accent);">⚔️ ${v.attackData.name}</div>` : (v.attackName ? `<div class="report-sub" style="color:var(--accent);">⚔️ ${v.attackName}</div>` : "")}
           <div class="report-sub">제보자: ${v.suggester}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -5922,11 +6046,24 @@ d.innerHTML=`<div style="flex:1;min-width:0;"><div class="report-name">[${dName}
   });
 }
 
-function approveDefTeam(key, name){
+async function approveDefTeam(key, name){
   if(!checkResearcher()) return;
-  db.ref("defenseTeams").push({name, attackTeams:{}, createdAt:Date.now()});
+  const snap = await db.ref(`suggestions/defense_team/${key}`).get();
+  const data = snap.val()||{};
+  const newRef = db.ref("defenseTeams").push();
+  const defKey = newRef.key;
+  await db.ref(`defenseTeams/${defKey}`).set({name, attackTeams:{}, createdAt:Date.now()});
+  // 공격덱 공략 포함된 제보면 suggestions/attack에 별도 저장 (제보 관리에서 한번 더 검토)
+  if(data.attackData){
+    await db.ref(`suggestions/attack/${defKey}`).push({
+      ...data.attackData, suggester:data.suggester, timestamp:Date.now()
+    });
+    toast("✅ 방어팀 승인됨! 공격덱 제보가 제보 관리에 올라왔어요 🎯");
+  } else {
+    toast("✅ 방어팀 추가 승인됨!");
+  }
   db.ref(`suggestions/defense_team/${key}`).remove();
-  toast("✅ 방어팀 추가 승인됨!"); loadAdminReports();
+  loadAdminReports();
 }
 function rejectDefTeam(key){
   if(!checkResearcher()) return;
@@ -6975,10 +7112,11 @@ function toggleRankDetail(nick, logs, w, l){
           const isWin = log.result==="win";
           const defName = (log.defenseName) || defenseDataCache[log.defense]?.name || log.defense || "-";
           const dateStr = log.date || "";
+          const directBadge = log.direct ? `<span style="font-size:9px;background:rgba(155,89,182,0.15);color:#9b59b6;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">직접기록</span>` : "";
           return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
             <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;background:${isWin?"rgba(39,174,96,0.15)":"rgba(231,76,60,0.12)"};color:${isWin?"#27ae60":"#e74c3c"};">${isWin?"승":"패"}</div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${log.attackName||"-"}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${log.attackName||"-"}${directBadge}</div>
               <div style="font-size:11px;color:var(--text3);">vs ${defName}</div>
             </div>
             <div style="font-size:11px;color:var(--text3);flex-shrink:0;">${dateStr}</div>
@@ -9562,6 +9700,23 @@ function selectTdAtk(key,name){
 }
 
 </script>
+
+<!-- ══ 없는팀 상대방 입력 모달 ══ -->
+<div id="noTeamLogOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:3000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:380px;padding:20px 18px;">
+    <div style="font-size:15px;font-weight:900;margin-bottom:6px;">📝 없는팀 기록</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">상대 방어팀과 우리 공격덱을 입력해주세요</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;">상대 방어팀</div>
+    <input class="form-input" id="noTeamDefInput" placeholder="예: 트루드 겔리두스 에이스" style="margin-bottom:10px;" oninput="checkNoTeamDefExists()">
+    <div id="noTeamDefExistsMsg" style="display:none;font-size:11px;color:#e67e22;background:rgba(230,126,34,0.1);border-radius:7px;padding:6px 10px;margin-bottom:8px;">⚠️ 이미 공략에 있는 방어팀이에요! 제보 대신 해당 팀에서 기록하세요.</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;">우리 공격덱</div>
+    <input class="form-input" id="noTeamAtkInput" placeholder="예: 카일 파이 풍연" style="margin-bottom:14px;">
+    <div id="noTeamResultBadge" style="text-align:center;margin-bottom:8px;padding:8px;border-radius:10px;font-size:14px;font-weight:900;"></div>
+    <button onclick="confirmNoTeamLog()" style="width:100%;margin-bottom:6px;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">✅ 기록하기</button>
+    <button onclick="noTeamReport()" style="width:100%;margin-bottom:6px;padding:11px;border-radius:12px;border:1px dashed var(--accent);background:rgba(255,85,51,0.06);color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📬 방어팀 + 공격덱 제보하기</button>
+    <button onclick="document.getElementById('noTeamLogOverlay').style.display='none'" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:inherit;">취소</button>
+  </div>
+</div>
 
 <!-- ══ 오늘의 추천덱 팝업 ══ -->
 <div id="todayDeckOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:3000;align-items:center;justify-content:center;padding:16px;">
