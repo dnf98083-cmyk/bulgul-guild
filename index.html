@@ -1978,7 +1978,7 @@ body::before {
         <div class="ranking-box">
           <div class="section-title">🏆 시즌 랭킹</div>
           <div id="rankingList" class="rank-card ranking-scroll"></div>
-          <div id="moreRankMsg" class="more-rank-msg">* 11위 이하는 관리자만 볼 수 있습니다</div>
+          <div id="moreRankMsg" class="more-rank-msg" style="display:none;"></div>
         </div>
       </div>
       <div id="attackCardWrap" style="position:sticky;top:20px;">
@@ -5829,7 +5829,7 @@ function renderRanking(){
     const rankData=Object.entries(stats).map(([n,d])=>{ d.logs.sort((a,b)=>b.time-a.time); const w=d.logs.filter(l=>l.result==="win").length,l=d.logs.filter(l=>l.result==="lose").length; const recent=d.logs.slice(0,30),rw=recent.filter(l=>l.result==="win").length,rl=recent.filter(l=>l.result==="lose").length; return{nick:n,w,l,rw,rl,logs:d.logs}; }).sort((a,b)=>b.w-a.w);
     const myD=rankData.find(x=>x.nick===myNick);
     if(myD){ const tot=myD.w+myD.l; document.getElementById("homeStatValue").innerHTML=`<span>${myD.w}</span>승 ${myD.l}패`; document.getElementById("homeStatRank").textContent=`전체 ${rankData.indexOf(myD)+1}위 · 승률 ${tot?Math.round(myD.w/tot*100):0}%`; }
-    const adminOpen=document.getElementById("attackAdminPanel")?.style.display==="block";
+    const adminOpen = true;
     let hide=0;
     rankData.forEach((d,i)=>{ if(!adminOpen&&i>=10){ hide++; return; } const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0,rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0; const badges=["🥇","🥈","🥉"]; const badge=i<3?badges[i]:`${i+1}`; const isMe=d.nick===myNick;
       const row=document.createElement("div"); row.className="rank-row"; row.style.cursor="pointer";
