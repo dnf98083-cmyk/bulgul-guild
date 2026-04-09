@@ -4690,6 +4690,7 @@ function switchTab(tab) {
       if(ap) ap.style.display="block";
       if(ab) ab.textContent="닫기";
     }
+    setTimeout(showTodayDeckPopupIfEnabled, 600);
   }
   if(tab==="notice") loadNotices();
   if(tab==="totalwar") loadTotalwar();
