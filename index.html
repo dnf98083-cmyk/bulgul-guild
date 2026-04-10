@@ -9840,18 +9840,15 @@ function renderTodayDeckWinList(){
 function goToTodayDeck(defKey, atkKey){
   closeTodayDeckPopup();
   if(!defKey||!atkKey) return;
-  window._skipTodayDeckPopup = true;
+  window._skipTodayDeckPopup = true; // 덱 클릭 후 팝업 차단
   switchTab("attack");
   setTimeout(()=>{
-    window._skipTodayDeckPopup = false;
     const defName = defenseDataCache[defKey]?.name||defKey;
     document.getElementById("defCurrentText").textContent = defName;
     loadAttackTeams(defKey);
-    // 공격덱 목록 로드 후 해당 공격덱 자동 선택
     setTimeout(()=>{
       currentAttack = atkKey;
       selectAttack(defKey, atkKey);
-      // 공격덱 버튼 active 표시
       setTimeout(()=>{
         document.querySelectorAll(".atk-btn").forEach(b=>{
           if(b.dataset.ak===atkKey) b.classList.add("active");
