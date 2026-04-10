@@ -8133,12 +8133,13 @@ function twRenderTeamCards(tier, data){
         const plus = isBack?"rgba(220,100,120,0.6)":"rgba(100,160,220,0.6)";
         const fs   = !name?"24px":name.length<=2?"14px":name.length<=4?"11px":"9px";
         const id   = `twCard_${twCurrentTier}_${i}_${si}`;
-        if(!name) return `<div data-tier="${twCurrentTier}" data-team="${i}" data-slot="${si}" data-empty="1" style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;"><span style="font-size:26px;color:${plus};line-height:1;pointer-events:none;">+</span></div>`;
+        if(!name) return `<div data-tier="${twCurrentTier}" data-team="${i}" data-slot="${si}" data-empty="1" onpointerdown="twCardDragDown(event)" style="background:var(--surface2);border:2px dashed ${plus};border-radius:14px;width:62px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;touch-action:none;"><span style="font-size:26px;color:${plus};line-height:1;pointer-events:none;">+</span></div>`;
         return `<div id="${id}" data-tier="${twCurrentTier}" data-team="${i}" data-slot="${si}"
+          onpointerdown="twCardDragDown(event)"
           style="background:${bg};border:${bd};border-radius:14px;width:62px;height:72px;
             display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;
-            cursor:pointer !important;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
-          <span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;cursor:pointer;user-select:none;-webkit-user-select:none;">${name}</span>
+            cursor:grab;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;">
+          <span style="font-size:${fs};font-weight:800;color:var(--text);text-align:center;line-height:1.25;word-break:keep-all;pointer-events:none;user-select:none;-webkit-user-select:none;">${name}</span>
         </div>`;
       };
       const backSlots  = fm.back.map(si=>makeCardSlot(si,true)).join("");
@@ -8320,7 +8321,10 @@ function copyTwTeam(tierId, teamIdx){
 function pasteTwTeam(tierId, teamIdx){
   if(!twCopiedTeam) return toast("먼저 복사할 팀의 📋 버튼을 눌러주세요");
   if(!confirm("팀 "+(teamIdx+1)+"에 복사한 편성을 붙여넣을까요? 기존 데이터가 덮어씌워져요.")) return;
-  const saveData={...twCopiedTeam, updatedAt:Date.now(), updatedBy:myNick};
+  // stats가 Firebase에서 객체로 변환됐을 수 있으므로 배열로 정규화
+  const rawStats = twCopiedTeam.stats||[];
+  const statsArr = Array.isArray(rawStats) ? rawStats : Object.values(rawStats);
+  const saveData={...twCopiedTeam, stats:statsArr, updatedAt:Date.now(), updatedBy:myNick};
   if(!twCachedData[tierId]) twCachedData[tierId]={};
   twCachedData[tierId]["team"+(teamIdx+1)]=saveData;
   db.ref("totalwar/teams/"+myNick+"/"+tierId+"/team"+(teamIdx+1)).set(saveData)
@@ -8426,7 +8430,7 @@ function renderTwTeamSlots(){
     const bd=isActive?`2px solid ${ac}`:c?`1.5px solid ${ac}`:"1.5px dashed var(--border)";
     const stat=twTeamStats[i]||{};
     const hasStat=c&&(stat.atk||stat.hp||stat.set);
-    return `<div id="twSlot_${i}" onclick="selectTwSlot(${i},'char')" onpointerdown="twStatHoldStart(${i})" onpointerup="twStatHoldEnd(${i})" onpointerleave="twStatHoldEnd(${i})" style="background:${bg};border:${bd};border-radius:12px;aspect-ratio:0.8;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;padding:3px;position:relative;min-height:54px;user-select:none;transition:transform 0.15s;">
+    return `<div id="twSlot_${i}" onclick="selectTwSlot(${i},'char')" onpointerdown="twDragPointerDown(event,${i})" style="background:${bg};border:${bd};border-radius:12px;aspect-ratio:0.8;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:grab;padding:3px;position:relative;min-height:54px;user-select:none;touch-action:none;transition:transform 0.15s,opacity 0.15s;">
       <div style="position:absolute;top:3px;left:4px;font-size:8px;font-weight:700;color:${ac};">${isBack?"후":"전"}</div>
       ${hasStat?`<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f0a500;"></div>`:""}
       ${c?`<button onclick="event.stopPropagation();clearTwSlot(${i},'char')" style="position:absolute;bottom:22px;right:2px;background:rgba(0,0,0,0.4);border:none;border-radius:50%;width:14px;height:14px;font-size:8px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>
@@ -8442,26 +8446,110 @@ function renderTwTeamSlots(){
   if(petInput) petInput.value=twTeamPet||"";
 }
 
-let twStatHoldTimer=null;
-let twStatHoldFired=false;
+// ── 총력전 슬롯 드래그 앤 드롭 ──
+let twDragSrcIdx = null;
+let twDragTimer  = null;
+let twDragActive = false;
+let twDragGhost  = null;
+let twStatHoldTimer = null;
+let twStatHoldFired = false;
 
-function twStatHoldStart(idx){
-  twStatHoldFired=false;
-  const el=document.getElementById("twSlot_"+idx);
+function twDragPointerDown(e, idx){
+  e.preventDefault();
+  twDragSrcIdx = idx;
+  twDragActive = false;
+  twStatHoldFired = false;
+
+  const el = document.getElementById("twSlot_"+idx);
   if(el) el.classList.add("tw-holding");
+
+  // 스탯 모달 (0.6초)
   if(twTeamChars[idx]){
-    twStatHoldTimer=setTimeout(()=>{
-      twStatHoldFired=true;
-      twStatHoldTimer=null;
+    twStatHoldTimer = setTimeout(()=>{
+      if(twDragActive) return;
+      twStatHoldFired = true;
+      twStatHoldTimer = null;
       openTwStatModal(idx);
-    },600);
+    }, 600);
+  }
+
+  // 드래그 시작 (0.25초)
+  twDragTimer = setTimeout(()=>{
+    twDragActive = true;
+    const srcEl = document.getElementById("twSlot_"+idx);
+    if(srcEl){
+      twDragGhost = srcEl.cloneNode(true);
+      twDragGhost.removeAttribute("id");
+      twDragGhost.style.cssText += ";position:fixed;z-index:9999;opacity:0.85;pointer-events:none;width:"+srcEl.offsetWidth+"px;transform:scale(1.12);box-shadow:0 8px 24px rgba(0,0,0,0.6);transition:none;";
+      document.body.appendChild(twDragGhost);
+      _twMoveGhost(e.clientX, e.clientY);
+      srcEl.style.opacity = "0.3";
+    }
+  }, 250);
+
+  document.addEventListener("pointermove", _twOnMove);
+  document.addEventListener("pointerup",   _twOnUp);
+  document.addEventListener("pointercancel", _twOnCancel);
+}
+
+function _twOnMove(e){
+  if(!twDragActive) return;
+  _twMoveGhost(e.clientX, e.clientY);
+  document.querySelectorAll("[id^='twSlot_']").forEach(el => el.style.outline="");
+  const t = _twSlotAt(e.clientX, e.clientY);
+  if(t !== null && t !== twDragSrcIdx){
+    const el = document.getElementById("twSlot_"+t);
+    if(el) el.style.outline = "2px solid var(--accent)";
   }
 }
-function twStatHoldEnd(idx){
-  if(twStatHoldTimer){ clearTimeout(twStatHoldTimer); twStatHoldTimer=null; }
-  const el=document.getElementById("twSlot_"+idx);
-  if(el) el.classList.remove("tw-holding");
+
+function _twOnUp(e){
+  const wasActive = twDragActive;
+  const src = twDragSrcIdx;
+  _twCleanDrag();
+  if(wasActive && src !== null){
+    const t = _twSlotAt(e.clientX, e.clientY);
+    if(t !== null && t !== src){
+      [twTeamChars[src], twTeamChars[t]] = [twTeamChars[t], twTeamChars[src]];
+      [twTeamStats[src], twTeamStats[t]] = [twTeamStats[t], twTeamStats[src]];
+      twSaveDraft();
+      renderTwTeamSlots();
+      toast("🔄 슬롯 교환됨");
+    }
+    twStatHoldFired = true;
+  }
 }
+
+function _twOnCancel(){ _twCleanDrag(); }
+
+function _twCleanDrag(){
+  if(twDragTimer){ clearTimeout(twDragTimer); twDragTimer=null; }
+  if(twStatHoldTimer){ clearTimeout(twStatHoldTimer); twStatHoldTimer=null; }
+  if(twDragGhost){ twDragGhost.remove(); twDragGhost=null; }
+  document.querySelectorAll("[id^='twSlot_']").forEach(el=>{ el.style.outline=""; el.style.opacity=""; el.classList.remove("tw-holding"); });
+  document.removeEventListener("pointermove", _twOnMove);
+  document.removeEventListener("pointerup",   _twOnUp);
+  document.removeEventListener("pointercancel", _twOnCancel);
+  twDragActive = false;
+  twDragSrcIdx = null;
+}
+
+function _twMoveGhost(x, y){
+  if(!twDragGhost) return;
+  twDragGhost.style.left = (x - twDragGhost.offsetWidth/2)  + "px";
+  twDragGhost.style.top  = (y - twDragGhost.offsetHeight/2) + "px";
+}
+
+function _twSlotAt(x, y){
+  for(let i=0; i<5; i++){
+    const el = document.getElementById("twSlot_"+i);
+    if(!el) continue;
+    const r = el.getBoundingClientRect();
+    if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i;
+  }
+  return null;
+}
+
 
 function selectTwSlot(idx,mode){
   // 꾹누름이 발동됐으면 클릭 무시
@@ -8879,7 +8967,7 @@ function closeTwStatModal(e){
         w2set:twEquipState.w2set, w2main:twEquipState.w2main, w2val:twEquipState.w2val,
         a1set:twEquipState.a1set, a1main:twEquipState.a1main, a1val:twEquipState.a1val,
         a2set:twEquipState.a2set, a2main:twEquipState.a2main, a2val:twEquipState.a2val,
-        ring:twEquipState.ring, ringVal:document.getElementById("tws_ring_val")?.value||"",
+        ring:twEquipState.ring, ringCustom:twEquipState.ringCustom||"", ringVal:document.getElementById("tws_ring_val")?.value||"",
         ringStar:twEquipState.ringStar||0, ringCraft:document.getElementById("tws_ring_craft")?.value||"",
       };
 
@@ -8908,6 +8996,140 @@ function closeTwStatModal(e){
 // ── 카드에서 캐릭터 꾹누름 → 스탯 보기 ──
 let twCardHoldTimer=null;
 let twCardHoldElId=null;
+
+// ── 총력전 카드 화면 드래그 ──
+let _twCD = { active:false, timer:null, ghost:null, src:null };
+
+function twCardDragDown(e){
+  e.preventDefault();
+  const el = e.currentTarget;
+  const tier = el.dataset.tier;
+  const team = parseInt(el.dataset.team);
+  const slot = parseInt(el.dataset.slot);
+  const name = (twCachedData[tier]||{})?.[`team${team+1}`]?.chars?.[slot]||"";
+  const startX = e.clientX, startY = e.clientY;
+
+  _twCD.src = {tier, team, slot, name};
+  _twCD.active = false;
+
+  // 스탯 모달 홀드 (0.6초, 캐릭터 있을 때만)
+  if(name){
+    twCardHoldElId = el.id;
+    if(el.id) el.classList.add("tw-holding");
+    twCardHoldTimer = setTimeout(()=>{
+      if(_twCD.active) return;
+      twCardHoldTimer=null;
+      if(el.id) el.classList.remove("tw-holding");
+      _twCDClean();
+      const d=(twCachedData[tier]||{})[`team${team+1}`]||{};
+      twEditTierIdx={tierId:tier,teamIdx:team};
+      twTeamChars=[...(d.chars||["","","","",""])];
+      while(twTeamChars.length<5) twTeamChars.push("");
+      const rawStats=d.stats||[];
+      twTeamStats=(Array.isArray(rawStats)?rawStats:Object.values(rawStats)).map(s=>s||{});
+      while(twTeamStats.length<5) twTeamStats.push({});
+      twTeamPet=d.pet||"";
+      window._cardStatSaveHook={tierId:tier,teamIdx:team};
+      openTwStatModal(slot);
+    }, 600);
+  }
+
+  // 움직임 감지 후 드래그 시작
+  const onMoveDetect = (me) => {
+    const dx = me.clientX - startX, dy = me.clientY - startY;
+    if(Math.sqrt(dx*dx+dy*dy) < 8) return; // 8px 미만이면 무시
+    document.removeEventListener("pointermove", onMoveDetect);
+    if(twCardHoldTimer){ clearTimeout(twCardHoldTimer); twCardHoldTimer=null; }
+    if(el.id) el.classList.remove("tw-holding");
+    _twCD.active = true;
+    // 고스트 생성
+    _twCD.ghost = el.cloneNode(true);
+    _twCD.ghost.removeAttribute("id");
+    _twCD.ghost.style.cssText += ";position:fixed;z-index:9999;opacity:0.85;pointer-events:none;transform:scale(1.12);box-shadow:0 8px 24px rgba(0,0,0,0.6);transition:none;";
+    document.body.appendChild(_twCD.ghost);
+    _twCDMoveGhost(me.clientX, me.clientY);
+    el.style.opacity = "0.3";
+  };
+
+  document.addEventListener("pointermove", onMoveDetect);
+  document.addEventListener("pointermove", _twCDMove);
+  document.addEventListener("pointerup",   _twCDUp);
+  document.addEventListener("pointercancel", _twCDCancel);
+  // onMoveDetect도 정리하도록 저장
+  _twCD._moveDetect = onMoveDetect;
+}
+
+function _twCDMove(e){
+  if(!_twCD.active) return;
+  _twCDMoveGhost(e.clientX, e.clientY);
+  // 타겟 슬롯 하이라이트
+  document.querySelectorAll("[data-slot]").forEach(el=>el.style.outline="");
+  const t = _twCDSlotAt(e.clientX, e.clientY);
+  if(t && !(t.team===_twCD.src.team && t.slot===_twCD.src.slot && t.tier===_twCD.src.tier)){
+    if(t.el) t.el.style.outline="2px solid var(--accent)";
+  }
+}
+
+function _twCDUp(e){
+  const wasActive = _twCD.active;
+  const src = _twCD.src;
+  _twCDClean();
+  if(wasActive && src){
+    const t = _twCDSlotAt(e.clientX, e.clientY);
+    if(t && t.tier===src.tier && t.team===src.team && !(t.slot===src.slot)){
+      // 같은 팀 내 슬롯 교환
+      const d = (twCachedData[src.tier]||{})[`team${src.team+1}`]||{};
+      const chars = [...(d.chars||["","","","",""])];
+      while(chars.length<5) chars.push("");
+      const rawStats = d.stats||[];
+      const stats = (Array.isArray(rawStats)?rawStats:Object.values(rawStats)).map(s=>s||{});
+      while(stats.length<5) stats.push({});
+      // 교환
+      [chars[src.slot], chars[t.slot]] = [chars[t.slot], chars[src.slot]];
+      [stats[src.slot], stats[t.slot]] = [stats[t.slot], stats[src.slot]];
+      const saveData = {...d, chars, stats, updatedAt:Date.now(), updatedBy:myNick};
+      if(!twCachedData[src.tier]) twCachedData[src.tier]={};
+      twCachedData[src.tier][`team${src.team+1}`] = saveData;
+      db.ref(`totalwar/teams/${myNick}/${src.tier}/team${src.team+1}`).set(saveData)
+        .then(()=>toast("🔄 슬롯 교환됨"))
+        .catch(()=>toast("로컬 저장됨"));
+      const tier = TW_TIERS.find(tt=>tt.id===src.tier);
+      if(tier) twRenderTeamCards(tier, twCachedData[src.tier]);
+    }
+  }
+}
+
+function _twCDCancel(){ _twCDClean(); }
+
+function _twCDClean(){
+  if(_twCD.timer){ clearTimeout(_twCD.timer); _twCD.timer=null; }
+  if(twCardHoldTimer){ clearTimeout(twCardHoldTimer); twCardHoldTimer=null; }
+  if(_twCD.ghost){ _twCD.ghost.remove(); _twCD.ghost=null; }
+  if(_twCD._moveDetect){ document.removeEventListener("pointermove", _twCD._moveDetect); _twCD._moveDetect=null; }
+  document.querySelectorAll("[data-slot]").forEach(el=>{ el.style.outline=""; el.style.opacity=""; el.classList.remove("tw-holding"); });
+  document.removeEventListener("pointermove", _twCDMove);
+  document.removeEventListener("pointerup",   _twCDUp);
+  document.removeEventListener("pointercancel", _twCDCancel);
+  _twCD.active = false;
+  _twCD.src = null;
+}
+
+function _twCDMoveGhost(x, y){
+  if(!_twCD.ghost) return;
+  _twCD.ghost.style.left = (x - _twCD.ghost.offsetWidth/2)  + "px";
+  _twCD.ghost.style.top  = (y - _twCD.ghost.offsetHeight/2) + "px";
+}
+
+function _twCDSlotAt(x, y){
+  const els = document.querySelectorAll("[data-slot]");
+  for(const el of els){
+    const r = el.getBoundingClientRect();
+    if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
+      return { el, tier:el.dataset.tier, team:parseInt(el.dataset.team), slot:parseInt(el.dataset.slot) };
+    }
+  }
+  return null;
+}
 
 function twCardHoldStart(tierId,teamIdx,slotIdx,elId){
   twCardHoldElId=elId;
