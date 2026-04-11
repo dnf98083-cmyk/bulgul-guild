@@ -4759,7 +4759,8 @@ function loadAttackTeamsMerged(entries, dkName) {
         hasAny=true;
         const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
         const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
-        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}${av.type==="속공 따야 함"?'<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>':av.type==="내줘도 됨"?'<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>':""}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+        if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
         btn.onclick=()=>{
           document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
           btn.classList.add("active");
@@ -4851,7 +4852,9 @@ function loadAttackTeams(dk, dkName) {
     Object.entries(d).forEach(([ak,av])=>{
       const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
       const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
-      btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+      const typeBadge2 = av.type==="속공 따야 함" ? `<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>` : av.type==="내줘도 됨" ? `<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>` : "";
+      btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}${typeBadge2}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+      if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
       btn.onclick=()=>{ document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); selectAttack(dk,ak); };
       list.appendChild(btn);
     });
