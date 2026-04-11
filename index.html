@@ -9887,15 +9887,24 @@ function renderTodayDeckAdminList(){
   const el=document.getElementById("todayDeckAdminList");
   if(!el) return;
   const entries=Object.entries(todayDeckData);
-  if(!entries.length){ el.innerHTML='<div style="font-size:11px;color:var(--text3);">등록된 덱 없음</div>'; return; }
+  if(!entries.length){ el.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0;">등록된 덱 없음</div>'; return; }
   el.innerHTML=entries.map(([k,v])=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
-      <div>
-        <span style="font-size:12px;font-weight:700;color:var(--text);">${v.atkName||""}</span>
-        <span style="font-size:11px;color:var(--text3);margin-left:6px;">vs ${v.defName||""}</span>
-        ${v.memo?`<div style="font-size:10px;color:var(--text3);margin-top:2px;">💬 ${v.memo}</div>`:""}
+    <div style="background:var(--surface2);border:1.5px solid rgba(255,85,51,0.2);border-radius:12px;padding:12px 14px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:9px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:2px;">⚔️ 우리 공격덱</div>
+          <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:7px;">${v.atkName||""}</div>
+          <div style="background:rgba(220,100,120,0.08);border:1px solid rgba(220,100,120,0.2);border-radius:7px;padding:5px 9px;${v.memo?'margin-bottom:7px;':''}">
+            <div style="font-size:9px;font-weight:700;color:rgba(220,100,120,0.9);margin-bottom:1px;">🛡️ 상대 방어덱</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);">${v.defName||""}</div>
+          </div>
+          ${v.memo?`<div style="background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:7px;padding:5px 9px;">
+            <div style="font-size:9px;font-weight:700;color:rgba(255,200,0,0.9);margin-bottom:1px;">💬 상황 설명</div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.5;">${v.memo}</div>
+          </div>`:""}
+        </div>
+        <button onclick="removeTodayDeck('${k}')" style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;font-size:12px;cursor:pointer;padding:5px 9px;border-radius:8px;flex-shrink:0;">삭제</button>
       </div>
-      <button onclick="removeTodayDeck('${k}')" style="background:none;border:none;color:#e74c3c;font-size:14px;cursor:pointer;padding:2px 6px;">✕</button>
     </div>`).join("");
 }
 
