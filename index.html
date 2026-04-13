@@ -3403,7 +3403,7 @@ function searchByChar(){
     return `<div onclick="selectFromCharSearch('${dk}','${ak}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
       <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">[${dName}]</div>
       <div style="font-size:13px;font-weight:700;">${fire}${atk.name}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;">${atk.type||""} ${atk.ring?"· "+atk.ring:""} · ${r}% (${atk.win}승${atk.lose}패)</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">${atk.type||""} ${atk.ring?"· "+atk.ring:""} · ${r}% (${atk.win||0}승${atk.lose||0}패)</div>
     </div>`;
   }).join("");
 }
@@ -4756,10 +4756,11 @@ function loadAttackTeamsMerged(entries, dkName) {
     let hasAny=false;
     results.forEach(({key, val})=>{
       Object.entries(val).forEach(([ak,av])=>{
+        if(!av||!av.name){ return; }
         hasAny=true;
-        const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
+        const w2=av.win||0,l2=av.lose||0,t=w2+l2, r=t?Math.round(w2/t*100):0;
         const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
-        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}${av.type==="속공 따야 함"?'<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>':av.type==="내줘도 됨"?'<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>':""}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name||"?"}${av.type==="속공 따야 함"?'<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>':av.type==="내줘도 됨"?'<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>':""}</div><div class="a-stat">${r}% · ${w2}승${l2}패</div>`;
         if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
         btn.onclick=()=>{
           document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
@@ -4850,10 +4851,11 @@ function loadAttackTeams(dk, dkName) {
     const d=snap.val();
     if(!d){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>'; return; }
     Object.entries(d).forEach(([ak,av])=>{
-      const t=av.win+av.lose, r=t?Math.round(av.win/t*100):0;
+      if(!av||!av.name) return; // 이름 없는 데이터 스킵
+      const w2=av.win||0,l2=av.lose||0,t=w2+l2, r=t?Math.round(w2/t*100):0;
       const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
       const typeBadge2 = av.type==="속공 따야 함" ? `<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>` : av.type==="내줘도 됨" ? `<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>` : "";
-      btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name}${typeBadge2}</div><div class="a-stat">${r}% · ${av.win}승${av.lose}패</div>`;
+      btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name||"?"}${typeBadge2}</div><div class="a-stat">${r}% · ${w2}승${l2}패</div>`;
       if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
       btn.onclick=()=>{ document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); selectAttack(dk,ak); };
       list.appendChild(btn);
