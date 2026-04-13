@@ -3280,6 +3280,12 @@ const db = firebase.database();
 const ADMIN_PW = "0204";
 
 let myNick="", currentDefense="", currentAttack="", currentRecDef="";
+// 추천덱 전역 변수 (initTodayDeck보다 앞에 선언 필수)
+let todayDeckEnabled = false;
+let todayDeckData = {};
+let _tdDefKey="", _tdAtkKey="";
+let _dpShareData = {}, _dpShareOpenKey = null;
+let _adpOpenNick = null;
 let isAdminAuthenticated=false, myRole="길드원", allLogsCache={}, defenseDataCache={};
 let pveCurrentCategory="siege", pveCurrentId="", pveCurrentType="", pveCurrentDetail="";
 
@@ -9986,19 +9992,43 @@ function dpRenderTeams(){
   const grid = document.getElementById("dpTeamsGrid");
   if(!grid) return;
   grid.innerHTML = "";
+
+  // 반지 사용 현황 계산 (전체 팀 기준)
+  const usedRings = {};
+  dpData.teams.forEach(t=>{ (t.rings||[]).forEach(r=>{ if(r) usedRings[r]=(usedRings[r]||0)+1; }); });
+
   dpData.teams.forEach((team,ti)=>{
     const hasRecord = (team.win||0)>0||(team.lose||0)>0;
     const tot = (team.win||0)+(team.lose||0);
     const wr = tot?Math.round((team.win||0)/tot*100):null;
     const atk = team.atkKey&&team.atkKey!=="__custom__"&&defenseDataCache[team.defKey]?.attackTeams?.[team.atkKey];
 
+    // 반지 부족 여부 체크
+    const rings = team.rings||[];
+    let isTemp = false;
+    // 각 팀의 반지가 전체 배정 합산 대비 보유량 초과하는지 체크
+    const tempCheck = {};
+    dpData.teams.slice(0, ti+1).forEach(t=>{
+      (t.rings||[]).forEach(r=>{
+        if(r) tempCheck[r]=(tempCheck[r]||0)+1;
+      });
+    });
+    rings.forEach(r=>{
+      if(!r) return;
+      const have = dpData.rings[r]?.count||0;
+      if(tempCheck[r]>have) isTemp=true;
+    });
+
     const card = document.createElement("div");
-    card.style.cssText = "background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;";
+    card.style.cssText = `background:var(--surface);border:1.5px solid ${isTemp?"rgba(100,160,220,0.6)":"var(--border)"};border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;${isTemp?"box-shadow:0 0 10px rgba(100,160,220,0.2);":""}`;
 
     card.innerHTML = `
       <!-- 헤더 -->
       <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:14px;font-weight:800;">팀 ${ti+1}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:14px;font-weight:800;">팀 ${ti+1}</span>
+          ${isTemp?`<span style="font-size:9px;font-weight:700;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:2px 6px;border-radius:4px;">임시</span>`:""}
+        </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${hasRecord?`<span style="font-size:11px;font-weight:700;color:${wr>=50?"#27ae60":"#e74c3c"};">${team.win||0}승${team.lose||0}패</span>`:""}
           <button onclick="dpRemoveTeam(${ti})" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:12px;padding:2px 4px;">✕</button>
@@ -10172,8 +10202,6 @@ function dpSharePlan(){
   .catch(()=>toast("공유 실패"));
 }
 
-let _dpShareData = {};
-let _dpShareOpenKey = null;
 
 // 공유된 덱편성 목록을 Firebase deckPlanShares에서 로드
 function loadDpShareList(){
@@ -10608,7 +10636,6 @@ function loadAdminDeckPlan(){
   });
 }
 
-let _adpOpenNick = null;
 function adpToggle(nick){
   const detail = document.getElementById("adp_detail_"+nick);
   const arrow  = document.getElementById("adp_arrow_"+nick);
@@ -10749,10 +10776,6 @@ async function dpMarkNotifyRead(key){
 }
 
 // ══ 오늘의 추천덱 ══
-let todayDeckEnabled = false;
-let todayDeckData = {};
-let _tdDefKey="", _tdAtkKey="";
-
 // 오늘의 추천덱 Firebase 실시간 리스너 등록
 function initTodayDeck(){
   db.ref("todayDeck").on("value", snap=>{
