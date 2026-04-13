@@ -9954,7 +9954,29 @@ function dpRenderTeams(){
       </div>
 
       <!-- 공략 정보 -->
-      ${atk?`<div style="background:rgba(100,160,220,0.06);border:1px solid rgba(100,160,220,0.15);border-radius:8px;padding:7px 10px;">
+      ${atk?`<div style="background:rgba(100,160,220,0.06);border:1px solid rgba(100,160,220,0.15);border-radius:8px;padding:8px 10px;">
+        ${(()=>{
+          const fm = atk.formation||"";
+          const ftype = detectFormationType(fm);
+          if(!ftype) return "";
+          const cleaned = fm.replace(ftype,"").trim();
+          const chars = cleaned ? cleaned.split(/\s+/).map(c=>c==="_"?"":c) : [];
+          const layout = FORMATION_LAYOUTS[ftype];
+          const rows = layout.map((row,ri)=>{
+            const isBack = ri===0;
+            const bg = isBack?"rgba(255,182,193,0.25)":"rgba(173,216,230,0.25)";
+            const bd = isBack?"rgba(220,100,120,0.45)":"rgba(100,160,220,0.45)";
+            const label = isBack?"▲ 앞줄":"▼ 뒷줄";
+            const cells = row.map(idx=>{
+              const name = chars[idx]||"";
+              const fs = name.length>4?"8px":name.length>2?"9px":"10px";
+              return `<div style="background:${bg};border:1.5px solid ${bd};border-radius:8px;padding:5px 4px;min-width:44px;text-align:center;font-size:${fs};font-weight:700;color:var(--text);">${name||"+"}</div>`;
+            }).join("");
+            return `<div style="font-size:8px;color:var(--text3);text-align:center;margin-bottom:2px;">${label}</div>
+                    <div style="display:flex;gap:4px;justify-content:center;margin-bottom:5px;">${cells}</div>`;
+          }).join("");
+          return `<div style="margin-bottom:6px;">${rows}</div>`;
+        })()}
         ${atk.type?`<div style="font-size:10px;color:var(--text2);">속공: <b>${atk.type}</b></div>`:""}
         ${atk.ring?`<div style="font-size:10px;color:var(--text2);">반지: <b>${atk.ring}</b></div>`:""}
         ${atk.pet?`<div style="font-size:10px;color:var(--text2);">펫: <b>${atk.pet}</b></div>`:""}
@@ -10069,12 +10091,12 @@ function dpGridWheel(e){
 // ── 덱편성 공유 ──
 function dpSharePlan(){
   if(!dpData.teams.length){ toast("공유할 팀이 없어요"); return; }
-  const title = prompt("공유 제목 (선택사항):", "");
-  if(title===null) return;
-  const key = myNick.replace(/[^a-zA-Z0-9가-힣]/g,"_")+"_dp_"+Date.now();
+  if(!confirm("내 덱편성을 공유할게요. 기존 공유가 있으면 덮어써요.")) return;
+  // 닉네임 기반 고정 키 (인당 1개)
+  const key = myNick.replace(/[^a-zA-Z0-9가-힣]/g,"_")+"_dp";
   db.ref("deckPlanShares/"+key).set({
-    teams: dpData.teams, sharedBy:myNick, sharedAt:Date.now(), title:title||""
-  }).then(()=>{ toast("🔗 덱편성 공유 완료!"); loadDpShareList(); })
+    teams: dpData.teams, sharedBy:myNick, sharedAt:Date.now()
+  }).then(()=>{ toast("🔗 공유 완료!"); loadDpShareList(); })
   .catch(()=>toast("공유 실패"));
 }
 
@@ -10098,7 +10120,6 @@ function loadDpShareList(){
           <div onclick="dpToggleShareItem('${k}')" style="flex:1;cursor:pointer;">
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:14px;font-weight:700;color:var(--text);">👤 ${v.sharedBy||""}</span>
-              ${v.title?`<span style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:2px 8px;">${v.title}</span>`:""}
             </div>
             <div style="font-size:11px;color:var(--text3);margin-top:2px;">${new Date(v.sharedAt).toLocaleDateString("ko")} · ${(v.teams||[]).length}팀</div>
           </div>
@@ -10158,7 +10179,28 @@ function dpRenderShareDetail(key, container){
         <div style="font-size:9px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:3px;">⚔️ 공격덱</div>
         <div style="background:rgba(100,160,220,0.08);border:1px solid rgba(100,160,220,0.2);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:700;color:var(--text);">${team.atkName||"미선택"}</div>
       </div>
-      ${atk?`<div style="background:rgba(100,160,220,0.05);border:1px solid rgba(100,160,220,0.12);border-radius:8px;padding:7px 10px;">
+      ${atk?`<div style="background:rgba(100,160,220,0.05);border:1px solid rgba(100,160,220,0.12);border-radius:8px;padding:8px 10px;">
+        ${(()=>{
+          const fm2=atk.formation||"";
+          const ftype2=detectFormationType(fm2);
+          if(!ftype2) return "";
+          const cleaned2=fm2.replace(ftype2,"").trim();
+          const chars2=cleaned2?cleaned2.split(/\s+/).map(c=>c==="_"?"":c):[];
+          const layout2=FORMATION_LAYOUTS[ftype2];
+          const rows2=layout2.map((row,ri)=>{
+            const isBack=ri===0;
+            const bg=isBack?"rgba(255,182,193,0.25)":"rgba(173,216,230,0.25)";
+            const bd=isBack?"rgba(220,100,120,0.45)":"rgba(100,160,220,0.45)";
+            const label=isBack?"▲ 앞줄":"▼ 뒷줄";
+            const cells=row.map(idx=>{
+              const name=chars2[idx]||"";
+              const fs=name.length>4?"8px":name.length>2?"9px":"10px";
+              return `<div style="background:${bg};border:1.5px solid ${bd};border-radius:8px;padding:5px 4px;min-width:44px;text-align:center;font-size:${fs};font-weight:700;color:var(--text);">${name||"+"}</div>`;
+            }).join("");
+            return `<div style="font-size:8px;color:var(--text3);text-align:center;margin-bottom:2px;">${label}</div><div style="display:flex;gap:4px;justify-content:center;margin-bottom:5px;">${cells}</div>`;
+          }).join("");
+          return `<div style="margin-bottom:6px;">${rows2}</div>`;
+        })()}
         ${atk.type?`<div style="font-size:10px;color:var(--text2);">속공: <b>${atk.type}</b></div>`:""}
         ${atk.ring?`<div style="font-size:10px;color:var(--text2);">반지추천: <b>${atk.ring}</b></div>`:""}
         ${atk.pet?`<div style="font-size:10px;color:var(--text2);">펫: <b>${atk.pet}</b></div>`:""}
@@ -10540,7 +10582,28 @@ function adpRenderDetail(nick, container){
         <div style="font-size:9px;color:rgba(100,160,220,0.9);margin-bottom:1px;">⚔️ 공격덱</div>
         <div style="font-size:12px;font-weight:700;color:var(--text);">${t.atkName||"미선택"}</div>
       </div>
-      ${atk?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:10px;color:var(--text2);">
+      ${atk?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-size:10px;color:var(--text2);">
+        ${(()=>{
+          const fm3=atk.formation||"";
+          const ftype3=detectFormationType(fm3);
+          if(!ftype3) return "";
+          const cleaned3=fm3.replace(ftype3,"").trim();
+          const chars3=cleaned3?cleaned3.split(/\s+/).map(c=>c==="_"?"":c):[];
+          const layout3=FORMATION_LAYOUTS[ftype3];
+          const rows3=layout3.map((row,ri)=>{
+            const isBack=ri===0;
+            const bg=isBack?"rgba(255,182,193,0.25)":"rgba(173,216,230,0.25)";
+            const bd=isBack?"rgba(220,100,120,0.45)":"rgba(100,160,220,0.45)";
+            const label=isBack?"▲ 앞줄":"▼ 뒷줄";
+            const cells=row.map(idx=>{
+              const name=chars3[idx]||"";
+              const fs=name.length>4?"8px":name.length>2?"9px":"10px";
+              return `<div style="background:${bg};border:1.5px solid ${bd};border-radius:8px;padding:5px 4px;min-width:44px;text-align:center;font-size:${fs};font-weight:700;color:var(--text);">${name||"+"}</div>`;
+            }).join("");
+            return `<div style="font-size:8px;color:var(--text3);text-align:center;margin-bottom:2px;">${label}</div><div style="display:flex;gap:4px;justify-content:center;margin-bottom:5px;">${cells}</div>`;
+          }).join("");
+          return `<div style="margin-bottom:6px;">${rows3}</div>`;
+        })()}
         ${atk.type?`<div>속공: <b>${atk.type}</b></div>`:""}
         ${atk.pet?`<div>펫: <b>${atk.pet}</b></div>`:""}
         ${atk.skill?`<div style="color:var(--text3);">스킬: ${atk.skill}</div>`:""}
