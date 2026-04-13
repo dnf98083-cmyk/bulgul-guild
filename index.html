@@ -1934,18 +1934,33 @@ body::before {
       </button>
       <div id="dpRingPanel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:0 0 10px 10px;padding:12px 14px;margin-top:-2px;">
         <div id="dpRingList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <div style="position:relative;flex:2;min-width:120px;">
-            <input class="form-input" id="dpRingInput" placeholder="반지 이름 검색/직접입력" style="margin:0;width:100%;" oninput="dpFilterRing()" autocomplete="off">
-            <div id="dpRingSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;max-height:150px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <!-- 반지 -->
+          <div style="display:flex;gap:6px;">
+            <div style="position:relative;flex:1;">
+              <input class="form-input" id="dpRingInput" placeholder="반지 이름 검색/직접입력" style="margin:0;width:100%;" oninput="dpFilterRing()" autocomplete="off">
+              <div id="dpRingSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;max-height:150px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+            </div>
+            <select class="form-select" id="dpRingStar" style="margin:0;width:62px;padding:0 4px;font-size:12px;flex-shrink:0;">
+              <option value="4">4성</option>
+              <option value="5">5성</option>
+              <option value="6" selected>6성</option>
+            </select>
+            <input class="form-input" type="number" id="dpRingCount" placeholder="개수" style="margin:0;width:52px;flex-shrink:0;" min="1" max="99" value="1">
           </div>
-          <select class="form-select" id="dpRingStar" style="margin:0;flex:1;min-width:80px;">
-            <option value="4">4성</option>
-            <option value="5">5성</option>
-            <option value="6" selected>6성</option>
-          </select>
-          <input class="form-input" type="number" id="dpRingCount" placeholder="개수" style="margin:0;width:60px;" min="1" max="99" value="1">
-          <button class="btn-sm btn-blue" onclick="dpAddRing()">추가</button>
+          <!-- 세공 -->
+          <div style="display:flex;gap:6px;">
+            <div style="position:relative;flex:1;">
+              <input class="form-input" id="dpRingCraft" placeholder="✨ 세공 반지명 (없으면 비워두기)" style="margin:0;width:100%;" oninput="dpFilterRingCraft()" autocomplete="off">
+              <div id="dpRingCraftSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;max-height:150px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+            </div>
+            <select class="form-select" id="dpRingCraftStar" style="margin:0;width:62px;padding:0 4px;font-size:12px;flex-shrink:0;">
+              <option value="4">4성</option>
+              <option value="5">5성</option>
+              <option value="6" selected>6성</option>
+            </select>
+            <button class="btn-sm btn-blue" onclick="dpAddRing()" style="white-space:nowrap;flex-shrink:0;">추가</button>
+          </div>
         </div>
       </div>
     </div>
@@ -9932,15 +9947,18 @@ function dpRenderRings(){
     const used = dpData.teams.reduce((a,t)=>a+((t.rings||[]).filter(r=>r===key).length),0);
     const left = cnt - used;
     const leftColor = left<0?"#e74c3c":left===0?"#f0a500":"#27ae60";
-    return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:11px;background:rgba(255,165,0,0.15);color:${starColor[star]||"#f0a500"};border:1px solid ${starColor[star]||"#f0a500"};padding:1px 6px;border-radius:4px;font-weight:700;">${star}★</span>
-        <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${dispName}</span>
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;background:rgba(255,165,0,0.15);color:${starColor[star]||"#f0a500"};border:1px solid ${starColor[star]||"#f0a500"};padding:1px 6px;border-radius:4px;font-weight:700;">${star}★</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${dispName}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:var(--text3);">보유 <b style="color:var(--accent);">${cnt}</b> · 잔여 <b style="color:${leftColor};">${left}</b></span>
+          <button onclick="dpRemoveRing('${key}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:13px;padding:0;">✕</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:11px;color:var(--text3);">보유 <b style="color:var(--accent);">${cnt}</b> · 잔여 <b style="color:${leftColor};">${left}</b></span>
-        <button onclick="dpRemoveRing('${key}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:13px;padding:0;">✕</button>
-      </div>
+      ${info.craft?`<div style="font-size:10px;color:var(--text3);margin-top:4px;padding-left:2px;">✨ 세공: ${info.craftStar?info.craftStar+"★ ":""}${info.craft}</div>`:""}
     </div>`;
   }).join("");
 }
@@ -9955,21 +9973,37 @@ function dpFilterRing(){
   sug.style.display="block";
 }
 
+function dpFilterRingCraft(){
+  const q = document.getElementById("dpRingCraft").value.trim().toLowerCase();
+  const sug = document.getElementById("dpRingCraftSuggest");
+  if(!q){ sug.style.display="none"; return; }
+  const matches = DP_RINGS.filter(r=>r.toLowerCase().includes(q));
+  if(!matches.length){ sug.style.display="none"; return; }
+  sug.innerHTML = matches.map(r=>`<div onclick="document.getElementById('dpRingCraft').value='${r}';document.getElementById('dpRingCraftSuggest').style.display='none';" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">💍 ${r}</div>`).join("");
+  sug.style.display="block";
+}
+
+
 function dpAddRing(){
   const name = document.getElementById("dpRingInput").value.trim();
   const star = parseInt(document.getElementById("dpRingStar").value)||6;
   const cnt  = parseInt(document.getElementById("dpRingCount").value)||1;
+  const craft = document.getElementById("dpRingCraft")?.value.trim()||"";
+  const craftStar = craft ? (parseInt(document.getElementById("dpRingCraftStar")?.value)||6) : 0;
   if(!name){ toast("반지 이름을 입력하세요"); return; }
-  // 성급+이름을 별도 키로 관리
-  const key = star+"★ "+name;
+  // 성급+이름+세공을 키로 관리
+  const craftLabel = craft ? craftStar+"★ "+craft : "";
+  const key = star+"★ "+name+(craftLabel?" [세공: "+craftLabel+"]":"");
   if(dpData.rings[key]){
     dpData.rings[key].count = (dpData.rings[key].count||1) + cnt;
   } else {
-    dpData.rings[key] = {star, name, count:cnt};
+    dpData.rings[key] = {star, name, count:cnt, craft, craftStar};
   }
   document.getElementById("dpRingInput").value="";
   document.getElementById("dpRingCount").value="1";
+  if(document.getElementById("dpRingCraft")) document.getElementById("dpRingCraft").value="";
   document.getElementById("dpRingSuggest").style.display="none";
+  document.getElementById("dpRingCraftSuggest").style.display="none";
   dpRenderRings(); dpUpdateUsage();
 }
 
@@ -10107,7 +10141,7 @@ function dpRenderTeams(){
               return `<div style="display:flex;align-items:center;gap:4px;">
                 <div onclick="dpEditRingLabel(${ti},${ci},'${charLabel}')" title="클릭하여 이름 수정" style="font-size:10px;font-weight:700;color:${autoLabel?'var(--text2)':'rgba(255,85,51,0.7)'};min-width:30px;text-align:center;cursor:pointer;border-bottom:1px dashed ${autoLabel?'transparent':'rgba(255,85,51,0.4)'};">${charLabel}</div>
                 <div onclick="dpOpenRingPickTeam(${ti},${ci})" style="flex:1;background:${r?"rgba(240,165,0,0.1)":"var(--surface2)"};border:1px ${r?"solid rgba(240,165,0,0.4)":"dashed var(--border)"};border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px;color:${r?"#f0a500":"var(--text3)"};display:flex;justify-content:space-between;align-items:center;">
-                  <span>${r?"💍 "+r+(info?" ("+info.star+"★)":""):"반지 선택"}</span>
+                  <span>${r?"💍 "+r+(info?" ("+info.star+"★)"+(info.craft?" · ✨"+(info.craftStar?info.craftStar+"★ ":"")+info.craft:""):""):"반지 선택"}</span>
                   ${r?`<button onclick="event.stopPropagation();dpData.teams[${ti}].rings[${ci}]='';dpRenderTeams();dpUpdateUsage();" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:10px;">✕</button>`:""}
                 </div>
               </div>`;
@@ -10534,7 +10568,7 @@ function dpOpenRingPickTeam(ti, ci){
     const used = dpData.teams.reduce((a,t)=>a+((t.rings||[]).filter(r=>r===key).length),0);
     const left = (info.count||1)-used;
     const dispName = info.name||key;
-    return {key, label:`${info.star||6}★ ${dispName} (잔여${left})`, disabled:left<=0};
+    return {key, label:`${info.star||6}★ ${dispName}${info.craft?' ['+info.craft+']':''} (잔여${left})`, disabled:left<=0};
   });
   dpShowListModal("💍 반지 선택", items, (item)=>{
     if(!dpData.teams[ti].rings) dpData.teams[ti].rings=["","",""];
@@ -10722,7 +10756,12 @@ function adpRenderDetail(nick, container){
         ${atk.pet?`<div>펫: <b>${atk.pet}</b></div>`:""}
         ${atk.skill?`<div style="color:var(--text3);">스킬: ${atk.skill}</div>`:""}
       </div>`:""}
-      ${rings3.some(Boolean)?`<div style="font-size:10px;color:rgba(240,165,0,0.9);">💍 ${rings3.map((r,ci)=>(labels[ci]||r)?`${labels[ci]||"?"}:${r||"-"}`:null).filter(Boolean).join(" · ")}</div>`:""}
+      ${rings3.some(Boolean)?`<div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
+        ${rings3.map((r,ci)=>r?`<div style="display:flex;align-items:center;gap:4px;font-size:10px;">
+          ${labels[ci]?`<span style="color:var(--text3);min-width:30px;font-weight:700;">${labels[ci]}</span>`:""}
+          <span style="color:#f0a500;">💍 ${r}${dpData.rings?.[r]?" ("+dpData.rings[r].star+"★)"+(dpData.rings[r].craft?" ✨"+dpData.rings[r].craft:""):""}</span>
+        </div>`:"").join("")}
+      </div>`:""}
       ${t.customNote?`<div style="font-size:10px;color:var(--text3);">📝 ${t.customNote}</div>`:""}
       ${t.feedback?`<div style="font-size:10px;color:rgba(255,200,0,0.8);background:rgba(255,200,0,0.06);border-radius:6px;padding:4px 7px;">💬 ${t.feedback}</div>`:""}
       <!-- 피드백 입력 -->
