@@ -2083,6 +2083,7 @@ body::before {
             <button onclick="copyAtkCard()" class="btn-sm btn-gray" style="flex:1;">📤 복사</button>
             <button onclick="pasteAtkCard()" class="btn-sm btn-gray" style="flex:1;">📥 붙여넣기</button>
           </div>
+          <button onclick="addToDeckPlan()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:11px;border:1.5px solid rgba(100,160,220,0.4);background:rgba(100,160,220,0.08);color:rgba(100,160,220,0.9);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🗡️ 덱편성에 추가</button>
           <div class="wl-btns">
             <button class="btn-win" onclick="addWin()">🏆 승리</button>
             <button class="btn-lose" onclick="addLose()">💀 패배</button>
@@ -5289,7 +5290,39 @@ function editAttack() {
 }
 function delAttack() { if(checkResearcher()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
 
-// ══ 관리자 패널 토글 (공격/방어 탭 내부) ══
+// 길드전 공격에서 현재 선택된 덱을 덱편성에 바로 추가
+async function addToDeckPlan(){
+  if(!currentDefense||!currentAttack){ toast("방어팀과 공격덱을 먼저 선택해주세요"); return; }
+  const def = defenseDataCache[currentDefense];
+  const atk = def?.attackTeams?.[currentAttack];
+  if(!atk){ toast("공격덱 정보를 불러올 수 없어요"); return; }
+
+  // 내 덱편성 데이터 로드 후 팀 추가
+  const snap = await db.ref(`deckPlan/${myNick}`).once("value");
+  const existing = snap.val()||{rings:{}, teams:[]};
+  const teams = existing.teams||[];
+
+  // 이미 같은 조합이 있는지 체크
+  const dup = teams.find(t=>t.defKey===currentDefense && t.atkKey===currentAttack);
+  if(dup){ toast("이미 덱편성에 있는 조합이에요"); return; }
+
+  // 새 팀 추가
+  teams.push({
+    defKey: currentDefense,
+    defName: def.name||currentDefense,
+    atkKey: currentAttack,
+    atkName: atk.name||currentAttack,
+    note:"", win:0, lose:0, customNote:"", rings:["","",""], ringLabels:["","",""]
+  });
+
+  await db.ref(`deckPlan/${myNick}`).set({...existing, teams, updatedAt:Date.now()});
+
+  // 로컬 dpData도 업데이트
+  dpData.teams = teams;
+  toast("🗡️ 덱편성에 추가됐어요!");
+}
+
+
 function toggleAttackAdmin() {
   const panel=document.getElementById("attackAdminPanel"), btn=document.getElementById("atkAdminBtn");
   const open=panel.style.display==="block";
