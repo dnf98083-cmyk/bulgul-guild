@@ -10562,4 +10562,272 @@ function adpRenderDetail(nick, container){
 }
 
 
-// 피드백 전송 (관리자)
+// 피드백 전송 (관리자)async function dpSendFeedback(nick, ti){
+  if(!checkAdmin()) return;
+  const input = document.getElementById(`dpFb_${nick}_${ti}`) || document.getElementById(`adpFb_${nick}_${ti}`);
+  if(!input) return;
+  const msg = input.value.trim();
+  await db.ref(`deckPlan/${nick}/teams/${ti}/feedback`).set(msg);
+  if(msg){
+    await db.ref(`deckPlanNotify/${nick}`).push({
+      teamIdx:ti, message:msg, from:myNick, createdAt:Date.now(), read:false
+    });
+  }
+  toast(`✅ ${nick}에게 피드백 전송됨`);
+}
+
+function checkDeckPlanNotify(){
+  if(!myNick) return;
+  db.ref(`deckPlanNotify/${myNick}`).orderByChild("read").equalTo(false).on("value", snap=>{
+    if(!snap.exists()) return;
+    const entries = Object.entries(snap.val()||{});
+    if(!entries.length) return;
+    const [key, notify] = entries[0];
+    showDeckPlanNotifyPopup(key, notify);
+  });
+}
+
+function showDeckPlanNotifyPopup(key, notify){
+  document.getElementById("dpNotifyPopup")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id="dpNotifyPopup";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.innerHTML=`
+    <div style="background:var(--surface);border:1.5px solid rgba(255,200,0,0.4);border-radius:18px;width:100%;max-width:380px;padding:20px 18px;">
+      <div style="font-size:16px;font-weight:900;color:rgba(255,200,0,0.9);margin-bottom:4px;">💬 덱편성 피드백</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">관리자 ${notify.from||""}의 피드백</div>
+      <div style="font-size:13px;color:var(--text2);background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;line-height:1.6;">팀 ${(notify.teamIdx||0)+1}: ${notify.message}</div>
+      <button onclick="dpMarkNotifyRead('${key}')" style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">확인</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function dpMarkNotifyRead(key){
+  await db.ref(`deckPlanNotify/${myNick}/${key}/read`).set(true);
+  document.getElementById("dpNotifyPopup")?.remove();
+}
+
+// ══ 오늘의 추천덱 ══
+let todayDeckEnabled = false;
+let todayDeckData = {};
+let _tdDefKey="", _tdAtkKey="";
+
+function initTodayDeck(){
+  db.ref("todayDeck").on("value", snap=>{
+    const val = snap.val()||{};
+    todayDeckEnabled = val.enabled===true;
+    todayDeckData = val.decks||{};
+    updateTodayDeckToggleBtn();
+    renderTodayDeckAdminList();
+    renderTodayDeckInline();
+  });
+}
+
+function toggleTodayDeckPopup(){
+  if(!checkResearcher()) return;
+  db.ref("todayDeck/enabled").set(!todayDeckEnabled);
+}
+
+function filterTdDef(){
+  const q=document.getElementById("tdDefInput")?.value.trim().toLowerCase();
+  const sug=document.getElementById("tdDefSuggest");
+  if(!q||!sug){if(sug)sug.style.display="none";return;}
+  const matches=Object.entries(defenseDataCache||{}).filter(([k,v])=>(v.name||k).toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){sug.style.display="none";return;}
+  sug.innerHTML=matches.map(([k,v])=>`<div onclick="tdSelectDef('${k}','${(v.name||k).replace(/'/g,"\\'")}')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">${v.name||k}</div>`).join("");
+  sug.style.display="block";
+}
+
+window.tdSelectDef=function(key,name){
+  _tdDefKey=key;
+  document.getElementById("tdDefInput").value=name;
+  document.getElementById("tdDefSuggest").style.display="none";
+  document.getElementById("tdAtkInput").value="";
+  _tdAtkKey="";
+};
+
+function filterTdAtk(){
+  const q=document.getElementById("tdAtkInput")?.value.trim().toLowerCase();
+  const sug=document.getElementById("tdAtkSuggest");
+  if(!_tdDefKey||!q||!sug){if(sug)sug.style.display="none";return;}
+  const atks=Object.entries(defenseDataCache[_tdDefKey]?.attackTeams||{});
+  const matches=atks.filter(([k,v])=>(v.name||k).toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){sug.style.display="none";return;}
+  sug.innerHTML=matches.map(([k,v])=>`<div onclick="tdSelectAtk('${k}','${(v.name||k).replace(/'/g,"\\'")}')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">${v.name||k}</div>`).join("");
+  sug.style.display="block";
+}
+
+window.tdSelectAtk=function(key,name){
+  _tdAtkKey=key;
+  document.getElementById("tdAtkInput").value=name;
+  document.getElementById("tdAtkSuggest").style.display="none";
+};
+
+async function addTodayDeck(){
+  if(!checkResearcher()) return;
+  const defName=document.getElementById("tdDefInput").value.trim();
+  const atkName=document.getElementById("tdAtkInput").value.trim();
+  if(!defName||!atkName){ toast("방어팀과 공격덱명을 입력하세요"); return; }
+  if(!_tdDefKey||!_tdAtkKey){ toast("목록에서 선택해주세요"); return; }
+  const memo=(document.getElementById("tdMemoInput")?.value||"").trim();
+  await db.ref("todayDeck/decks").push({defKey:_tdDefKey,atkKey:_tdAtkKey,defName,atkName,memo,createdAt:Date.now()});
+  document.getElementById("tdDefInput").value="";
+  document.getElementById("tdAtkInput").value="";
+  if(document.getElementById("tdMemoInput")) document.getElementById("tdMemoInput").value="";
+  _tdDefKey=""; _tdAtkKey="";
+  toast("추천덱 추가됨 ✅");
+}
+
+async function removeTodayDeck(key){
+  await db.ref(`todayDeck/decks/${key}`).remove();
+}
+
+function renderTodayDeckAdminList(){
+  const el=document.getElementById("todayDeckAdminList");
+  if(!el) return;
+  const entries=Object.entries(todayDeckData);
+  if(!entries.length){ el.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0;">등록된 덱 없음</div>'; return; }
+  el.innerHTML=entries.map(([k,v])=>`
+    <div style="background:var(--surface2);border:1.5px solid rgba(255,85,51,0.2);border-radius:12px;padding:12px 14px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:9px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:2px;">⚔️ 우리 공격덱</div>
+          <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:7px;">${v.atkName||""}</div>
+          <div style="background:rgba(220,100,120,0.08);border:1px solid rgba(220,100,120,0.2);border-radius:7px;padding:5px 9px;${v.memo?'margin-bottom:7px;':''}">
+            <div style="font-size:9px;font-weight:700;color:rgba(220,100,120,0.9);margin-bottom:1px;">🛡️ 상대 방어덱</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);">${v.defName||""}</div>
+          </div>
+          ${v.memo?`<div style="background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:7px;padding:5px 9px;">
+            <div style="font-size:9px;font-weight:700;color:rgba(255,200,0,0.9);margin-bottom:1px;">💬 상황 설명</div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.5;">${v.memo}</div>
+          </div>`:""}
+        </div>
+        <button onclick="removeTodayDeck('${k}')" style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;font-size:12px;cursor:pointer;padding:5px 9px;border-radius:8px;flex-shrink:0;">삭제</button>
+      </div>
+    </div>`).join("");
+}
+
+function renderTodayDeckInline(){
+  const section=document.getElementById("todayDeckSection");
+  const list=document.getElementById("todayDeckInlineList");
+  if(!section||!list) return;
+  const entries=Object.entries(todayDeckData);
+  if(!todayDeckEnabled||!entries.length){ section.style.display="none"; return; }
+  section.style.display="block";
+  list.innerHTML=entries.map(([k,v])=>{
+    const w=defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.win||0;
+    const l=defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.lose||0;
+    const wr=(w+l)>0?Math.round(w/(w+l)*100):null;
+    const wrBadge=wr!==null?`<span style="font-size:11px;background:rgba(255,85,51,0.2);color:var(--accent);padding:2px 8px;border-radius:20px;font-weight:900;">${wr}%</span>`:"";
+    return `<div onclick="goToTodayDeck('${v.defKey}','${v.atkKey}')" style="background:var(--surface);border:1.5px solid rgba(255,85,51,0.2);border-radius:14px;padding:14px 14px 10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(255,85,51,0.06)'" onmouseout="this.style.borderColor='rgba(255,85,51,0.2)';this.style.background='var(--surface)'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div><div style="font-size:10px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:2px;">⚔️ 우리 공격덱</div><div style="font-size:15px;font-weight:900;color:var(--text);">${v.atkName||""}</div></div>
+        ${wrBadge}
+      </div>
+      <div style="background:rgba(220,100,120,0.08);border:1px solid rgba(220,100,120,0.2);border-radius:8px;padding:6px 10px;${v.memo?'margin-bottom:8px;':'margin-bottom:6px;'}">
+        <div style="font-size:9px;font-weight:700;color:rgba(220,100,120,0.9);margin-bottom:2px;">🛡️ 상대 방어덱</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text2);">${v.defName||""}</div>
+      </div>
+      ${v.memo?`<div style="background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:8px;padding:7px 10px;margin-bottom:6px;"><div style="font-size:9px;font-weight:700;color:rgba(255,200,0,0.9);margin-bottom:2px;">💬 상황 설명</div><div style="font-size:12px;color:var(--text2);line-height:1.5;">${v.memo}</div></div>`:""}
+      <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:right;">공략 보기 →</div>
+    </div>`;
+  }).join("");
+}
+
+function renderTodayDeckWinList(){
+  const el=document.getElementById("todayDeckWinList");
+  if(!el) return;
+  const all=[];
+  Object.entries(defenseDataCache||{}).forEach(([dk,def])=>{
+    Object.entries(def.attackTeams||{}).forEach(([ak,atk])=>{
+      const w=atk.win||0,l=atk.lose||0;
+      if(w+l<1) return;
+      all.push({defKey:dk,atkKey:ak,defName:def.name||dk,atkName:atk.name||ak,w,l,rate:Math.round(w/(w+l)*100)});
+    });
+  });
+  if(!all.length){el.innerHTML='<div style="color:var(--text3);font-size:11px;text-align:center;">기록된 승패 데이터가 없어요</div>';return;}
+  const top5=all.sort((a,b)=>b.rate-a.rate||b.w-a.w).slice(0,5);
+  el.innerHTML=top5.map((d,i)=>`
+    <div onclick="goToTodayDeck('${d.defKey}','${d.atkKey}')" style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size:14px;font-weight:900;color:${i===0?'var(--accent)':'var(--text3)'};width:20px;text-align:center;">${i+1}</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:900;color:var(--text);">${d.atkName}</div><div style="font-size:10px;color:var(--text3);">vs ${d.defName}</div></div>
+      <div style="text-align:right;"><div style="font-size:12px;font-weight:900;color:var(--accent);">${d.rate}%</div><div style="font-size:10px;color:var(--text3);">${d.w}승${d.l}패</div></div>
+    </div>`).join("");
+}
+
+function updateTodayDeckToggleBtn(){
+  const btn=document.getElementById("todayDeckToggleBtn");
+  if(!btn) return;
+  if(todayDeckEnabled){btn.textContent="ON";btn.style.background="var(--accent)";btn.style.color="#fff";}
+  else{btn.textContent="OFF";btn.style.background="var(--surface3)";btn.style.color="var(--text3)";}
+}
+
+function showTodayDeckPopupIfEnabled(){
+  if(!todayDeckEnabled||!Object.keys(todayDeckData).length) return;
+  if(window._skipTodayDeckPopup) return;
+  openTodayDeckPopup();
+}
+
+function openTodayDeckPopup(){
+  const el=document.getElementById("todayDeckOverlay");
+  if(!el) return;
+  renderTodayDeckPopupList();
+  renderTodayDeckWinList();
+  el.style.display="flex";
+}
+
+function closeTodayDeckPopup(){
+  const el=document.getElementById("todayDeckOverlay");
+  if(el) el.style.display="none";
+}
+
+function renderTodayDeckPopupList(){
+  const el=document.getElementById("todayDeckPopupList");
+  if(!el) return;
+  const entries=Object.entries(todayDeckData);
+  if(!entries.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px 0;">등록된 추천덱이 없어요</div>';return;}
+  el.innerHTML=entries.map(([k,v])=>{
+    const w=defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.win||0;
+    const l=defenseDataCache[v.defKey]?.attackTeams?.[v.atkKey]?.lose||0;
+    const wr=(w+l)>0?Math.round(w/(w+l)*100):null;
+    const wrBadge=wr!==null?`<span style="font-size:11px;background:rgba(255,85,51,0.2);color:var(--accent);padding:2px 8px;border-radius:20px;font-weight:900;">${wr}%</span>`:"";
+    return `<div onclick="goToTodayDeck('${v.defKey}','${v.atkKey}')" style="background:var(--surface2);border:1.5px solid rgba(255,85,51,0.2);border-radius:14px;padding:14px 14px 10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(255,85,51,0.06)'" onmouseout="this.style.borderColor='rgba(255,85,51,0.2)';this.style.background='var(--surface2)'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div><div style="font-size:10px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:2px;">⚔️ 우리 공격덱</div><div style="font-size:15px;font-weight:900;color:var(--text);">${v.atkName||""}</div></div>
+        ${wrBadge}
+      </div>
+      <div style="background:rgba(220,100,120,0.08);border:1px solid rgba(220,100,120,0.2);border-radius:8px;padding:6px 10px;${v.memo?'margin-bottom:8px;':'margin-bottom:6px;'}">
+        <div style="font-size:9px;font-weight:700;color:rgba(220,100,120,0.9);margin-bottom:2px;">🛡️ 상대 방어덱</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text2);">${v.defName||""}</div>
+      </div>
+      ${v.memo?`<div style="background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:8px;padding:7px 10px;margin-bottom:6px;"><div style="font-size:9px;font-weight:700;color:rgba(255,200,0,0.9);margin-bottom:2px;">💬 상황 설명</div><div style="font-size:12px;color:var(--text2);line-height:1.5;">${v.memo}</div></div>`:""}
+      <div style="font-size:10px;color:var(--accent);font-weight:700;text-align:right;">공략 보기 →</div>
+    </div>`;
+  }).join("");
+}
+
+function goToTodayDeck(defKey,atkKey){
+  closeTodayDeckPopup();
+  if(!defKey||!atkKey) return;
+  window._skipTodayDeckPopup=true;
+  switchTab("attack");
+  setTimeout(()=>{
+    const defName=defenseDataCache[defKey]?.name||defKey;
+    document.getElementById("defCurrentText").textContent=defName;
+    loadAttackTeams(defKey);
+    setTimeout(()=>{
+      currentAttack=atkKey;
+      selectAttack(defKey,atkKey);
+      setTimeout(()=>{
+        document.querySelectorAll(".atk-btn").forEach(b=>{
+          if(b.dataset.ak===atkKey) b.classList.add("active");
+          else b.classList.remove("active");
+        });
+      },200);
+    },400);
+  },600);
+}
+
+</script>
+</body>
+</html>
