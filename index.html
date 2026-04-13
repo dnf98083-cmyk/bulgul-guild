@@ -10562,7 +10562,8 @@ function adpRenderDetail(nick, container){
 }
 
 
-// 피드백 전송 (관리자)async function dpSendFeedback(nick, ti){
+// 피드백 전송 (관리자)
+async function dpSendFeedback(nick, ti){
   if(!checkAdmin()) return;
   const input = document.getElementById(`dpFb_${nick}_${ti}`) || document.getElementById(`adpFb_${nick}_${ti}`);
   if(!input) return;
