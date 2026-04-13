@@ -1494,6 +1494,7 @@ body::before {
     <button class="sb-item active" onclick="switchTab('home')"><span class="si-icon">🏠</span> 홈</button>
     <button class="sb-item" onclick="switchTab('notice')"><span class="si-icon">📢</span> 공지사항</button>
     <button class="sb-item" onclick="switchTab('totalwar')"><span class="si-icon">⚔️</span> 총력전</button>
+    <button class="sb-item" onclick="switchTab('deckplan')"><span class="si-icon">🗡️</span> 길드전 덱편성</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
@@ -1508,6 +1509,7 @@ body::before {
       <button class="sb-item" onclick="switchTab('adminSuggest')"><span class="si-icon">📬</span> 건의 관리<span id="badge-suggest" class="sb-badge" style="display:none;"></span></button>
       <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
       <button class="sb-item" onclick="switchTab('adminTodayDeck')"><span class="si-icon">🎯</span> 추천덱 관리</button>
+      <button class="sb-item" onclick="switchTab('adminDeckPlan')"><span class="si-icon">🗡️</span> 덱편성 관리</button>
     </div>
   </nav>
   <div class="sb-bottom">
@@ -1646,7 +1648,7 @@ body::before {
       • 데이터는 <b>내 닉네임</b> 기준으로 저장돼요 (다른 사람과 분리)
     </div>
     <!-- 팀 목록 -->
-    <div id="tw_teams_grid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;"></div>
+    <div id="tw_teams_grid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;cursor:grab;" onmousedown="twGridDragStart(event)" onmousemove="twGridDragMove(event)" onmouseup="twGridDragEnd()" onmouseleave="twGridDragEnd()" onwheel="twGridWheel(event)"></div>
 
     <!-- 공유 목록 (인라인) -->
     <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:14px;">
@@ -1915,6 +1917,51 @@ body::before {
         <button class="btn-sm btn-gray" style="width:100%;" onclick="document.getElementById('twStatViewOverlay').classList.remove('open')">닫기</button>
       </div>
     </div>
+  </div>
+
+
+  <!-- ══ 길드전 덱편성 ══ -->
+  <div id="deckplanScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 80px);">
+    <div class="page-header">
+      <div class="page-title">🗡️ 길드전 덱편성</div>
+      <button class="btn-icon" onclick="saveDeckPlan()" style="padding:7px 12px;font-size:12px;font-weight:700;">💾 저장</button>
+    </div>
+
+    <!-- 반지 보유 등록 토글 -->
+    <div style="margin-bottom:10px;">
+      <button onclick="dpToggleRingPanel()" id="dpRingToggleBtn" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;display:flex;justify-content:space-between;align-items:center;">
+        <span>💍 보유 반지 등록</span><span id="dpRingToggleIcon">▼</span>
+      </button>
+      <div id="dpRingPanel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:0 0 10px 10px;padding:12px 14px;margin-top:-2px;">
+        <div id="dpRingList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="position:relative;flex:2;min-width:120px;">
+            <input class="form-input" id="dpRingInput" placeholder="반지 이름 검색/직접입력" style="margin:0;width:100%;" oninput="dpFilterRing()" autocomplete="off">
+            <div id="dpRingSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:400;max-height:150px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);margin-top:2px;"></div>
+          </div>
+          <select class="form-select" id="dpRingStar" style="margin:0;flex:1;min-width:80px;">
+            <option value="4">4성</option>
+            <option value="5">5성</option>
+            <option value="6" selected>6성</option>
+          </select>
+          <input class="form-input" type="number" id="dpRingCount" placeholder="개수" style="margin:0;width:60px;" min="1" max="99" value="1">
+          <button class="btn-sm btn-blue" onclick="dpAddRing()">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 소모 현황 -->
+    <div id="dpUsageSummary" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;">📊 반지 소모 현황</div>
+      <div id="dpUsageContent" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <!-- 팀 카드 가로 슬라이드 -->
+    <div id="dpTeamsGrid" style="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;cursor:grab;"
+      onmousedown="dpGridDragStart(event)" onmousemove="dpGridDragMove(event)" onmouseup="dpGridDragEnd()" onmouseleave="dpGridDragEnd()" onwheel="dpGridWheel(event)"></div>
+
+    <!-- 팀 추가 버튼 -->
+    <button onclick="dpAddTeam()" style="width:100%;margin-top:4px;padding:13px;border-radius:12px;border:2px dashed var(--accent);background:rgba(255,85,51,0.06);color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 팀 추가</button>
   </div>
 
   <div id="attackScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 60px);">
@@ -3069,6 +3116,16 @@ body::before {
     </div>
   </div>
 
+
+  <!-- 덱편성 관리자 스크린 -->
+  <div id="adminDeckPlanScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 120px);">
+    <div class="page-header">
+      <div class="page-title">🗡️ 덱편성 관리</div>
+      <button class="btn-icon" onclick="loadAdminDeckPlan()">새로고침</button>
+    </div>
+    <div id="adminDeckPlanList" style="display:flex;flex-direction:column;gap:14px;"></div>
+  </div>
+
 </div><!-- /mainContent -->
 
 <!-- 제보 모달 -->
@@ -3342,6 +3399,7 @@ function enterApp() {
   checkSuggestReply();
   initTodayDeck();
   setTimeout(showTodayDeckPopupIfEnabled, 1000);
+  checkDeckPlanNotify();
 }
 
 function showAdminNav() {
@@ -4530,6 +4588,7 @@ function buildMobileAdminMenu(){
   menus.push(["📬","건의 관리","adminSuggest"]);
   if(isAdmin) menus.push(["📊","승패 관리","adminScores"]);
   menus.push(["🎯","추천덱 관리","adminTodayDeck"]);
+  menus.push(["🗡️","덱편성 관리","adminDeckPlan"]);
 
   menus.forEach(([icon, label, tab])=>{
     const btn = document.createElement("button");
@@ -4651,7 +4710,7 @@ function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear()
 
 // ══ 탭 전환 ══
 function switchTab(tab) {
-  const allTabs=["home","notice","totalwar","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest","adminTodayDeck"];
+  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -4663,7 +4722,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"attack":3,"defense":4,"pve":5,"calc":6,"ranking":7,"suggest":8,"adminMembers":9,"adminReports":10,"adminSuggest":11,"adminScores":12,"adminTodayDeck":13};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"ranking":8,"suggest":9,"adminMembers":10,"adminReports":11,"adminSuggest":12,"adminScores":13,"adminTodayDeck":14,"adminDeckPlan":15};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -4696,6 +4755,8 @@ function switchTab(tab) {
   if(tab==="adminReports"){ loadAdminReports(); markReportsAsRead(); }
   if(tab==="adminScores") loadAdminScores();
   if(tab==="adminTodayDeck") renderTodayDeckAdminList();
+  if(tab==="deckplan") initDeckPlan();
+  if(tab==="adminDeckPlan") loadAdminDeckPlan();
 }
 
 // ══ 방어팀 드롭다운 ══
@@ -8156,6 +8217,7 @@ function twRenderTeamCards(tier, data){
         border-radius:var(--radius);padding:12px;
         flex-shrink:0;width:min(210px,75vw);
         display:flex;flex-direction:column;gap:8px;
+        scroll-snap-align:start;
       ">
         <!-- 헤더: 팀번호 + 진형 화살표 -->
         <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -8451,7 +8513,38 @@ function renderTwTeamSlots(){
   if(petInput) petInput.value=twTeamPet||"";
 }
 
-// ── 총력전 슬롯 드래그 앤 드롭 ──
+// ── 총력전 그리드 마우스휠 좌우 스크롤 ──
+function twGridWheel(e){
+  const grid = document.getElementById("tw_teams_grid");
+  if(!grid) return;
+  e.preventDefault();
+  grid.scrollLeft += e.deltaY * 2;
+}
+
+
+let _twGridDrag = {active:false, startX:0, scrollLeft:0};
+function twGridDragStart(e){
+  const grid = document.getElementById("tw_teams_grid");
+  if(!grid) return;
+  _twGridDrag = {active:true, startX:e.pageX - grid.offsetLeft, scrollLeft:grid.scrollLeft};
+  grid.style.cursor="grabbing";
+}
+function twGridDragMove(e){
+  if(!_twGridDrag.active) return;
+  e.preventDefault();
+  const grid = document.getElementById("tw_teams_grid");
+  if(!grid) return;
+  const x = e.pageX - grid.offsetLeft;
+  const walk = (x - _twGridDrag.startX) * 1.5;
+  grid.scrollLeft = _twGridDrag.scrollLeft - walk;
+}
+function twGridDragEnd(){
+  _twGridDrag.active = false;
+  const grid = document.getElementById("tw_teams_grid");
+  if(grid) grid.style.cursor="grab";
+}
+
+
 let twDragSrcIdx = null;
 let twDragTimer  = null;
 let twDragActive = false;
@@ -9713,7 +9806,618 @@ function switchAdventInput(week){
   switchAdventWeek(week);
 }
 
-// ══ 오늘의 추천덱 ══
+// ══ 길드전 덱편성 ══
+const DP_RINGS = ["부활의 반지","불사의 반지","권능의 반지"];
+
+let dpData = {
+  rings: {},   // {반지명: {star:6, count:1}}
+  teams: []    // [{defKey, defName, atkKey, atkName, note, win, lose, customNote}]
+};
+
+function dpEmptyTeam(){ return {defKey:"",defName:"",atkKey:"",atkName:"",note:"",win:0,lose:0,customNote:"",rings:["","",""]}; }
+
+// ── 초기화 ──
+function initDeckPlan(){
+  db.ref(`deckPlan/${myNick}`).once("value").then(snap=>{
+    if(snap.exists()){
+      const d = snap.val();
+      dpData.rings = d.rings||{};
+      dpData.teams = (d.teams||[]).map(t=>({...dpEmptyTeam(),...t, rings:t.rings||(t.ring?[t.ring,"",""]:["","",""])}));
+    } else {
+      dpData.rings = {};
+      dpData.teams = [dpEmptyTeam()];
+    }
+    if(!dpData.teams.length) dpData.teams = [dpEmptyTeam()];
+    dpRenderRings();
+    dpRenderTeams();
+    dpUpdateUsage();
+  });
+}
+
+// ── 반지 렌더링 ──
+function dpRenderRings(){
+  const el = document.getElementById("dpRingList");
+  if(!el) return;
+  const entries = Object.entries(dpData.rings);
+  if(!entries.length){ el.innerHTML='<div style="font-size:11px;color:var(--text3);">등록된 반지 없음</div>'; return; }
+  const starColor = {4:"#a0a0ff",5:"#ffd700",6:"#ff6b35"};
+  el.innerHTML = entries.map(([key,info])=>{
+    const star = info.star||6, cnt = info.count||1, dispName = info.name||key;
+    const used = dpData.teams.reduce((a,t)=>a+((t.rings||[]).filter(r=>r===key).length),0);
+    const left = cnt - used;
+    const leftColor = left<0?"#e74c3c":left===0?"#f0a500":"#27ae60";
+    return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;background:rgba(255,165,0,0.15);color:${starColor[star]||"#f0a500"};border:1px solid ${starColor[star]||"#f0a500"};padding:1px 6px;border-radius:4px;font-weight:700;">${star}★</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">💍 ${dispName}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);">보유 <b style="color:var(--accent);">${cnt}</b> · 잔여 <b style="color:${leftColor};">${left}</b></span>
+        <button onclick="dpRemoveRing('${key}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:13px;padding:0;">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function dpFilterRing(){
+  const q = document.getElementById("dpRingInput").value.trim().toLowerCase();
+  const sug = document.getElementById("dpRingSuggest");
+  if(!q){ sug.style.display="none"; return; }
+  const matches = DP_RINGS.filter(r=>r.toLowerCase().includes(q));
+  if(!matches.length){ sug.style.display="none"; return; }
+  sug.innerHTML = matches.map(r=>`<div onclick="document.getElementById('dpRingInput').value='${r}';document.getElementById('dpRingSuggest').style.display='none';" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">💍 ${r}</div>`).join("");
+  sug.style.display="block";
+}
+
+function dpAddRing(){
+  const name = document.getElementById("dpRingInput").value.trim();
+  const star = parseInt(document.getElementById("dpRingStar").value)||6;
+  const cnt  = parseInt(document.getElementById("dpRingCount").value)||1;
+  if(!name){ toast("반지 이름을 입력하세요"); return; }
+  // 성급+이름을 별도 키로 관리
+  const key = star+"★ "+name;
+  if(dpData.rings[key]){
+    dpData.rings[key].count = (dpData.rings[key].count||1) + cnt;
+  } else {
+    dpData.rings[key] = {star, name, count:cnt};
+  }
+  document.getElementById("dpRingInput").value="";
+  document.getElementById("dpRingCount").value="1";
+  document.getElementById("dpRingSuggest").style.display="none";
+  dpRenderRings(); dpUpdateUsage();
+}
+
+function dpRemoveRing(name){
+  delete dpData.rings[name];
+  dpRenderRings(); dpUpdateUsage();
+}
+
+// ── 팀 렌더링 ──
+function dpToggleRingPanel(){
+  const panel = document.getElementById("dpRingPanel");
+  const icon = document.getElementById("dpRingToggleIcon");
+  const open = panel.style.display==="none";
+  panel.style.display = open?"block":"none";
+  if(icon) icon.textContent = open?"▲":"▼";
+}
+
+function dpRenderTeams(){
+  const grid = document.getElementById("dpTeamsGrid");
+  if(!grid) return;
+  grid.innerHTML = "";
+  dpData.teams.forEach((team,ti)=>{
+    const hasRecord = (team.win||0)>0||(team.lose||0)>0;
+    const tot = (team.win||0)+(team.lose||0);
+    const wr = tot?Math.round((team.win||0)/tot*100):null;
+    const atk = team.atkKey&&team.atkKey!=="__custom__"&&defenseDataCache[team.defKey]?.attackTeams?.[team.atkKey];
+
+    const card = document.createElement("div");
+    card.style.cssText = "background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;";
+
+    card.innerHTML = `
+      <!-- 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:14px;font-weight:800;">팀 ${ti+1}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${hasRecord?`<span style="font-size:11px;font-weight:700;color:${wr>=50?"#27ae60":"#e74c3c"};">${team.win||0}승${team.lose||0}패</span>`:""}
+          <button onclick="dpRemoveTeam(${ti})" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:12px;padding:2px 4px;">✕</button>
+        </div>
+      </div>
+
+      <!-- 상대 방어팀 -->
+      <div>
+        <div style="font-size:9px;font-weight:700;color:rgba(220,100,120,0.9);margin-bottom:3px;">🛡️ 상대 방어팀</div>
+        <div onclick="dpOpenDefPick(${ti})" style="background:${team.defKey?"rgba(220,100,120,0.1)":"var(--surface2)"};border:1.5px ${team.defKey?"solid rgba(220,100,120,0.4)":"dashed var(--border)"};border-radius:10px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:700;color:${team.defKey?"var(--text)":"var(--text3)"};">
+          ${team.defName||"방어팀 선택 →"}
+        </div>
+      </div>
+
+      <!-- 공격덱 -->
+      <div>
+        <div style="font-size:9px;font-weight:700;color:rgba(100,160,220,0.9);margin-bottom:3px;">⚔️ 공격덱</div>
+        <div style="display:flex;gap:6px;align-items:stretch;">
+          <div onclick="dpOpenAtkPick(${ti})" style="flex:1;background:${team.atkKey?"rgba(100,160,220,0.1)":"var(--surface2)"};border:1.5px ${team.atkKey?"solid rgba(100,160,220,0.4)":"dashed var(--border)"};border-radius:10px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:700;color:${team.atkKey?"var(--text)":"var(--text3)"};">
+            ${team.atkName||"공격덱 선택 →"}
+          </div>
+          ${team.atkKey&&team.atkKey!=="__custom__"?`<button onclick="dpShowAtkDetail(${ti})" style="padding:0 10px;border-radius:10px;border:1px solid rgba(100,160,220,0.3);background:rgba(100,160,220,0.08);color:rgba(100,160,220,0.9);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;">📋</button>`:""}
+        </div>
+      </div>
+
+      <!-- 공략 정보 -->
+      ${atk?`<div style="background:rgba(100,160,220,0.06);border:1px solid rgba(100,160,220,0.15);border-radius:8px;padding:7px 10px;">
+        ${atk.type?`<div style="font-size:10px;color:var(--text2);">속공: <b>${atk.type}</b></div>`:""}
+        ${atk.ring?`<div style="font-size:10px;color:var(--text2);">반지: <b>${atk.ring}</b></div>`:""}
+        ${atk.pet?`<div style="font-size:10px;color:var(--text2);">펫: <b>${atk.pet}</b></div>`:""}
+        ${atk.skill?`<div style="font-size:10px;color:var(--text3);">스킬: ${atk.skill}</div>`:""}
+      </div>`:""}
+
+      <!-- 반지 선택 (3슬롯 - 캐릭터명) -->
+      <div>
+        <div style="font-size:9px;font-weight:700;color:rgba(240,165,0,0.9);margin-bottom:4px;">💍 사용 반지 (캐릭터별)</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${(()=>{
+            // 공격덱 formation에서 캐릭터 이름 추출
+            const atkData = team.atkKey&&team.atkKey!=="__custom__"&&defenseDataCache[team.defKey]?.attackTeams?.[team.atkKey];
+            const formation = atkData?.formation||"";
+            const parts = formation.trim().split(/\s+/);
+            // 첫 단어가 진형타입이면 제거
+            const formTypes = ["기본","밸런스","공격","보호"];
+            const charParts = formTypes.includes(parts[0]) ? parts.slice(1) : parts;
+            // _는 빈 슬롯, 앞 2글자만
+            const charNames = charParts.filter(p=>p&&p!=="__"&&p!=="_").slice(0,3);
+            return [0,1,2].map(ci=>{
+              const r=(team.rings||[])[ci]||"";
+              const info=r?dpData.rings[r]:null;
+              const charLabel = charNames[ci] || (ci+1)+"번";
+              return `<div style="display:flex;align-items:center;gap:4px;">
+                <span style="font-size:10px;font-weight:700;color:var(--text3);min-width:24px;text-align:center;">${charLabel}</span>
+                <div onclick="dpOpenRingPickTeam(${ti},${ci})" style="flex:1;background:${r?"rgba(240,165,0,0.1)":"var(--surface2)"};border:1px ${r?"solid rgba(240,165,0,0.4)":"dashed var(--border)"};border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px;color:${r?"#f0a500":"var(--text3)"};display:flex;justify-content:space-between;align-items:center;">
+                  <span>${r?"💍 "+r+(info?" ("+info.star+"★)":""):"반지 선택"}</span>
+                  ${r?`<button onclick="event.stopPropagation();dpData.teams[${ti}].rings[${ci}]='';dpRenderTeams();dpUpdateUsage();" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:10px;">✕</button>`:""}
+                </div>
+              </div>`;
+            }).join("");
+          })()}
+        </div>
+      </div>
+
+      <!-- 메모 -->
+      <textarea oninput="dpData.teams[${ti}].customNote=this.value" placeholder="메모" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:11px;color:var(--text2);font-family:inherit;resize:none;box-sizing:border-box;" rows="2">${team.customNote||""}</textarea>
+
+      <!-- 관리자 피드백 -->
+      ${team.feedback?`<div onclick="dpShowFeedbackPopup(${ti})" style="background:rgba(255,200,0,0.08);border:1.5px solid rgba(255,200,0,0.4);border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:rgba(255,200,0,0.9);margin-bottom:1px;">💬 관리자 피드백</div>
+          <div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">${team.feedback}</div>
+        </div>
+        <span style="font-size:10px;color:rgba(255,200,0,0.7);">자세히 →</span>
+      </div>`:""}
+
+      <!-- 승패 버튼 -->
+      <div style="display:flex;gap:6px;">
+        <button onclick="dpRecordResult(${ti},'win')" style="flex:1;padding:9px;border-radius:9px;border:none;background:rgba(39,174,96,0.15);color:#27ae60;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;">🏆 승</button>
+        <button onclick="dpRecordResult(${ti},'lose')" style="flex:1;padding:9px;border-radius:9px;border:none;background:rgba(231,76,60,0.12);color:#e74c3c;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;">💀 패</button>
+        ${hasRecord?`<button onclick="dpResetRecord(${ti})" style="padding:9px 10px;border-radius:9px;border:1px solid var(--border);background:none;color:var(--text3);font-size:10px;cursor:pointer;font-family:inherit;">초기화</button>`:""}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // 팀 없을 때 빈 상태
+  if(!dpData.teams.length){
+    grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;">팀을 추가해주세요</div>';
+  }
+}
+
+function dpAddTeam(){
+  dpData.teams.push(dpEmptyTeam());
+  dpRenderTeams(); dpUpdateUsage();
+}
+
+function dpRemoveTeam(ti){
+  if(!confirm(`팀 ${ti+1}을 삭제할까요?`)) return;
+  dpData.teams.splice(ti,1);
+  if(!dpData.teams.length) dpData.teams.push(dpEmptyTeam());
+  dpRenderTeams(); dpUpdateUsage();
+}
+
+// ── 그리드 마우스 드래그 ──
+let _dpGridDrag = {active:false, startX:0, scrollLeft:0};
+function dpGridDragStart(e){
+  const g=document.getElementById("dpTeamsGrid"); if(!g) return;
+  _dpGridDrag={active:true,startX:e.pageX-g.offsetLeft,scrollLeft:g.scrollLeft};
+  g.style.cursor="grabbing";
+}
+function dpGridDragMove(e){
+  if(!_dpGridDrag.active) return; e.preventDefault();
+  const g=document.getElementById("dpTeamsGrid"); if(!g) return;
+  g.scrollLeft=_dpGridDrag.scrollLeft-(e.pageX-g.offsetLeft-_dpGridDrag.startX)*1.5;
+}
+function dpGridDragEnd(){
+  _dpGridDrag.active=false;
+  const g=document.getElementById("dpTeamsGrid"); if(g) g.style.cursor="grab";
+}
+
+// 마우스휠 좌우 스크롤
+function dpGridWheel(e){
+  const g=document.getElementById("dpTeamsGrid");
+  if(!g) return;
+  e.preventDefault();
+  g.scrollLeft += e.deltaY * 2;
+}
+
+// 피드백 팝업
+function dpShowFeedbackPopup(ti){
+  const team = dpData.teams[ti];
+  if(!team?.feedback) return;
+  document.getElementById("dpFeedbackPopup")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id="dpFeedbackPopup";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML=`
+    <div style="background:var(--surface);border:2px solid rgba(255,200,0,0.4);border-radius:18px;width:100%;max-width:380px;padding:20px 18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:15px;font-weight:900;color:rgba(255,200,0,0.9);">💬 관리자 피드백</div>
+        <button onclick="document.getElementById('dpFeedbackPopup').remove()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:13px;color:var(--text2);background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;line-height:1.6;">팀 ${ti+1}: ${team.feedback}</div>
+      <button onclick="dpClearFeedback(${ti})" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.08);color:rgba(255,200,0,0.9);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✅ 피드백 확인 완료</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function dpClearFeedback(ti){
+  await db.ref(`deckPlan/${myNick}/teams/${ti}/feedback`).remove();
+  dpData.teams[ti].feedback = "";
+  document.getElementById("dpFeedbackPopup")?.remove();
+  dpRenderTeams();
+  toast("피드백 확인 완료!");
+}
+
+
+function dpShowAtkDetail(ti){
+  const team = dpData.teams[ti];
+  if(!team||!team.atkKey||team.atkKey==="__custom__") return;
+  const atk = defenseDataCache[team.defKey]?.attackTeams?.[team.atkKey];
+  if(!atk) return;
+
+  document.getElementById("dpAtkDetailPopup")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id="dpAtkDetailPopup";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:4500;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  // 배치 HTML 생성
+  const formation = atk.formation||"";
+  let formationHtml = "";
+  if(formation){
+    const type = detectFormationType(formation);
+    if(type){
+      const cleaned = formation.replace(type,"").trim();
+      const chars = cleaned ? cleaned.split(/\s+/).map(c=>c==="_"?"":c) : [];
+      const layout = FORMATION_LAYOUTS[type];
+      const rows = layout.map((row, ri)=>{
+        const cells = row.map(idx=>{
+          const c = chars[idx]||"";
+          const isBack = ri > 0;
+          const bg = isBack?"rgba(255,182,193,0.3)":"rgba(173,216,230,0.3)";
+          const bd = isBack?"rgba(220,100,120,0.5)":"rgba(100,160,220,0.5)";
+          return `<div style="background:${bg};border:1.5px solid ${bd};border-radius:10px;padding:8px 6px;min-width:56px;text-align:center;font-size:${c.length>4?"9px":"11px"};font-weight:700;color:var(--text);">${c||"+"}</div>`;
+        }).join("");
+        const label = ri===0?"▲ 앞줄":"▼ 뒷줄";
+        return `<div style="font-size:9px;color:var(--text3);text-align:center;margin-bottom:3px;">${label}</div>
+                <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">${cells}</div>`;
+      }).join("");
+      formationHtml = `<div style="margin-bottom:12px;">${rows}</div>`;
+    }
+  }
+
+  const tot = (atk.win||0)+(atk.lose||0);
+  const wr = tot?Math.round((atk.win||0)/tot*100):null;
+
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:18px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding:20px 18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:15px;font-weight:900;">⚔️ ${atk.name||""}</div>
+        <button onclick="document.getElementById('dpAtkDetailPopup').remove()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">🛡️ vs ${team.defName||""} ${wr!==null?`· <span style="color:${wr>=50?"#27ae60":"#e74c3c"};font-weight:700;">${atk.win||0}승${atk.lose||0}패 ${wr}%</span>`:""}</div>
+
+      <!-- 배치 -->
+      ${formationHtml}
+
+      <!-- 정보 -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${atk.type?`<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;"><span style="font-size:10px;color:var(--text3);">속공</span><div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px;">${atk.type}</div></div>`:""}
+        ${atk.ring?`<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;"><span style="font-size:10px;color:var(--text3);">반지</span><div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px;">${atk.ring}</div></div>`:""}
+        ${atk.pet?`<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;"><span style="font-size:10px;color:var(--text3);">펫</span><div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px;">${atk.pet}</div></div>`:""}
+        ${atk.skill?`<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;"><span style="font-size:10px;color:var(--text3);">스킬순서</span><div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.6;">${atk.skill}</div></div>`:""}
+        ${atk.armor?`<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;"><span style="font-size:10px;color:var(--text3);">장비·특이사항</span><div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.6;">${atk.armor}</div></div>`:""}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+
+// ── 승패 기록 ──
+async function dpRecordResult(ti, result){
+  const team = dpData.teams[ti];
+  if(!team) return;
+  if(result==="win") team.win=(team.win||0)+1;
+  else team.lose=(team.lose||0)+1;
+  // 길드전 공격 랭킹에도 반영
+  const atkName = team.atkName||"덱편성 기록";
+  const defKey  = team.defKey||"__direct__";
+  const atkKey  = team.atkKey||"__direct__";
+  db.ref("logs").push({
+    nick:myNick, result, defense:defKey, attack:atkKey,
+    attackName:atkName, defenseName:team.defName||"",
+    attackType:"덱편성", date:new Date().toISOString().slice(0,10), time:Date.now()
+  });
+  if(team.atkKey&&team.defKey){
+    const ref = db.ref(`defenseTeams/${team.defKey}/attackTeams/${team.atkKey}`);
+    const snap = await ref.once("value");
+    const d = snap.val()||{win:0,lose:0};
+    if(result==="win") ref.update({win:(d.win||0)+1});
+    else ref.update({lose:(d.lose||0)+1});
+  }
+  saveDeckPlan();
+  dpRenderTeams();
+  toast(result==="win"?"🏆 승리 기록됨!":"💀 패배 기록됨");
+}
+
+function dpResetRecord(ti){
+  if(!confirm("승패 기록을 초기화할까요?")) return;
+  dpData.teams[ti].win=0; dpData.teams[ti].lose=0;
+  dpRenderTeams(); saveDeckPlan();
+}
+
+// ── 소모 현황 ──
+function dpUpdateUsage(){
+  const usedRings = {};
+  dpData.teams.forEach(t=>{ (t.rings||[]).forEach(r=>{ if(r) usedRings[r]=(usedRings[r]||0)+1; }); });
+  const summary = document.getElementById("dpUsageSummary");
+  const cont = document.getElementById("dpUsageContent");
+  if(!summary||!cont) return;
+  const starColor = {4:"#a0a0ff",5:"#ffd700",6:"#ff6b35"};
+  const items = Object.entries(dpData.rings).map(([key,info])=>{
+    const used = usedRings[key]||0;
+    const left = (info.count||1) - used;
+    const lc = left<0?"#e74c3c":left===0?"#f0a500":"#27ae60";
+    const dispName = info.name||key;
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;min-width:100px;">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+        <span style="font-size:10px;color:${starColor[info.star||6]||"#f0a500"};font-weight:700;">${info.star||6}★</span>
+        <span style="font-weight:700;color:var(--text2);">💍 ${dispName}</span>
+      </div>
+      <div style="color:${lc};font-weight:900;">사용 ${used}/${info.count||1} · 잔여 ${left}</div>
+    </div>`;
+  });
+  if(items.length){ summary.style.display="block"; cont.innerHTML=items.join(""); }
+  else summary.style.display="none";
+}
+
+// ── 방어팀 선택 ──
+let _dpPickTi = null;
+
+function dpOpenDefPick(ti){
+  _dpPickTi = ti;
+  const defs = Object.entries(defenseDataCache||{});
+  if(!defs.length){ toast("방어팀 데이터 로딩 중..."); return; }
+  dpShowListModal("🛡️ 상대 방어팀 선택", defs.map(([k,v])=>({key:k,label:v.name||k})), (item)=>{
+    dpData.teams[ti].defKey = item.key;
+    dpData.teams[ti].defName = item.label;
+    dpData.teams[ti].atkKey = "";
+    dpData.teams[ti].atkName = "";
+    dpRenderTeams(); dpUpdateUsage();
+  });
+}
+
+// ── 공격덱 선택 ──
+function dpOpenAtkPick(ti){
+  const team = dpData.teams[ti];
+  if(!team.defKey){ toast("먼저 상대 방어팀을 선택하세요"); return; }
+  const atks = Object.entries(defenseDataCache[team.defKey]?.attackTeams||{});
+  const items = atks.map(([k,v])=>({key:k,label:v.name||k}));
+  items.push({key:"__custom__", label:"✏️ 직접 입력"});
+  dpShowListModal("⚔️ 공격덱 선택", items, (item)=>{
+    if(item.key==="__custom__"){
+      const name = prompt("공격덱 이름 직접 입력:");
+      if(!name) return;
+      dpData.teams[ti].atkKey = "__custom__";
+      dpData.teams[ti].atkName = name;
+    } else {
+      dpData.teams[ti].atkKey = item.key;
+      dpData.teams[ti].atkName = item.label;
+    }
+    dpRenderTeams(); dpUpdateUsage();
+  });
+}
+
+// ── 반지 선택 ──
+function dpOpenRingPickTeam(ti, ci){
+  const ringKeys = Object.keys(dpData.rings);
+  if(!ringKeys.length){ toast("먼저 반지를 등록해주세요"); return; }
+  const starColor = {4:"#a0a0ff",5:"#ffd700",6:"#ff6b35"};
+  const items = ringKeys.map(key=>{
+    const info = dpData.rings[key]||{};
+    const used = dpData.teams.reduce((a,t)=>a+((t.rings||[]).filter(r=>r===key).length),0);
+    const left = (info.count||1)-used;
+    const dispName = info.name||key;
+    return {key, label:`${info.star||6}★ ${dispName} (잔여${left})`, disabled:left<=0};
+  });
+  dpShowListModal("💍 반지 선택", items, (item)=>{
+    if(!dpData.teams[ti].rings) dpData.teams[ti].rings=["","",""];
+    dpData.teams[ti].rings[ci] = item.key;
+    dpRenderTeams(); dpUpdateUsage();
+  });
+}
+
+// ── 공통 리스트 모달 ──
+function dpShowListModal(title, items, onSelect){
+  document.getElementById("dpListModal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id="dpListModal";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:4000;display:flex;align-items:flex-end;justify-content:center;padding:0;";
+  overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+  const modal = document.createElement("div");
+  modal.style.cssText="background:var(--surface);border-radius:18px 18px 0 0;width:100%;max-width:500px;max-height:70vh;display:flex;flex-direction:column;padding:16px;";
+  let search="";
+  const render=()=>{
+    const filtered = items.filter(it=>!search||it.label.toLowerCase().includes(search.toLowerCase()));
+    grid.innerHTML = filtered.map(it=>`
+      <button onclick="${it.disabled?"":"dpListSelect(this)"}" data-key="${it.key}" data-label="${it.label.replace(/"/g,"&quot;")}"
+        style="padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:${it.disabled?"var(--surface3)":"var(--surface2)"};
+        color:${it.disabled?"var(--text3)":"var(--text2)"};font-size:13px;font-weight:700;cursor:${it.disabled?"not-allowed":"pointer"};
+        font-family:inherit;text-align:left;opacity:${it.disabled?0.5:1};">${it.label}</button>
+    `).join("");
+  };
+  modal.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:15px;font-weight:900;">${title}</div>
+      <button onclick="document.getElementById('dpListModal').remove()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <input class="form-input" placeholder="검색..." style="margin-bottom:10px;" oninput="this._s=this.value;dpListSearch(this.value)">
+    <div id="dpListGrid" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;"></div>
+  `;
+  const grid = modal.querySelector("#dpListGrid");
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  window._dpListItems = items;
+  window._dpListOnSelect = onSelect;
+  render();
+  window.dpListSearch = (v)=>{
+    search=v;
+    const filtered = items.filter(it=>!v||it.label.toLowerCase().includes(v.toLowerCase()));
+    grid.innerHTML = filtered.map(it=>`
+      <button onclick="${it.disabled?"":"dpListSelect(this)"}" data-key="${it.key}" data-label="${it.label.replace(/"/g,"&quot;")}"
+        style="padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:${it.disabled?"var(--surface3)":"var(--surface2)"};
+        color:${it.disabled?"var(--text3)":"var(--text2)"};font-size:13px;font-weight:700;cursor:${it.disabled?"not-allowed":"pointer"};
+        font-family:inherit;text-align:left;opacity:${it.disabled?0.5:1};">${it.label}</button>
+    `).join("");
+  };
+}
+
+window.dpListSelect = function(btn){
+  const key = btn.dataset.key;
+  const label = btn.dataset.label;
+  document.getElementById("dpListModal")?.remove();
+  if(window._dpListOnSelect) window._dpListOnSelect({key, label});
+};
+
+// ── 저장 ──
+async function saveDeckPlan(){
+  await db.ref(`deckPlan/${myNick}`).set({
+    rings: dpData.rings,
+    teams: dpData.teams,
+    updatedAt: Date.now()
+  });
+  toast("✅ 덱편성 저장됨!");
+}
+
+// ── 관리자 뷰 ──
+function loadAdminDeckPlan(){
+  const el = document.getElementById("adminDeckPlanList");
+  if(!el) return;
+  el.innerHTML='<div class="empty-state">로딩 중...</div>';
+  db.ref("deckPlan").on("value", snap=>{
+    const all = snap.val()||{};
+    if(!Object.keys(all).length){ el.innerHTML='<div class="empty-state">등록된 덱편성 없음</div>'; return; }
+    const starColor={4:"#a0a0ff",5:"#ffd700",6:"#ff6b35"};
+    el.innerHTML = Object.entries(all).map(([nick,data])=>{
+      const teams = data.teams||[];
+      const rings = data.rings||{};
+      const ringStr = Object.entries(rings).map(([k,info])=>`${info.star||6}★${info.name||k}×${info.count||1}`).join(", ")||"없음";
+      const totalW = teams.reduce((a,t)=>a+(t.win||0),0);
+      const totalL = teams.reduce((a,t)=>a+(t.lose||0),0);
+      const totalTot = totalW+totalL;
+      const totalWr = totalTot?Math.round(totalW/totalTot*100):null;
+      const teamHtml = teams.map((t,i)=>{
+        const tot=(t.win||0)+(t.lose||0), wr=tot?Math.round((t.win||0)/tot*100):null;
+        return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">팀 ${i+1}</span>
+            ${wr!==null?`<span style="font-size:11px;font-weight:700;color:${wr>=50?"#27ae60":"#e74c3c"};">${t.win||0}승${t.lose||0}패 ${wr}%</span>`:"<span style='font-size:10px;color:var(--text3);'>미기록</span>"}
+          </div>
+          <div style="font-size:11px;color:rgba(220,100,120,0.9);">🛡️ ${t.defName||"미선택"}</div>
+          <div style="font-size:11px;color:rgba(100,160,220,0.9);">⚔️ ${t.atkName||"미선택"}</div>
+          ${(t.rings||[]).filter(Boolean).length?`<div style="font-size:11px;color:#f0a500;">💍 ${(t.rings||[]).filter(Boolean).join(", ")}</div>`:""}
+          ${t.customNote?`<div style="font-size:10px;color:var(--text3);margin-top:2px;">📝 ${t.customNote}</div>`:""}
+          ${t.feedback?`<div style="font-size:10px;color:rgba(255,200,0,0.9);margin-top:2px;">💬 ${t.feedback}</div>`:""}
+          <!-- 피드백 입력 (관리자) -->
+          ${myRole==="관리자"?`<div style="display:flex;gap:6px;margin-top:6px;">
+            <input id="dpFb_${nick}_${i}" class="form-input" placeholder="피드백 입력..." value="${t.feedback||""}" style="margin:0;flex:1;font-size:11px;">
+            <button onclick="dpSendFeedback('${nick}',${i})" class="btn-sm btn-blue" style="white-space:nowrap;font-size:11px;">전송</button>
+          </div>`:""}
+        </div>`;
+      }).join("");
+      return `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:15px;font-weight:900;color:var(--text);">👤 ${nick}</div>
+          <div style="text-align:right;">
+            ${totalWr!==null?`<div style="font-size:12px;font-weight:900;color:${totalWr>=50?"#27ae60":"#e74c3c"};">${totalW}승${totalL}패 ${totalWr}%</div>`:""}
+            <div style="font-size:10px;color:var(--text3);">💍 ${ringStr}</div>
+          </div>
+        </div>
+        ${teamHtml}
+      </div>`;
+    }).join("");
+  });
+}
+
+// 피드백 전송 (관리자)
+async function dpSendFeedback(nick, ti){
+  if(!checkAdmin()) return;
+  const input = document.getElementById(`dpFb_${nick}_${ti}`);
+  if(!input) return;
+  const msg = input.value.trim();
+  // 팀 피드백 저장
+  await db.ref(`deckPlan/${nick}/teams/${ti}/feedback`).set(msg);
+  // 알림 저장 (일회용)
+  if(msg){
+    await db.ref(`deckPlanNotify/${nick}`).push({
+      teamIdx: ti, message: msg, from: myNick,
+      createdAt: Date.now(), read: false
+    });
+  }
+  toast(`✅ ${nick}에게 피드백 전송됨`);
+}
+
+// 덱편성 피드백 알림 체크
+function checkDeckPlanNotify(){
+  if(!myNick) return;
+  db.ref(`deckPlanNotify/${myNick}`).orderByChild("read").equalTo(false).on("value", snap=>{
+    if(!snap.exists()) return;
+    const entries = Object.entries(snap.val());
+    if(!entries.length) return;
+    // 첫 번째 미읽은 알림 팝업
+    const [key, notify] = entries[0];
+    showDeckPlanNotifyPopup(key, notify);
+  });
+}
+
+function showDeckPlanNotifyPopup(key, notify){
+  document.getElementById("dpNotifyPopup")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "dpNotifyPopup";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1.5px solid rgba(255,200,0,0.4);border-radius:18px;width:100%;max-width:380px;padding:20px 18px;">
+      <div style="font-size:16px;font-weight:900;color:rgba(255,200,0,0.9);margin-bottom:4px;">💬 덱편성 피드백</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">관리자 ${notify.from||""}의 피드백</div>
+      <div style="font-size:13px;color:var(--text2);background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;line-height:1.6;">팀 ${(notify.teamIdx||0)+1}: ${notify.message}</div>
+      <button onclick="dpMarkNotifyRead('${key}')" style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">확인</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function dpMarkNotifyRead(key){
+  await db.ref(`deckPlanNotify/${myNick}/${key}/read`).set(true);
+  document.getElementById("dpNotifyPopup")?.remove();
+}
+
+
 let todayDeckEnabled = false;
 let todayDeckData = {};
 let _tdDefKey="", _tdAtkKey="";
