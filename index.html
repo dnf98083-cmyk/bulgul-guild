@@ -3218,6 +3218,7 @@ body::before {
 let loginNickList = [];
 let loginSuggestIdx = -1;
 
+// 로그인 버튼 클릭 시 닉네임+코드로 Firebase 인증
 function tryLogin(){
   const nick = document.getElementById("nickInput")?.value.trim();
   const key  = document.getElementById("codeInput")?.value.trim();
@@ -3326,6 +3327,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
 });
 
 // ══ 로그인 ══
+// Firebase allowedUsers에서 닉네임/코드 검증 후 앱 진입
 function checkLogin(nick,key,isAuto) {
   db.ref(`allowedUsers/${nick}`).get().then(snap=>{
     if(snap.exists()&&String(snap.val().code)===key){
@@ -3356,6 +3358,7 @@ function checkAdmin() {
   toast("관리자 전용 기능입니다"); return false;
 }
 
+// 로그인 성공 후 앱 화면 전환 및 데이터 초기화
 function enterApp() {
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("mainContent").style.display=isPC()?"flex":"block";
@@ -3869,6 +3872,7 @@ const FORMATION_LAYOUTS = {
   "보호":   [[0,1,2,3],[4]],       // 앞줄 1,2,3,4 / 뒷줄 5
 };
 
+// 진형 문자열에서 타입(기본/밸런스/공격/보호) 추출
 function detectFormationType(text){
   if(!text) return null;
   const t = text.trim();
@@ -3879,6 +3883,7 @@ function detectFormationType(text){
   return null;
 }
 
+// 진형 문자열("기본 브브 여포...")을 앞줄/뒷줄 시각적 배치로 렌더링
 function renderFormation(formationText, targetEl, editable=false, onChangeCb=null){
   if(!targetEl) return;
   if(!formationText || formationText==="-"){
@@ -4718,6 +4723,7 @@ function closeMobileMenu(){
 function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear(); location.reload(); }
 
 // ══ 탭 전환 ══
+// 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
 function switchTab(tab) {
   const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
@@ -4803,6 +4809,7 @@ function loadDefenseTeamsListener() {
   });
 }
 
+// 방어팀 검색 결과 공격덱 목록 렌더링 (방어팀 여러 개 합산)
 function loadAttackTeamsMerged(entries, dkName) {
   // 대표 key (승패 기록용)
   const repKey = entries[0].key;
@@ -4903,6 +4910,7 @@ function filterDefense() {
 }
 
 // ══ 공격팀 ══
+// 선택된 방어팀의 공격덱 목록을 Firebase에서 불러와 버튼으로 렌더링
 function loadAttackTeams(dk, dkName) {
   currentDefense=dk; currentAttack="";
   // 관리자 패널 방어팀 이름 업데이트
@@ -4932,6 +4940,7 @@ function loadAttackTeams(dk, dkName) {
     });
   });
 }
+// 공격덱 선택 시 카드 정보(진형/속공/반지/펫 등) 우측에 표시
 function selectAttack(dk,ak) {
   currentAttack=ak;
   // 진형 수정창 닫기
@@ -7075,6 +7084,7 @@ function delPveScore(type, key, id){
 let rankingLogsCache = {};
 let rankingSelectedNick = null;
 
+// 길드원 시즌 랭킹 로드 - logs에서 집계
 function loadRanking(){
   const list = document.getElementById("rankingListFull");
   if(list) list.innerHTML = "<div class='empty-state'>로딩중...</div>";
@@ -8169,6 +8179,7 @@ function renderTwTeams(){
   });
 }
 
+// 총력전 팀 카드 렌더링 - 진형/캐릭터/펫/스킬 등 표시
 function twRenderTeamCards(tier, data){
   const grid = document.getElementById("tw_teams_grid");
   if(!grid) return;
@@ -8452,6 +8463,7 @@ function setTwFormation(f){
   twSaveDraft();
 }
 
+// 총력전 팀 편성 모달 열기 - Firebase에서 기존 데이터 로드
 function openTwTeamModal(tierId,teamIdx){
   if(!myNick) return toast("로그인이 필요해요");
   twEditTierIdx={tierId,teamIdx};
@@ -9826,6 +9838,7 @@ let dpData = {
 function dpEmptyTeam(){ return {defKey:"",defName:"",atkKey:"",atkName:"",note:"",win:0,lose:0,customNote:"",rings:["","",""]}; }
 
 // ── 초기화 ──
+// 길드전 덱편성 초기화 - Firebase에서 내 편성 데이터 로드
 function initDeckPlan(){
   db.ref(`deckPlan/${myNick}`).once("value").then(snap=>{
     if(snap.exists()){
@@ -9911,6 +9924,7 @@ function dpToggleRingPanel(){
   if(icon) icon.textContent = open?"▲":"▼";
 }
 
+// 덱편성 팀 카드 렌더링 - 방어팀/공격덱/반지/배치도 표시
 function dpRenderTeams(){
   const grid = document.getElementById("dpTeamsGrid");
   if(!grid) return;
@@ -10089,6 +10103,7 @@ function dpGridWheel(e){
 }
 
 // ── 덱편성 공유 ──
+// 내 덱편성을 Firebase에 공유 (닉네임당 1개, 덮어쓰기)
 function dpSharePlan(){
   if(!dpData.teams.length){ toast("공유할 팀이 없어요"); return; }
   if(!confirm("내 덱편성을 공유할게요. 기존 공유가 있으면 덮어써요.")) return;
@@ -10103,6 +10118,7 @@ function dpSharePlan(){
 let _dpShareData = {};
 let _dpShareOpenKey = null;
 
+// 공유된 덱편성 목록을 Firebase deckPlanShares에서 로드
 function loadDpShareList(){
   const list = document.getElementById("dp_share_list");
   if(!list) return;
@@ -10328,6 +10344,7 @@ function dpShowAtkDetail(ti){
 
 
 // ── 승패 기록 ──
+// 팀 승/패 기록 - 덱편성 저장 + 길드전 공격 랭킹에도 반영
 async function dpRecordResult(ti, result){
   const team = dpData.teams[ti];
   if(!team) return;
@@ -10494,6 +10511,7 @@ window.dpListSelect = function(btn){
 };
 
 // ── 저장 ──
+async // 내 덱편성을 Firebase deckPlan/{닉네임}에 저장
 async function saveDeckPlan(){
   await db.ref(`deckPlan/${myNick}`).set({
     rings: dpData.rings,
@@ -10626,6 +10644,7 @@ function adpRenderDetail(nick, container){
 
 
 // 피드백 전송 (관리자)
+// 관리자가 특정 길드원의 팀에 피드백 저장 + 알림 발송
 async function dpSendFeedback(nick, ti){
   if(!checkAdmin()) return;
   const input = document.getElementById(`dpFb_${nick}_${ti}`) || document.getElementById(`adpFb_${nick}_${ti}`);
@@ -10640,6 +10659,7 @@ async function dpSendFeedback(nick, ti){
   toast(`✅ ${nick}에게 피드백 전송됨`);
 }
 
+// 접속 시 미읽은 덱편성 피드백 알림 체크 후 팝업 표시
 function checkDeckPlanNotify(){
   if(!myNick) return;
   db.ref(`deckPlanNotify/${myNick}`).orderByChild("read").equalTo(false).on("value", snap=>{
@@ -10676,6 +10696,7 @@ let todayDeckEnabled = false;
 let todayDeckData = {};
 let _tdDefKey="", _tdAtkKey="";
 
+// 오늘의 추천덱 Firebase 실시간 리스너 등록
 function initTodayDeck(){
   db.ref("todayDeck").on("value", snap=>{
     const val = snap.val()||{};
@@ -10826,6 +10847,7 @@ function updateTodayDeckToggleBtn(){
   else{btn.textContent="OFF";btn.style.background="var(--surface3)";btn.style.color="var(--text3)";}
 }
 
+// 추천덱 팝업 ON 상태일 때만 표시 (세션당 1회, 덱 클릭 후 차단)
 function showTodayDeckPopupIfEnabled(){
   if(!todayDeckEnabled||!Object.keys(todayDeckData).length) return;
   if(window._skipTodayDeckPopup) return;
