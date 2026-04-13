@@ -10054,7 +10054,7 @@ function dpRenderTeams(){
     });
 
     const card = document.createElement("div");
-    card.style.cssText = `background:var(--surface);border:1.5px solid ${isTemp?"rgba(100,160,220,0.6)":"var(--border)"};border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;${isTemp?"box-shadow:0 0 10px rgba(100,160,220,0.2);":""}`;
+    card.style.cssText = `background:var(--surface);border:1.5px solid ${isTemp?"rgba(100,160,220,0.6)":"var(--border)"};border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;overflow-y:auto;${isTemp?"box-shadow:0 0 10px rgba(100,160,220,0.2);":""}`;
 
     card.innerHTML = `
       <!-- 헤더 -->
@@ -10223,11 +10223,23 @@ function dpGridWheel(e){
   g.scrollLeft += e.deltaY * 2;
 }
 
+
+// 공유/관리자 카드 그리드 드래그+휠 스크롤
+function attachGridScroll(el){
+  if(!el) return;
+  let isDown=false, startX=0, scrollLeft=0;
+  el.addEventListener("mousedown", e=>{ isDown=true; startX=e.pageX-el.offsetLeft; scrollLeft=el.scrollLeft; el.style.cursor="grabbing"; });
+  el.addEventListener("mouseleave", ()=>{ isDown=false; el.style.cursor="grab"; });
+  el.addEventListener("mouseup", ()=>{ isDown=false; el.style.cursor="grab"; });
+  el.addEventListener("mousemove", e=>{ if(!isDown) return; e.preventDefault(); const x=e.pageX-el.offsetLeft; el.scrollLeft=scrollLeft-(x-startX)*1.5; });
+  el.addEventListener("wheel", e=>{ e.preventDefault(); el.scrollLeft+=e.deltaY*2; }, {passive:false});
+  el.style.cursor="grab";
+}
+
 // ── 덱편성 공유 ──
 // 내 덱편성을 Firebase에 공유 (닉네임당 1개, 덮어쓰기)
 function dpSharePlan(){
   if(!dpData.teams.length){ toast("공유할 팀이 없어요"); return; }
-  if(!confirm("내 덱편성을 공유할게요. 기존 공유가 있으면 덮어써요.")) return;
   // 닉네임 기반 고정 키 (인당 1개)
   const key = myNick.replace(/[^a-zA-Z0-9가-힣]/g,"_")+"_dp";
   db.ref("deckPlanShares/"+key).set({
@@ -10291,7 +10303,7 @@ function dpRenderShareDetail(key, container){
   if(!v){ container.innerHTML="<div style='color:var(--text3);font-size:12px;'>데이터 없음</div>"; return; }
   const teams = v.teams||[];
   const grid = document.createElement("div");
-  grid.style.cssText="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;";
+  grid.style.cssText="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x;";
   teams.forEach((team,i)=>{
     const atk = team.atkKey&&team.atkKey!=="__custom__"&&defenseDataCache[team.defKey]?.attackTeams?.[team.atkKey];
     const rings = (team.rings||[]);
@@ -10303,7 +10315,7 @@ function dpRenderShareDetail(key, container){
     const charNames = charParts.filter(p=>p&&p!=="__"&&p!=="_").slice(0,3);
 
     const card = document.createElement("div");
-    card.style.cssText="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;";
+    card.style.cssText="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;flex-shrink:0;width:min(230px,80vw);display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;overflow-y:auto;";
     card.innerHTML=`
       <div style="font-size:14px;font-weight:800;">팀 ${i+1}</div>
       <div>
@@ -10360,6 +10372,7 @@ function dpRenderShareDetail(key, container){
     grid.appendChild(card);
   });
   container.innerHTML="";
+  attachGridScroll(grid);
   container.appendChild(grid);
 }
 
@@ -10708,7 +10721,7 @@ function adpRenderDetail(nick, container){
 
   // 카드 슬라이드
   const gridEl = document.createElement("div");
-  gridEl.style.cssText="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;";
+  gridEl.style.cssText="display:flex;flex-direction:row;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x;";
 
   teams.forEach((t,i)=>{
     const tot=(t.win||0)+(t.lose||0), wr=tot?Math.round((t.win||0)/tot*100):null;
@@ -10716,7 +10729,7 @@ function adpRenderDetail(nick, container){
     const labels=(t.ringLabels||[]);
     const atk = t.atkKey&&t.atkKey!=="__custom__"&&defenseDataCache[t.defKey]?.attackTeams?.[t.atkKey];
     const card = document.createElement("div");
-    card.style.cssText="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px;flex-shrink:0;width:min(220px,78vw);display:flex;flex-direction:column;gap:7px;";
+    card.style.cssText="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px;flex-shrink:0;width:min(220px,78vw);display:flex;flex-direction:column;gap:7px;overflow-y:auto;";
     card.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;font-weight:800;color:var(--accent);">팀 ${i+1}</span>
@@ -10774,6 +10787,7 @@ function adpRenderDetail(nick, container){
   });
 
   container.innerHTML=`<div style="margin-bottom:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:5px;">💍 보유 반지</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${ringHtml}</div></div>`;
+  attachGridScroll(gridEl);
   container.appendChild(gridEl);
 }
 
