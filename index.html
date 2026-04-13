@@ -3383,7 +3383,12 @@ function enterApp() {
       tabs.forEach(function(t) {
         const btn = document.createElement("button");
         btn.className = "tab-item" + (t[3] ? " active" : "");
-        btn.onclick = function(){ switchTab(t[0]); };
+        // 공격 탭은 서브메뉴 팝업
+        if(t[0]==="attack"){
+          btn.onclick = function(){ showAttackSubMenu(btn); };
+        } else {
+          btn.onclick = function(){ switchTab(t[0]); };
+        }
         // 건의 탭에 답변 뱃지 추가
         const badgeHtml = t[0]==="suggest" ? '<span id="tab-badge-suggest" style="display:none;position:absolute;top:4px;right:8px;background:#27ae60;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:1px 5px;min-width:16px;text-align:center;">답변</span>' : "";
         btn.style.position = "relative";
@@ -4721,6 +4726,25 @@ function closeMobileMenu(){
 })();
 
 function doLogout() { if(!confirm("로그아웃?")) return; localStorage.clear(); location.reload(); }
+
+// 모바일 탭바 공격 서브메뉴
+function showAttackSubMenu(anchorBtn){
+  document.getElementById("attackSubMenu")?.remove();
+  const menu = document.createElement("div");
+  menu.id = "attackSubMenu";
+  const rect = anchorBtn.getBoundingClientRect();
+  menu.style.cssText = `position:fixed;bottom:${window.innerHeight-rect.top+8}px;left:${Math.max(4,rect.left-10)}px;z-index:3000;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;min-width:150px;`;
+  menu.innerHTML = `
+    <button onclick="document.getElementById('attackSubMenu').remove();switchTab('deckplan')" style="display:block;width:100%;padding:14px 16px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;">🗡️ 길드전 덱편성</button>
+    <button onclick="document.getElementById('attackSubMenu').remove();switchTab('attack')" style="display:block;width:100%;padding:14px 16px;background:none;border:none;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;">⚔️ 길드전 공격</button>
+  `;
+  document.body.appendChild(menu);
+  setTimeout(()=>{
+    document.addEventListener("click", function closeMenu(e){
+      if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener("click", closeMenu); }
+    });
+  }, 100);
+}
 
 // ══ 탭 전환 ══
 // 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
