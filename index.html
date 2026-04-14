@@ -10012,7 +10012,8 @@ function dpAddRing(){
   if(!name){ toast("반지 이름을 입력하세요"); return; }
   // 성급+이름+세공을 키로 관리
   const craftLabel = craft ? craftStar+"★ "+craft : "";
-  const key = star+"★ "+name+(craftLabel?" [세공: "+craftLabel+"]":"");
+  const rawKey = star+"★ "+name+(craftLabel?" 세공_"+craftLabel:"");
+  const key = rawKey.replace(/[.\[\]$#/]/g,"_");
   if(dpData.rings[key]){
     dpData.rings[key].count = (dpData.rings[key].count||1) + cnt;
   } else {
