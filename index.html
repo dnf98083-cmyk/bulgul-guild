@@ -4973,17 +4973,61 @@ function loadAttackTeams(dk, dkName) {
   db.ref(`defenseTeams/${dk}/attackTeams`).on("value",snap=>{
     list.innerHTML="";
     const d=snap.val();
-    if(!d){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>'; return; }
-    Object.entries(d).forEach(([ak,av])=>{
-      if(!av||!av.name) return; // 이름 없는 데이터 스킵
-      const w2=av.win||0,l2=av.lose||0,t=w2+l2, r=t?Math.round(w2/t*100):0;
-      const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
-      const typeBadge2 = av.type==="속공 따야 함" ? `<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>` : av.type==="내줘도 됨" ? `<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>` : "";
-      btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name||"?"}${typeBadge2}</div><div class="a-stat">${r}% · ${w2}승${l2}패</div>`;
-      if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
-      btn.onclick=()=>{ document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); selectAttack(dk,ak); };
-      list.appendChild(btn);
-    });
+    if(!d){ list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>'; }
+    else {
+      Object.entries(d).forEach(([ak,av])=>{
+        if(!av||!av.name) return;
+        const w2=av.win||0,l2=av.lose||0,t=w2+l2, r=t?Math.round(w2/t*100):0;
+        const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
+        const typeBadge2 = av.type==="속공 따야 함" ? `<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>` : av.type==="내줘도 됨" ? `<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>` : "";
+        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name||"?"}${typeBadge2}</div><div class="a-stat">${r}% · ${w2}승${l2}패</div>`;
+        if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
+        btn.onclick=()=>{ document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); selectAttack(dk,ak); };
+        list.appendChild(btn);
+      });
+    }
+
+    // 내 덱편성에서 같은 방어팀 팀 표시
+    if(myNick){
+      // dpData가 로드됐으면 바로, 없으면 Firebase에서 로드
+      const showDpTeams = (teams) => {
+        const myTeams = (teams||[]).filter(t=>t.defKey===dk && t.atkName);
+        if(!myTeams.length) return;
+        const divider = document.createElement("div");
+        divider.style.cssText="grid-column:span 2;font-size:11px;font-weight:700;color:rgba(100,160,220,0.9);margin-top:6px;padding:4px 0;border-top:1px solid var(--border);";
+        divider.textContent="🗡️ 내 덱편성";
+        list.appendChild(divider);
+        myTeams.forEach((team,i)=>{
+          const btn=document.createElement("div"); btn.className="atk-btn";
+          btn.style.cssText="border-color:rgba(100,160,220,0.4);background:rgba(100,160,220,0.05);";
+          const tot=(team.win||0)+(team.lose||0), wr=tot?Math.round((team.win||0)/tot*100):null;
+          const rings=(team.rings||[]).filter(Boolean);
+          const ringStr=rings.slice(0,2).join(", ");
+          btn.innerHTML=`<div class="a-name">🗡️ ${team.atkName}${wr!==null?`<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">${wr}%</span>`:''}</div><div class="a-stat">내 덱편성 ${i+1}팀${ringStr?' · 💍'+ringStr:''}</div>`;
+          btn.onclick=()=>{
+            document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
+            btn.classList.add("active");
+            if(team.atkKey && team.atkKey!=="__custom__" && d?.[team.atkKey]){
+              selectAttack(dk, team.atkKey);
+            } else {
+              toast("🗡️ 내 덱편성 팀 - 덱편성 탭에서 상세 확인");
+            }
+          };
+          list.appendChild(btn);
+        });
+      };
+      if(dpData.teams && dpData.teams.length){
+        showDpTeams(dpData.teams);
+      } else {
+        db.ref(`deckPlan/${myNick}/teams`).once("value").then(snap=>{
+          if(snap.exists()){
+            const raw = snap.val();
+            const teams = Array.isArray(raw) ? raw : Object.values(raw||{});
+            showDpTeams(teams);
+          }
+        });
+      }
+    }
   });
 }
 // 공격덱 선택 시 카드 정보(진형/속공/반지/펫 등) 우측에 표시
@@ -4996,7 +5040,7 @@ function selectAttack(dk,ak) {
     editArea.style.display="none";
     if(editBtn) editBtn.textContent="✏️ 수정";
   }
-  db.ref(`defenseTeams/${dk}/attackTeams/${ak}`).on("value",snap=>{
+  db.ref(`defenseTeams/${dk}/attackTeams/${ak}`).once("value").then(snap=>{
     const d=snap.val(); if(!d) return;
     document.getElementById("attackCard").style.display="block";
     const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns=isPC()?"45% 1fr":"1fr";
