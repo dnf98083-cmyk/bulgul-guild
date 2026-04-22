@@ -7063,7 +7063,7 @@ function loadSiegeRanking(){
 }
 
 function addSiegeScore(){
-  if(!checkAdmin()) return;
+  if(!checkResearcher()) return;
   const nick=document.getElementById("siegeScoreNick").value.trim();
   const score=parseInt(document.getElementById("siegeScoreVal").value);
   if(!nick||!score) return toast("닉네임과 점수를 입력하세요");
@@ -7197,7 +7197,7 @@ function loadPveScoreList(type, key, listId){
 }
 
 function addPveScore(type){
-  if(!checkAdmin()) return;
+  if(!checkResearcher()) return;
   const nickEl  = document.getElementById(type==="siege"?"siegeScoreNick":"adventScoreNick");
   const scoreEl = document.getElementById(type==="siege"?"siegeScoreVal":"adventScoreVal");
   const nick=nickEl.value.trim();
@@ -7585,7 +7585,7 @@ function switchAdventMode(mode){
 let bulkScoresRunning = false;
 async function addBulkScores(type, textId, listId, key){
   if(bulkScoresRunning) return toast("등록 중입니다...");
-  if(!checkAdmin()) return;
+  if(!checkResearcher()) return;
   const raw = document.getElementById(textId).value.trim();
   if(!raw) return toast("내용을 입력하세요");
 
