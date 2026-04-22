@@ -4558,7 +4558,7 @@ function loadAdventTotal(){
 }
 
 async function addAdventSeason(){
-  if(!checkAdmin()) return;
+  if(!checkResearcher()) return;
   const nameEl  = document.getElementById("advent_season_name2");
   const scoreEl = document.getElementById("advent_season_score");
   const name  = nameEl?.value.trim();
@@ -4576,7 +4576,7 @@ async function addAdventSeason(){
 }
 
 async function calcAdventSeason(){
-  if(!checkAdmin()) return;
+  if(!checkResearcher()) return;
   const nameEl = document.getElementById("advent_season_name");
   const name   = nameEl?.value.trim();
   if(!name) return toast("시즌명을 입력하세요");
