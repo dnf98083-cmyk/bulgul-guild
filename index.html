@@ -2026,6 +2026,17 @@ body::before {
           <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 공격덱 제보</button>
           <button onclick="openMyReportsPopup()" class="btn-icon" style="padding:11px 12px;border-radius:12px;font-size:12px;white-space:nowrap;">📨 내 제보</button>
         </div>
+        
+        <!-- 정렬 옵션 -->
+        <div style="background:var(--surface2);border-radius:12px;padding:10px;margin-bottom:14px;">
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;">
+            <button onclick="setAtkSort('winrate')" id="atksort_winrate" class="pve-tab-btn active" style="flex-shrink:0;font-size:11px;padding:7px 10px;white-space:nowrap;">승률순</button>
+            <button onclick="setAtkSort('usage')" id="atksort_usage" class="pve-tab-btn" style="flex-shrink:0;font-size:11px;padding:7px 10px;white-space:nowrap;">사용횟수</button>
+            <button onclick="setAtkSort('recent')" id="atksort_recent" class="pve-tab-btn" style="flex-shrink:0;font-size:11px;padding:7px 10px;white-space:nowrap;">최근사용</button>
+            <button onclick="setAtkSort('games')" id="atksort_games" class="pve-tab-btn" style="flex-shrink:0;font-size:11px;padding:7px 10px;white-space:nowrap;">전적순</button>
+          </div>
+        </div>
+        
         <div id="attackList" class="atk-grid"></div>
         <div id="atkSuggestBtn" style="display:none;"></div>
 
@@ -2580,6 +2591,15 @@ body::before {
           </select>
         </div>
 
+        <div class="calc-field" id="c_pet_skill_field" style="display:none;">
+          <label class="calc-label">스킬 강화</label>
+          <select class="form-select" id="c_pet_skill_level" onchange="onPetChange()" style="margin:0;">
+            <option value="0">기본 (0레벨)</option>
+            <option value="1">1레벨 강화</option>
+            <option value="2">2레벨 강화</option>
+            <option value="3">3레벨 강화</option>
+          </select>
+        </div>
 
         <div class="calc-field">
           <label class="calc-label">펫 깡공</label>
@@ -3304,6 +3324,7 @@ let _dpShareData = {}, _dpShareOpenKey = null;
 let _adpOpenNick = null;
 let isAdminAuthenticated=false, myRole="길드원", allLogsCache={}, defenseDataCache={};
 let pveCurrentCategory="siege", pveCurrentId="", pveCurrentType="", pveCurrentDetail="";
+let currentAtkSort = "winrate"; // 공격덱 정렬 기준
 
 // ══ 토스트 ══
 function toast(msg) {
@@ -4856,6 +4877,32 @@ function loadDefenseTeamsListener() {
   });
 }
 
+// ══ 공격 덱 정렬 ══
+function setAtkSort(type) {
+  currentAtkSort = type;
+  ['winrate','usage','recent','games'].forEach(t=>{
+    const btn = document.getElementById('atksort_'+t);
+    if(btn) btn.classList.toggle('active', t===type);
+  });
+  // 현재 선택된 방어팀 다시 로드
+  if(currentDefense) {
+    const defName = document.getElementById("defCurrentText").textContent;
+    if(defName && defName !== "선택해주세요") {
+      // 현재 선택된 방어팀 entries 다시 찾기
+      db.ref("defenseTeams").once("value").then(snap=>{
+        const all = [];
+        snap.forEach(s=>{
+          const v=s.val();
+          if(!v||!v.name) return;
+          all.push({key:s.key, name:v.name, maker:v.maker||"?"});
+        });
+        const entries = all.filter(x=>x.name===defName);
+        if(entries.length>0) loadAttackTeamsMerged(entries, defName);
+      });
+    }
+  }
+}
+
 // 방어팀 검색 결과 공격덱 목록 렌더링 (방어팀 여러 개 합산)
 function loadAttackTeamsMerged(entries, dkName) {
   // 대표 key (승패 기록용)
@@ -4877,25 +4924,72 @@ function loadAttackTeamsMerged(entries, dkName) {
   );
   Promise.all(promises).then(results=>{
     list.innerHTML="";
-    let hasAny=false;
+    let allAttacks = [];
+    
+    // 모든 공격덱 수집
     results.forEach(({key, val})=>{
       Object.entries(val).forEach(([ak,av])=>{
-        if(!av||!av.name){ return; }
-        hasAny=true;
-        const w2=av.win||0,l2=av.lose||0,t=w2+l2, r=t?Math.round(w2/t*100):0;
-        const btn=document.createElement("div"); btn.className="atk-btn"; btn.dataset.ak=ak;
-        btn.innerHTML=`<div class="a-name">${r>=70?"🔥 ":""}${av.name||"?"}${av.type==="속공 따야 함"?'<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>':av.type==="내줘도 됨"?'<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>':""}</div><div class="a-stat">${r}% · ${w2}승${l2}패</div>`;
-        if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
-        btn.onclick=()=>{
-          document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
-          btn.classList.add("active");
-          currentDefense=key; // 해당 공격팀이 속한 실제 key로 설정
-          selectAttack(key,ak);
-        };
-        list.appendChild(btn);
+        if(!av||!av.name) return;
+        const w2=av.win||0, l2=av.lose||0, t=w2+l2, r=t?Math.round(w2/t*100):0;
+        
+        // 내 사용 횟수 계산
+        let myUsage = 0;
+        let lastUsed = 0;
+        if(allLogsCache && Object.keys(allLogsCache).length > 0) {
+          Object.values(allLogsCache).forEach(log=>{
+            if(log.attack === ak && log.nick === myNick) {
+              myUsage++;
+              if(log.time > lastUsed) lastUsed = log.time;
+            }
+          });
+        }
+        
+        allAttacks.push({
+          key, ak, av, 
+          win: w2, lose: l2, total: t, rate: r,
+          myUsage, lastUsed
+        });
       });
     });
-    if(!hasAny) list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>';
+    
+    // 정렬
+    if(currentAtkSort === 'winrate') {
+      allAttacks.sort((a,b) => b.rate - a.rate || b.total - a.total);
+    } else if(currentAtkSort === 'usage') {
+      allAttacks.sort((a,b) => b.myUsage - a.myUsage || b.rate - a.rate);
+    } else if(currentAtkSort === 'recent') {
+      allAttacks.sort((a,b) => b.lastUsed - a.lastUsed);
+    } else if(currentAtkSort === 'games') {
+      allAttacks.sort((a,b) => b.total - a.total || b.rate - a.rate);
+    }
+    
+    // 렌더링
+    if(allAttacks.length === 0) {
+      list.innerHTML='<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text3);font-size:13px;">등록된 공격덱 없음</div>';
+      return;
+    }
+    
+    allAttacks.forEach(({key, ak, av, win, lose, total, rate, myUsage})=>{
+      const btn=document.createElement("div"); 
+      btn.className="atk-btn"; 
+      btn.dataset.ak=ak;
+      
+      let badge = '';
+      if(rate>=70) badge = '🔥 ';
+      if(myUsage > 0) badge += `<span style="font-size:9px;background:rgba(52,152,219,0.15);color:#3498db;border:1px solid rgba(52,152,219,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">사용 ${myUsage}회</span>`;
+      
+      btn.innerHTML=`<div class="a-name">${badge}${av.name||"?"}${av.type==="속공 따야 함"?'<span style="font-size:9px;background:rgba(240,165,0,0.2);color:#f0a500;border:1px solid rgba(240,165,0,0.4);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">⚡속공</span>':av.type==="내줘도 됨"?'<span style="font-size:9px;background:rgba(100,160,220,0.15);color:rgba(100,160,220,0.9);border:1px solid rgba(100,160,220,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">🛡️내줘도됨</span>':""}</div><div class="a-stat">${rate}% · ${win}승${lose}패</div>`;
+      
+      if(av.type==="속공 따야 함") btn.style.borderColor="rgba(240,165,0,0.4)";
+      
+      btn.onclick=()=>{
+        document.querySelectorAll(".atk-btn").forEach(x=>x.classList.remove("active"));
+        btn.classList.add("active");
+        currentDefense=key;
+        selectAttack(key,ak);
+      };
+      list.appendChild(btn);
+    });
   });
 }
 function openDefDropdown() {
@@ -6730,13 +6824,28 @@ function toggleBoss(on){
 const PET_DATA = {
   windi: {
     name:"윈디",
-    5: { buffAtk:10, dmgInc:20, flatAtk:564 },
-    6: { buffAtk:12, dmgInc:26, flatAtk:564 }
+    5: { buffAtk:10, bossDmg:20, flatAtk:564 },
+    6: { 
+      buffAtk:12, bossDmg:26, flatAtk:564,
+      // 스킬 강화 (1~3레벨)
+      skill: [
+        { buffAtk:13, bossDmg:27 },
+        { buffAtk:14, bossDmg:28 },
+        { buffAtk:15, bossDmg:30 }
+      ]
+    }
   },
   yenji: {
     name:"연지",
     5: { buffAtk:19, dmgInc:0, flatAtk:564 },
-    6: { buffAtk:21, dmgInc:0, flatAtk:564 }
+    6: { 
+      buffAtk:21, dmgInc:0, flatAtk:564,
+      skill: [
+        { buffAtk:22 },
+        { buffAtk:24 },
+        { buffAtk:26 }
+      ]
+    }
   },
   irin: {
     name:"이린",
@@ -6745,7 +6854,14 @@ const PET_DATA = {
   },
   zeo: {
     name:"제오",
-    6: { buffAtk:29, dmgInc:12, flatAtk:564 }
+    6: { 
+      buffAtk:29, dmgInc:12, flatAtk:564,
+      skill: [
+        { buffAtk:32, dmgInc:12 },
+        { buffAtk:34, dmgInc:13 },
+        { buffAtk:37, dmgInc:14 }
+      ]
+    }
   }
 };
 
@@ -6754,12 +6870,44 @@ function onPetChange(){
   const petStar = 6;
   const effectDiv = document.getElementById('c_pet_effect');
   const effectText = document.getElementById('c_pet_effect_text');
-  if(petType==='none'){ effectDiv.style.display='none'; runCalc(); return; }
-  const p = PET_DATA[petType][petStar];
-  const petName = PET_DATA[petType].name;
+  const skillField = document.getElementById('c_pet_skill_field');
+  const skillLevelSelect = document.getElementById('c_pet_skill_level');
+  
+  if(petType==='none'){ 
+    effectDiv.style.display='none'; 
+    skillField.style.display='none';
+    runCalc(); 
+    return; 
+  }
+  
+  const petData = PET_DATA[petType];
+  const basePet = petData[petStar];
+  const petName = petData.name;
+  
+  // 스킬 강화 가능 여부 체크
+  if(basePet.skill){
+    skillField.style.display='block';
+  } else {
+    skillField.style.display='none';
+    skillLevelSelect.value = '0';
+  }
+  
+  // 스킬 강화 레벨에 따른 스탯
+  const skillLevel = parseInt(skillLevelSelect.value) || 0;
+  let p = basePet;
+  if(skillLevel > 0 && basePet.skill && basePet.skill[skillLevel - 1]){
+    p = { ...basePet, ...basePet.skill[skillLevel - 1] };
+  }
+  
   let lines = [];
   if(p.buffAtk) lines.push(`공격력 버프 +${p.buffAtk}%`);
-  if(p.dmgInc)  lines.push(`피해증가(보스취약) +${p.dmgInc}%`);
+  if(p.dmgInc)  lines.push(`피해증가 +${p.dmgInc}%`);
+  if(p.bossDmg) lines.push(`보스 피해 +${p.bossDmg}%`);
+  
+  if(skillLevel > 0){
+    lines.push(`<span style="color:var(--accent);font-weight:700;">⚡ ${skillLevel}레벨 강화</span>`);
+  }
+  
   effectText.innerHTML = lines.join('<br>');
   effectDiv.style.display='block';
   runCalc();
@@ -6800,10 +6948,20 @@ function runCalc(){
   const hitCount    = Math.max(1, Math.round(cv('c_hitCount')));
 
   // 펫 효과 적용
-  let petBuffAtk = 0, petDmgInc = 0;
+  let petBuffAtk = 0, petDmgInc = 0, petBossDmg = 0;
   if(petType !== 'none' && PET_DATA[petType]){
-    petBuffAtk = (PET_DATA[petType][petStar]?.buffAtk || 0) / 100;
-    petDmgInc  = (PET_DATA[petType][petStar]?.dmgInc  || 0) / 100;
+    const skillLevel = parseInt(document.getElementById('c_pet_skill_level')?.value || '0');
+    const basePet = PET_DATA[petType][petStar];
+    let p = basePet;
+    
+    // 스킬 강화 적용
+    if(skillLevel > 0 && basePet.skill && basePet.skill[skillLevel - 1]){
+      p = { ...basePet, ...basePet.skill[skillLevel - 1] };
+    }
+    
+    petBuffAtk = (p.buffAtk || 0) / 100;
+    petDmgInc  = (p.dmgInc  || 0) / 100;
+    petBossDmg = (p.bossDmg || 0) / 100;
   }
 
   // 세트 효과
@@ -6825,8 +6983,8 @@ function runCalc(){
   // 피증계수
   const dmgIncCoef = 1 + dmgIncAdd + petDmgInc + setDmg;
 
-  // 보스 관련
-  const bossMult    = isBossMode ? bossRate * (1 + setBossDmg) : 1;
+  // 보스 관련 (펫의 bossDmg도 포함)
+  const bossMult    = isBossMode ? bossRate * (1 + setBossDmg + petBossDmg) : 1;
   const weakDmgCoef = 1 + setWeakDmg + cv('c_weakbuff2')/100;
 
   // 합산 배율
