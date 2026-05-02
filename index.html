@@ -3333,6 +3333,48 @@ function toast(msg) {
   setTimeout(()=>t.classList.remove("show"),2200);
 }
 
+// ══ 삭제 로그 기록 ══
+async function logDeletion(type, data) {
+  // type: 'attack', 'defense', 'notice', 'suggestion', 'user', 'pveBuild', etc.
+  const logEntry = {
+    type,
+    deletedBy: myNick,
+    deletedAt: Date.now(),
+    data
+  };
+  
+  try {
+    await db.ref("deletionLogs").push(logEntry);
+  } catch(err) {
+    console.error("삭제 로그 기록 실패:", err);
+  }
+}
+
+// 30일 이상 된 삭제 로그 자동 정리
+async function cleanupOldDeletionLogs() {
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  try {
+    const snapshot = await db.ref("deletionLogs").once("value");
+    if(!snapshot.exists()) return;
+    
+    const toDelete = [];
+    snapshot.forEach(child => {
+      const log = child.val();
+      if(log.deletedAt < thirtyDaysAgo) {
+        toDelete.push(db.ref(`deletionLogs/${child.key}`).remove());
+      }
+    });
+    
+    if(toDelete.length > 0) {
+      await Promise.all(toDelete);
+      console.log(`${toDelete.length}개의 오래된 삭제 로그 정리됨`);
+    }
+  } catch(err) {
+    console.error("삭제 로그 정리 실패:", err);
+  }
+}
+
+
 // ══ 초기화 ══
 window.onload = () => {
   const nick=localStorage.getItem("nickname"), key=localStorage.getItem("accessKey");
@@ -3485,6 +3527,11 @@ function showAdminNav() {
     // 연구원은 코드 발급 섹션 숨김
     const codeSection = document.getElementById("codeIssueSection");
     if(codeSection) codeSection.style.display="none";
+  }
+  
+  // 30일 이상 된 삭제 로그 자동 정리 (관리자만)
+  if(myRole === "관리자") {
+    cleanupOldDeletionLogs();
   }
 }
 
@@ -6263,24 +6310,87 @@ function submitDefenseSug(){ const name=document.getElementById("mDefName").valu
 
 // ══ 랭킹 ══
 function renderRanking(){
-  db.ref("logs").on("value",snap=>{
-    allLogsCache=snap.val()||{};
-    const list=document.getElementById("rankingList"); list.innerHTML="";
-    if(!Object.keys(allLogsCache).length){ list.innerHTML='<div class="empty-state">기록 없음</div>'; return; }
+  // roles도 함께 로드
+  Promise.all([
+    db.ref("logs").once("value"),
+    db.ref("roles").once("value")
+  ]).then(([logsSnap, rolesSnap]) => {
+    allLogsCache = logsSnap.val()||{};
+    const roles = rolesSnap.val()||{};
+    
+    const list=document.getElementById("rankingList"); 
+    list.innerHTML="";
+    
+    if(!Object.keys(allLogsCache).length){ 
+      list.innerHTML='<div class="empty-state">기록 없음</div>'; 
+      return; 
+    }
+    
     const stats={};
-    Object.values(allLogsCache).forEach(v=>{ if(!stats[v.nick]) stats[v.nick]={logs:[]}; stats[v.nick].logs.push(v); });
-    const rankData=Object.entries(stats).map(([n,d])=>{ d.logs.sort((a,b)=>b.time-a.time); const w=d.logs.filter(l=>l.result==="win").length,l=d.logs.filter(l=>l.result==="lose").length; const recent=d.logs.slice(0,30),rw=recent.filter(l=>l.result==="win").length,rl=recent.filter(l=>l.result==="lose").length; return{nick:n,w,l,rw,rl,logs:d.logs}; }).sort((a,b)=>b.w-a.w);
+    Object.values(allLogsCache).forEach(v=>{ 
+      if(!stats[v.nick]) stats[v.nick]={logs:[]}; 
+      stats[v.nick].logs.push(v); 
+    });
+    
+    const rankData=Object.entries(stats).map(([n,d])=>{ 
+      d.logs.sort((a,b)=>b.time-a.time); 
+      const w=d.logs.filter(l=>l.result==="win").length;
+      const l=d.logs.filter(l=>l.result==="lose").length; 
+      const recent=d.logs.slice(0,30);
+      const rw=recent.filter(l=>l.result==="win").length;
+      const rl=recent.filter(l=>l.result==="lose").length; 
+      return{nick:n,w,l,rw,rl,logs:d.logs, role: roles[n]||"길드원"}; 
+    }).sort((a,b)=>b.w-a.w);
+    
     const myD=rankData.find(x=>x.nick===myNick);
-    if(myD){ const tot=myD.w+myD.l; document.getElementById("homeStatValue").innerHTML=`<span>${myD.w}</span>승 ${myD.l}패`; document.getElementById("homeStatRank").textContent=`전체 ${rankData.indexOf(myD)+1}위 · 승률 ${tot?Math.round(myD.w/tot*100):0}%`; }
+    if(myD){ 
+      const tot=myD.w+myD.l; 
+      document.getElementById("homeStatValue").innerHTML=`<span>${myD.w}</span>승 ${myD.l}패`; 
+      document.getElementById("homeStatRank").textContent=`전체 ${rankData.indexOf(myD)+1}위 · 승률 ${tot?Math.round(myD.w/tot*100):0}%`; 
+    }
+    
     const adminOpen = true;
     let hide=0;
-    rankData.forEach((d,i)=>{ if(!adminOpen&&i>=10){ hide++; return; } const tot=d.w+d.l,r=tot?Math.round(d.w/tot*100):0,rTot=d.rw+d.rl,rr=rTot?Math.round(d.rw/rTot*100):0; const badges=["🥇","🥈","🥉"]; const badge=i<3?badges[i]:`${i+1}`; const isMe=d.nick===myNick;
-      const row=document.createElement("div"); row.className="rank-row"; row.style.cursor="pointer";
-      row.innerHTML=`<div class="rank-num" ${isMe?'style="color:var(--accent)"':''}>${badge}</div><div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div><div class="rank-stat"><div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div><div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div></div>`;
+    
+    rankData.forEach((d,i)=>{ 
+      if(!adminOpen&&i>=10){ hide++; return; }
+      
+      const tot=d.w+d.l;
+      const r=tot?Math.round(d.w/tot*100):0;
+      const rTot=d.rw+d.rl;
+      const rr=rTot?Math.round(d.rw/rTot*100):0;
+      const badges=["🥇","🥈","🥉"];
+      const badge=i<3?badges[i]:`${i+1}`;
+      const isMe=d.nick===myNick;
+      
+      // 역할 배지
+      let roleBadge = '';
+      if(d.role === "관리자") {
+        roleBadge = '<span style="font-size:9px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">관리자</span>';
+      } else if(d.role === "연구원") {
+        roleBadge = '<span style="font-size:9px;background:rgba(52,152,219,0.15);color:#3498db;border:1px solid rgba(52,152,219,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">연구원</span>';
+      }
+      
+      const row=document.createElement("div"); 
+      row.className="rank-row"; 
+      row.style.cursor="pointer";
+      row.innerHTML=`<div class="rank-num" ${isMe?'style="color:var(--accent)"':''}>${badge}</div><div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${roleBadge}${isMe?" ◀":""}</div><div class="rank-stat"><div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div><div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div></div>`;
       row.onclick=()=>toggleRankDetail(d.nick, d.logs, d.w, d.l);
-      const detail=document.createElement("div"); detail.id="rankDetail_"+d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_'); detail.style.cssText="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);";
-      list.appendChild(row); list.appendChild(detail); });
+      
+      const detail=document.createElement("div"); 
+      detail.id="rankDetail_"+d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_'); 
+      detail.style.cssText="display:none;background:var(--surface2);border-radius:10px;margin:0 0 4px;padding:14px 16px;border:1px solid var(--border);";
+      
+      list.appendChild(row); 
+      list.appendChild(detail); 
+    });
+    
     document.getElementById("moreRankMsg").style.display=hide>0?"block":"none";
+    
+    // 리스너 유지를 위해 on으로 변경
+    db.ref("logs").on("value", snap => {
+      allLogsCache = snap.val()||{};
+    });
   });
 }
 
@@ -6311,7 +6421,18 @@ function loadAdminMembers(){
     filterKeys2();
   });
 }
-function deleteUser(n){ if(confirm(`${n} 삭제?`)){ db.ref(`allowedUsers/${n}`).remove().then(()=>{ toast("삭제됨"); loadAdminMembers(); }); } }
+function deleteUser(n){ 
+  if(confirm(`${n} 삭제?`)){ 
+    db.ref(`allowedUsers/${n}`).get().then(snap => {
+      const userData = snap.val();
+      return db.ref(`allowedUsers/${n}`).remove().then(()=>{ 
+        logDeletion('user', { nick: n, code: userData?.code });
+        toast("삭제됨"); 
+        loadAdminMembers(); 
+      }); 
+    });
+  } 
+}
 
 // ══ 관리자: 제보 관리 ══
 function loadAdminReports(){
@@ -6557,7 +6678,25 @@ function adjustScore(nick,type,delta){
   if(delta===1){ db.ref("logs").push({nick,result:type,defense:"admin",attack:"manual_adjust",attackName:"관리자수정",attackType:"",date:new Date().toISOString().slice(0,10),time:Date.now()}).then(()=>loadAdminScores()); }
   else{ db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const logs=Object.entries(snap.val()).map(([k,v])=>({...v,key:k})).filter(v=>v.nick===nick&&v.result===type).sort((a,b)=>b.time-a.time); if(!logs.length) return toast("기록 없음"); db.ref(`logs/${logs[0].key}`).remove().then(()=>loadAdminScores()); }); }
 }
-function deleteUserLogs(nick){ if(!confirm(`${nick} 기록 삭제?`)) return; db.ref("logs").get().then(snap=>{ if(!snap.exists()) return; const p=[]; Object.entries(snap.val()).forEach(([k,v])=>{ if(v.nick===nick) p.push(db.ref(`logs/${k}`).remove()); }); Promise.all(p).then(()=>{ toast("삭제됨"); loadAdminScores(); }); }); }
+function deleteUserLogs(nick){ 
+  if(!confirm(`${nick} 기록 삭제?`)) return; 
+  db.ref("logs").get().then(snap=>{ 
+    if(!snap.exists()) return; 
+    const deletedLogs = [];
+    const p=[]; 
+    Object.entries(snap.val()).forEach(([k,v])=>{ 
+      if(v.nick===nick) {
+        deletedLogs.push(v);
+        p.push(db.ref(`logs/${k}`).remove()); 
+      }
+    }); 
+    Promise.all(p).then(()=>{ 
+      logDeletion('userLogs', { nick, count: deletedLogs.length });
+      toast("삭제됨"); 
+      loadAdminScores(); 
+    }); 
+  }); 
+}
 function resetSeason(){ if(!confirm("⚠️ 모든 승패 기록을 삭제합니다. 계속할까요?")) return; db.ref("logs").remove().then(()=>{ toast("시즌 초기화 완료!"); loadAdminScores(); }); }
 
 // ══ 로딩 스피너 ══
@@ -6648,7 +6787,15 @@ function addNotice(){
 }
 function deleteNotice(key){
   if(!confirm("공지를 삭제할까요?")) return;
-  db.ref("notices/"+key).remove().then(()=>{ toast("삭제됨"); loadNotices(); loadHomeNotice(); });
+  db.ref("notices/"+key).get().then(snap => {
+    const notice = snap.val();
+    return db.ref("notices/"+key).remove().then(()=>{ 
+      logDeletion('notice', { key, title: notice?.title, body: notice?.body });
+      toast("삭제됨"); 
+      loadNotices(); 
+      loadHomeNotice(); 
+    });
+  });
 }
 
 // ══ 홈 공지 카드 ══
@@ -7392,15 +7539,22 @@ let rankingSelectedNick = null;
 function loadRanking(){
   const list = document.getElementById("rankingListFull");
   if(list) list.innerHTML = "<div class='empty-state'>로딩중...</div>";
-  db.ref("logs").once("value").then(snap=>{
-    const raw = snap.val()||{};
+  
+  Promise.all([
+    db.ref("logs").once("value"),
+    db.ref("roles").once("value")
+  ]).then(([logsSnap, rolesSnap])=>{
+    const raw = logsSnap.val()||{};
+    const roles = rolesSnap.val()||{};
     rankingLogsCache = raw;
+    
     const stats = {};
     Object.values(raw).forEach(log=>{
       if(!log.nick) return;
       if(!stats[log.nick]) stats[log.nick] = { logs:[] };
       stats[log.nick].logs.push(log);
     });
+    
     const rankData = Object.entries(stats).map(([nick, d])=>{
       d.logs.sort((a,b)=>(b.time||0)-(a.time||0));
       const w=d.logs.filter(l=>l.result==="win").length;
@@ -7408,7 +7562,7 @@ function loadRanking(){
       const recent=d.logs.slice(0,30);
       const rw=recent.filter(l=>l.result==="win").length;
       const rl=recent.filter(l=>l.result==="lose").length;
-      return { nick, w, l, rw, rl, logs: d.logs };
+      return { nick, w, l, rw, rl, logs: d.logs, role: roles[nick]||"길드원" };
     }).sort((a,b)=>b.w-a.w);
 
     if(!rankData.length){ if(list) list.innerHTML="<div class='empty-state'>전적 데이터 없음</div>"; return; }
@@ -7421,9 +7575,18 @@ function loadRanking(){
         const badge=i<3?badges[i]:`${i+1}`;
         const isMe=d.nick===myNick;
         const safeId=d.nick.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+        
+        // 역할 배지
+        let roleBadge = '';
+        if(d.role === "관리자") {
+          roleBadge = '<span style="font-size:9px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">관리자</span>';
+        } else if(d.role === "연구원") {
+          roleBadge = '<span style="font-size:9px;background:rgba(52,152,219,0.15);color:#3498db;border:1px solid rgba(52,152,219,0.3);padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">연구원</span>';
+        }
+        
         return `<div class="rank-row${isMe?" rank-me":""}" data-nick="${d.nick.replace(/"/g,'&quot;')}" data-w="${d.w}" data-l="${d.l}" style="cursor:pointer;">
           <div class="rank-num ${i===0?"gold":i===1?"silver":i===2?"bronze":"normal"}">${badge}</div>
-          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${isMe?" ◀":""}</div>
+          <div class="rank-name" ${isMe?'style="color:var(--accent)"':''}>${d.nick}${roleBadge}${isMe?" ◀":""}</div>
           <div class="rank-stat">
             <div class="rs-main">${d.w}승 ${d.l}패 <span style="color:var(--accent)">${r}%</span></div>
             <div class="rs-sub">최근 ${d.rw}승${d.rl}패 ${rr}%</div>
