@@ -1544,6 +1544,7 @@ body::before {
       <button class="sb-item" onclick="switchTab('adminReports')"><span class="si-icon">📋</span> 제보 관리<span id="badge-reports" class="sb-badge" style="display:none;"></span></button>
       <button class="sb-item" onclick="switchTab('adminSuggest')"><span class="si-icon">📬</span> 건의 관리<span id="badge-suggest" class="sb-badge" style="display:none;"></span></button>
       <button class="sb-item" onclick="switchTab('adminScores')"><span class="si-icon">📊</span> 승패 관리</button>
+      <button class="sb-item" onclick="switchTab('adminRecovery')"><span class="si-icon">♻️</span> 데이터 복구</button>
       <button class="sb-item" onclick="switchTab('adminTodayDeck')"><span class="si-icon">🎯</span> 추천덱 관리</button>
       <button class="sb-item" onclick="switchTab('adminDeckPlan')"><span class="si-icon">🗡️</span> 덱편성 관리</button>
     </div>
@@ -2439,6 +2440,10 @@ body::before {
       <span style="font-size:22px;">📊</span>
       <span>승패 관리</span>
     </button>
+    <button onclick="closeMobileAdminMenu();switchTab('adminRecovery')" class="mobile-admin-btn" id="drawerRecoveryBtn" style="display:none;">
+      <span style="font-size:22px;">♻️</span>
+      <span>데이터 복구</span>
+    </button>
     <button onclick="closeMobileAdminMenu();switchTab('adminTodayDeck')" class="mobile-admin-btn" id="drawerTodayDeckBtn" style="display:none;">
       <span style="font-size:22px;">🎯</span>
       <span>추천덱 관리</span>
@@ -3173,6 +3178,53 @@ body::before {
     </div>
   </div>
 
+  <!-- 복구 관리 스크린 -->
+  <div id="adminRecoveryScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 120px);">
+    <div class="page-header">
+      <div class="page-title">♻️ 데이터 복구</div>
+      <button class="btn-icon" onclick="loadDeletionLogs()">새로고침</button>
+    </div>
+    
+    <!-- 자동 삭제 로그 섹션 (상단) -->
+    <div class="admin-section">
+      <div class="admin-section-title">🗑️ 삭제 기록 (7일 보관)</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">삭제된 방어덱/공격덱을 7일간 보관합니다. 클릭하여 복구하세요.</div>
+      <div id="deletionLogsList"></div>
+    </div>
+    
+    <!-- 수동 복구 섹션 (하단 - 접기) -->
+    <div class="admin-section">
+      <div class="admin-section-title" style="cursor:pointer;user-select:none;" onclick="toggleManualRecovery()">
+        🛠️ 수동 복구 (고급) 
+        <span id="manualRecoveryToggle" style="font-size:11px;color:var(--text3);margin-left:8px;">▼ 펼치기</span>
+      </div>
+      <div id="manualRecoveryContent" style="display:none;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">삭제 로그가 없는 데이터를 수동으로 복구할 수 있습니다</div>
+        
+        <!-- 방어덱 수동 복구 -->
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;">🛡️ 방어덱 복구</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input class="form-input" id="manualDefenseName" placeholder="방어덱 이름 (예: 초선)" style="margin:0;">
+            <textarea class="form-textarea" id="manualDefenseData" rows="8" placeholder='Firebase 데이터 JSON 붙여넣기 (예: {"name":"초선","attackTeams":{...}})' style="margin:0;font-size:11px;font-family:monospace;"></textarea>
+            <button class="btn-sm btn-green" onclick="manualRestoreDefense()" style="align-self:flex-start;">✅ 방어덱 복구</button>
+          </div>
+        </div>
+        
+        <!-- 공격덱 수동 복구 -->
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;">⚔️ 공격덱 복구</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input class="form-input" id="manualDefenseKey" placeholder="방어덱 키 (Firebase에서 확인)" style="margin:0;">
+            <input class="form-input" id="manualAttackName" placeholder="공격덱 이름 (예: 프레이야 레긴)" style="margin:0;">
+            <textarea class="form-textarea" id="manualAttackData" rows="8" placeholder='공격덱 데이터 JSON (예: {"name":"프레이야 레긴","ring":"...","formation":"..."})' style="margin:0;font-size:11px;font-family:monospace;"></textarea>
+            <button class="btn-sm btn-green" onclick="manualRestoreAttack()" style="align-self:flex-start;">✅ 공격덱 복구</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 추천덱 관리 스크린 -->
   <div id="adminTodayDeckScreen" class="screen" style="padding-bottom:calc(var(--tab-h) + 120px);">
     <div class="page-header">
@@ -3399,9 +3451,9 @@ async function logDeletion(type, data) {
   }
 }
 
-// 30일 이상 된 삭제 로그 자동 정리
+// 7일 이상 된 삭제 로그 자동 정리
 async function cleanupOldDeletionLogs() {
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
   try {
     const snapshot = await db.ref("deletionLogs").once("value");
     if(!snapshot.exists()) return;
@@ -3409,14 +3461,14 @@ async function cleanupOldDeletionLogs() {
     const toDelete = [];
     snapshot.forEach(child => {
       const log = child.val();
-      if(log.deletedAt < thirtyDaysAgo) {
+      if(log.deletedAt < sevenDaysAgo) {
         toDelete.push(db.ref(`deletionLogs/${child.key}`).remove());
       }
     });
     
     if(toDelete.length > 0) {
       await Promise.all(toDelete);
-      console.log(`${toDelete.length}개의 오래된 삭제 로그 정리됨`);
+      console.log(`${toDelete.length}개의 오래된 삭제 로그 정리됨 (7일 경과)`);
     }
   } catch(err) {
     console.error("삭제 로그 정리 실패:", err);
@@ -3578,7 +3630,7 @@ function showAdminNav() {
     if(codeSection) codeSection.style.display="none";
   }
   
-  // 30일 이상 된 삭제 로그 자동 정리 (관리자만)
+  // 7일 이상 된 삭제 로그 자동 정리 (관리자만)
   if(myRole === "관리자") {
     cleanupOldDeletionLogs();
   }
@@ -4746,6 +4798,7 @@ function buildMobileAdminMenu(){
   menus.push(["📋","제보 관리","adminReports"]);
   menus.push(["📬","건의 관리","adminSuggest"]);
   if(isAdmin) menus.push(["📊","승패 관리","adminScores"]);
+  menus.push(["♻️","데이터 복구","adminRecovery"]);
   menus.push(["🎯","추천덱 관리","adminTodayDeck"]);
   menus.push(["🗡️","덱편성 관리","adminDeckPlan"]);
 
@@ -4889,7 +4942,7 @@ function showAttackSubMenu(anchorBtn){
 // ══ 탭 전환 ══
 // 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
 function switchTab(tab) {
-  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminSuggest","adminTodayDeck","adminDeckPlan"];
+  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -4901,7 +4954,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"ranking":8,"suggest":9,"adminMembers":10,"adminReports":11,"adminSuggest":12,"adminScores":13,"adminTodayDeck":14,"adminDeckPlan":15};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"ranking":8,"suggest":9,"adminMembers":10,"adminReports":11,"adminSuggest":12,"adminScores":13,"adminRecovery":14,"adminTodayDeck":15,"adminDeckPlan":16};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -4933,6 +4986,7 @@ function switchTab(tab) {
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
   if(tab==="adminReports"){ loadAdminReports(); markReportsAsRead(); }
   if(tab==="adminScores") loadAdminScores();
+  if(tab==="adminRecovery") loadDeletionLogs();
   if(tab==="adminTodayDeck") renderTodayDeckAdminList();
   if(tab==="deckplan") initDeckPlan();
   if(tab==="adminDeckPlan") loadAdminDeckPlan();
@@ -5510,7 +5564,29 @@ function addLose() {
 }
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
-function delDefense() { if(checkResearcher()&&currentDefense){ db.ref("defenseTeams/"+currentDefense).remove(); toast("삭제됨"); } }
+async function delDefense() { 
+  if(!checkResearcher() || !currentDefense) return;
+  
+  // 삭제 전 데이터 백업
+  const snapshot = await db.ref("defenseTeams/" + currentDefense).once("value");
+  const deletedData = snapshot.val();
+  
+  if(deletedData) {
+    // 삭제 로그 저장
+    await logDeletion('defenseTeam', {
+      defenseKey: currentDefense,
+      defenseName: deletedData.name,
+      data: deletedData
+    });
+  }
+  
+  db.ref("defenseTeams/" + currentDefense).remove().then(() => {
+    toast("삭제됨 (복구 가능)");
+    // 화면 초기화
+    document.getElementById("attackCard").style.display = "none";
+    document.getElementById("defCurrentText").textContent = "선택해주세요";
+  });
+}
 function clearAtkForm(){
   ["atkName","ringRec","atkPet","atkFormation","armorRec","skillOrder"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value="";
@@ -5563,7 +5639,46 @@ function editAttack() {
     skill:document.getElementById("skillOrder").value
   }).then(()=>{ toast("수정됨 ✅"); clearAtkForm(); });
 }
-function delAttack() { if(checkResearcher()&&currentAttack){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove(); toast("삭제됨"); } }
+async function delAttack() { 
+  if(!checkResearcher() || !currentAttack) return;
+  
+  // 삭제 전 데이터 백업
+  const snapshot = await db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).once("value");
+  const deletedData = snapshot.val();
+  
+  if(deletedData) {
+    // 방어팀 이름 가져오기
+    const defSnapshot = await db.ref(`defenseTeams/${currentDefense}/name`).once("value");
+    const defenseName = defSnapshot.val() || "알 수 없음";
+    
+    await logDeletion('attackTeam', {
+      defenseKey: currentDefense,
+      defenseName: defenseName,
+      attackKey: currentAttack,
+      attackName: deletedData.name,
+      data: deletedData
+    });
+  }
+  
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).remove().then(() => {
+    toast("삭제됨 (복구 가능)");
+    // 공격덱 목록 새로고침
+    const defName = document.getElementById("defCurrentText").textContent;
+    if(defName && defName !== "선택해주세요") {
+      // 현재 방어팀 다시 로드
+      db.ref("defenseTeams").once("value").then(snap => {
+        const all = [];
+        snap.forEach(s => {
+          const v = s.val();
+          if(!v || !v.name) return;
+          all.push({key: s.key, name: v.name, data: v});
+        });
+        const entries = all.filter(x => x.name === defName);
+        if(entries.length > 0) loadAttackTeamsMerged(entries.map(e => ({key: e.key, data: e.data})), defName);
+      });
+    }
+  });
+}
 
 // 길드전 공격에서 현재 선택된 덱을 덱편성에 바로 추가
 async function addToDeckPlan(){
@@ -5853,7 +5968,7 @@ function renderPveSubList(subCat, parentName){
     list.appendChild(div);
   });
 }
-function loadPveData(cat,id,title,type){
+async function loadPveData(cat,id,title,type){
   pveCurrentCategory=cat; pveCurrentId=id; pveCurrentType=type; pveCurrentDetail="";
   document.getElementById("pveDetailCard").style.display="block";
   document.getElementById("pveCardTitle").textContent=title;
@@ -5864,10 +5979,8 @@ function loadPveData(cat,id,title,type){
   // 🔧 새로운 보스 선택 시 빌드 선택 초기화
   document.getElementById("pveBuildSelect").value="build1";
   
-  // 빌드 탭 초기 렌더링 (fetchPveRealData에서 순서 로드 후 선택됨)
-  renderPveBuildTabs();
-  
-  fetchPveRealData();
+  // 빌드 탭은 fetchPveRealData에서 데이터 로드 후 렌더링
+  await fetchPveRealData();
   // 공성전이면 점수 등록 섹션 표시
   const scoreSection = document.getElementById("siegeScoreSection");
   if(cat==="siege" && scoreSection){
@@ -6283,17 +6396,35 @@ function addPveBuild(){
   });
 }
 
-function deletePveBuild(){
+async function deletePveBuild(){
   if(!checkResearcher()) return;
   const sel=document.getElementById("pveBuildSelect");
   const val=sel.value;
   if(["build1","build2","build3","build4"].includes(val)) return toast("기본 빌드(1~4)는 삭제할 수 없어요");
   if(!confirm(`"${sel.options[sel.selectedIndex].textContent}" 빌드를 삭제할까요?`)) return;
+  
   const basePath=getPveBasePath()+(pveCurrentType==="turn_build"?`/${document.getElementById("pveTurnSelect").value}`:"");
+  
+  // 삭제 전 데이터 백업
+  const snapshot = await db.ref(`${basePath}/${val}`).once("value");
+  const deletedData = snapshot.val();
+  
+  if(deletedData) {
+    // 삭제 로그 저장
+    await logDeletion('pveBuild', {
+      category: pveCurrentCategory,
+      id: pveCurrentId,
+      buildKey: val,
+      buildName: sel.options[sel.selectedIndex].textContent,
+      turnValue: pveCurrentType === "turn_build" ? document.getElementById("pveTurnSelect").value : null,
+      data: deletedData
+    });
+  }
+  
   db.ref(`${basePath}/${val}`).remove().then(()=>{
     sel.removeChild(sel.querySelector(`option[value="${val}"]`));
     sel.value="build1";
-    toast("🗑️ 빌드 삭제됨");
+    toast("🗑️ 빌드 삭제됨 (복구 가능)");
     renderPveBuildTabs();
     fetchPveRealData();
   });
@@ -6564,11 +6695,27 @@ function deleteCurrentPveDetail(){
   if(!confirm("현재 세부사항을 삭제할까요?")) return;
   deletePveDetailByKey(pveCurrentDetail);
 }
-function deletePveDetailByKey(key){
+async function deletePveDetailByKey(key){
   if(!key) return;
+  
+  // 삭제 전 데이터 백업
+  const snapshot = await db.ref(`${getPveBuildPath()}/details/${key}`).once("value");
+  const deletedData = snapshot.val();
+  
+  if(deletedData) {
+    await logDeletion('pveDetail', {
+      category: pveCurrentCategory,
+      id: pveCurrentId,
+      buildKey: document.getElementById("pveBuildSelect").value,
+      detailKey: key,
+      detailName: deletedData.name,
+      data: deletedData
+    });
+  }
+  
   db.ref(`${getPveBuildPath()}/details/${key}`).remove().then(()=>{
     if(pveCurrentDetail===key) pveCurrentDetail="";
-    toast("세부사항 삭제됨"); fetchPveRealData();
+    toast("세부사항 삭제됨 (복구 가능)"); fetchPveRealData();
   });
 }
 function copyPveData(){ const data={deck:document.getElementById("editPveDeck").value,skill:document.getElementById("editPveSkill").value,equip:document.getElementById("editPveEquip").value}; navigator.clipboard.writeText(btoa(encodeURIComponent(JSON.stringify(data)))).then(()=>toast("복사됨 📋")); }
@@ -6878,6 +7025,269 @@ function loadAdminScores(){
       listDiv.appendChild(div);
     });
   });
+}
+
+// ══ 데이터 복구 ══
+async function loadDeletionLogs() {
+  if(!checkResearcher()) return;
+  const listDiv = document.getElementById("deletionLogsList");
+  listDiv.innerHTML = '<div class="empty-state">로딩중...</div>';
+  
+  try {
+    const snapshot = await db.ref("deletionLogs").once("value");
+    if(!snapshot.exists()) {
+      listDiv.innerHTML = `
+        <div class="empty-state">
+          <div style="font-size:48px;margin-bottom:12px;">📭</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px;">삭제 기록 없음</div>
+          <div style="font-size:11px;color:var(--text3);">방어덱이나 공격덱을 삭제하면 여기에 7일간 보관됩니다</div>
+        </div>
+      `;
+      return;
+    }
+    
+    const logs = [];
+    snapshot.forEach(child => {
+      logs.push({ key: child.key, ...child.val() });
+    });
+    
+    // 최신순 정렬
+    logs.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+    
+    if(logs.length === 0) {
+      listDiv.innerHTML = `
+        <div class="empty-state">
+          <div style="font-size:48px;margin-bottom:12px;">📭</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px;">삭제 기록 없음</div>
+          <div style="font-size:11px;color:var(--text3);">방어덱이나 공격덱을 삭제하면 여기에 7일간 보관됩니다</div>
+        </div>
+      `;
+      return;
+    }
+    
+    listDiv.innerHTML = '';
+    logs.forEach(log => {
+      const div = document.createElement("div");
+      div.className = "report-row";
+      div.style.flexDirection = "column";
+      div.style.gap = "10px";
+      
+      const date = new Date(log.deletedAt);
+      const dateStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+      
+      let title = "알 수 없음";
+      let subtitle = "";
+      
+      if(log.type === "pveBuild") {
+        title = `PVE 빌드: ${log.data.buildName || "이름 없음"}`;
+        subtitle = `${getCategoryName(log.data.category)} → ${getIdName(log.data.category, log.data.id)}`;
+      } else if(log.type === "pveDetail") {
+        title = `PVE 세부사항: ${log.data.detailName || "이름 없음"}`;
+        subtitle = `${getCategoryName(log.data.category)} → ${getIdName(log.data.category, log.data.id)}`;
+      } else if(log.type === "defenseTeam") {
+        title = `🛡️ 방어덱: ${log.data.defenseName || "이름 없음"}`;
+        const atkCount = Object.keys(log.data.data?.attackTeams || {}).length;
+        subtitle = `공격덱 ${atkCount}개 포함`;
+      } else if(log.type === "attackTeam") {
+        title = `⚔️ 공격덱: ${log.data.attackName || "이름 없음"}`;
+        subtitle = `방어덱: ${log.data.defenseName}`;
+      }
+      
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div class="report-name">${title}</div>
+            <div class="report-sub">${subtitle}</div>
+            <div class="report-sub" style="margin-top:4px;">삭제: ${log.deletedBy} · ${dateStr}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn-sm btn-blue" onclick="viewDeletionLog('${log.key}')" style="padding:7px 10px;">👁️</button>
+            <button class="btn-sm btn-green" onclick="restoreData('${log.key}')" style="padding:7px 10px;">♻️</button>
+            <button class="btn-sm btn-red" onclick="deleteDeletionLog('${log.key}')" style="padding:7px 10px;">🗑️</button>
+          </div>
+        </div>
+      `;
+      
+      listDiv.appendChild(div);
+    });
+    
+  } catch(err) {
+    listDiv.innerHTML = '<div class="empty-state">로드 실패</div>';
+    toast("로드 실패");
+  }
+}
+
+function getCategoryName(cat) {
+  const map = { siege: "공성전", advent: "강림원정대", raid: "레이드", event_raid: "돌발 레이드" };
+  return map[cat] || cat;
+}
+
+function getIdName(cat, id) {
+  if(cat === "siege") {
+    const days = { mon: "월요일", tue: "화요일", wed: "수요일", thu: "목요일", fri: "금요일", sat: "토요일", sun: "일요일" };
+    return days[id] || id;
+  }
+  return id || "?";
+}
+
+async function viewDeletionLog(logKey) {
+  const snapshot = await db.ref(`deletionLogs/${logKey}`).once("value");
+  const log = snapshot.val();
+  if(!log) return toast("데이터 없음");
+  
+  alert(`삭제된 데이터:\n\n${JSON.stringify(log.data, null, 2)}`);
+}
+
+async function restoreData(logKey) {
+  if(!checkResearcher()) return;
+  if(!confirm("이 데이터를 복구할까요?")) return;
+  
+  try {
+    const snapshot = await db.ref(`deletionLogs/${logKey}`).once("value");
+    const log = snapshot.val();
+    if(!log) return toast("데이터 없음");
+    
+    let restorePath = "";
+    
+    if(log.type === "pveBuild") {
+      const basePath = `pve/${log.data.category}/${log.data.id}`;
+      const turnPath = log.data.turnValue ? `/${log.data.turnValue}` : "";
+      restorePath = `${basePath}${turnPath}/${log.data.buildKey}`;
+    } else if(log.type === "pveDetail") {
+      const basePath = `pve/${log.data.category}/${log.data.id}`;
+      restorePath = `${basePath}/${log.data.buildKey}/details/${log.data.detailKey}`;
+    } else if(log.type === "defenseTeam") {
+      // 방어덱 복구 - 새 키로 생성
+      const newRef = db.ref("defenseTeams").push();
+      restorePath = `defenseTeams/${newRef.key}`;
+    } else if(log.type === "attackTeam") {
+      // 공격덱 복구
+      restorePath = `defenseTeams/${log.data.defenseKey}/attackTeams/${log.data.attackKey}`;
+    } else {
+      return toast("지원하지 않는 타입");
+    }
+    
+    // 데이터 복구
+    await db.ref(restorePath).set(log.data.data);
+    
+    // 삭제 로그 제거
+    await db.ref(`deletionLogs/${logKey}`).remove();
+    
+    toast("✅ 복구 완료!");
+    loadDeletionLogs();
+    
+  } catch(err) {
+    toast("복구 실패");
+  }
+}
+
+async function deleteDeletionLog(logKey) {
+  if(!checkResearcher()) return;
+  if(!confirm("이 삭제 로그를 영구 삭제할까요? (복구 불가)")) return;
+  
+  try {
+    await db.ref(`deletionLogs/${logKey}`).remove();
+    toast("삭제 로그 제거됨");
+    loadDeletionLogs();
+  } catch(err) {
+    toast("삭제 실패");
+  }
+}
+
+// ══ 수동 복구 ══
+async function manualRestoreDefense() {
+  if(!checkResearcher()) return;
+  
+  const name = document.getElementById("manualDefenseName").value.trim();
+  const dataStr = document.getElementById("manualDefenseData").value.trim();
+  
+  if(!name) return toast("방어덱 이름을 입력하세요");
+  if(!dataStr) return toast("데이터를 입력하세요");
+  
+  try {
+    // JSON 파싱
+    let data = JSON.parse(dataStr);
+    
+    // name이 없으면 입력한 이름 사용
+    if(!data.name) data.name = name;
+    
+    // attackTeams가 없으면 빈 객체
+    if(!data.attackTeams) data.attackTeams = {};
+    
+    // Firebase에 새 방어덱 추가
+    const newRef = db.ref("defenseTeams").push();
+    await newRef.set({
+      ...data,
+      createdAt: Date.now(),
+      restoredAt: Date.now(),
+      restoredBy: myNick
+    });
+    
+    toast("✅ 방어덱 복구 완료!");
+    
+    // 입력창 초기화
+    document.getElementById("manualDefenseName").value = "";
+    document.getElementById("manualDefenseData").value = "";
+    
+  } catch(err) {
+    toast("❌ JSON 파싱 실패: " + err.message);
+  }
+}
+
+async function manualRestoreAttack() {
+  if(!checkResearcher()) return;
+  
+  const defKey = document.getElementById("manualDefenseKey").value.trim();
+  const name = document.getElementById("manualAttackName").value.trim();
+  const dataStr = document.getElementById("manualAttackData").value.trim();
+  
+  if(!defKey) return toast("방어덱 키를 입력하세요");
+  if(!name) return toast("공격덱 이름을 입력하세요");
+  if(!dataStr) return toast("데이터를 입력하세요");
+  
+  try {
+    // JSON 파싱
+    let data = JSON.parse(dataStr);
+    
+    // name이 없으면 입력한 이름 사용
+    if(!data.name) data.name = name;
+    
+    // 기본값 설정
+    if(!data.win) data.win = 0;
+    if(!data.lose) data.lose = 0;
+    
+    // Firebase에 공격덱 추가
+    const newRef = db.ref(`defenseTeams/${defKey}/attackTeams`).push();
+    await newRef.set({
+      ...data,
+      restoredAt: Date.now(),
+      restoredBy: myNick
+    });
+    
+    toast("✅ 공격덱 복구 완료!");
+    
+    // 입력창 초기화
+    document.getElementById("manualDefenseKey").value = "";
+    document.getElementById("manualAttackName").value = "";
+    document.getElementById("manualAttackData").value = "";
+    
+  } catch(err) {
+    toast("❌ JSON 파싱 실패: " + err.message);
+  }
+}
+
+// ══ 수동 복구 토글 ══
+function toggleManualRecovery() {
+  const content = document.getElementById("manualRecoveryContent");
+  const toggle = document.getElementById("manualRecoveryToggle");
+  
+  if(content.style.display === "none") {
+    content.style.display = "block";
+    toggle.textContent = "▲ 접기";
+  } else {
+    content.style.display = "none";
+    toggle.textContent = "▼ 펼치기";
+  }
 }
 
 // ══ 제보 검토 모달 ══
@@ -8614,6 +9024,9 @@ function initMobileAdminBtn(){
       const scoresBtn = document.getElementById('drawerScoresBtn');
       if(scoresBtn) scoresBtn.style.display='flex';
     }
+    // 복구 버튼은 관리자/연구원 모두 표시
+    const recoveryBtn = document.getElementById('drawerRecoveryBtn');
+    if(recoveryBtn) recoveryBtn.style.display='flex';
     // 추천덱 관리는 관리자/연구원 모두 표시
     const tdBtn = document.getElementById('drawerTodayDeckBtn');
     if(tdBtn) tdBtn.style.display='flex';
