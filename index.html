@@ -6314,6 +6314,8 @@ async function loadBuildOrder() {
     if(select.options.length > 0) {
       select.value = select.options[0].value;
     }
+    // 순서가 없어도 탭은 렌더링
+    renderPveBuildTabs();
     return;
   }
   
