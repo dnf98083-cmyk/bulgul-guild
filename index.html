@@ -5854,15 +5854,17 @@ function renderPveSubList(subCat, parentName){
   });
 }
 function loadPveData(cat,id,title,type){
-  pveCurrentId=id; pveCurrentType=type; pveCurrentDetail="";
+  pveCurrentCategory=cat; pveCurrentId=id; pveCurrentType=type; pveCurrentDetail="";
   document.getElementById("pveDetailCard").style.display="block";
   document.getElementById("pveCardTitle").textContent=title;
   document.getElementById("pveTurnArea").style.display=type==="turn_build"?"block":"none";
   document.getElementById("pveBuildArea").style.display="block";
   if(type==="turn_build") document.getElementById("pveTurnSelect").value="8";
+  
+  // 🔧 새로운 보스 선택 시 빌드 선택 초기화
   document.getElementById("pveBuildSelect").value="build1";
   
-  // 빌드 탭 초기 렌더링
+  // 빌드 탭 초기 렌더링 (fetchPveRealData에서 순서 로드 후 선택됨)
   renderPveBuildTabs();
   
   fetchPveRealData();
@@ -5882,7 +5884,6 @@ function loadPveData(cat,id,title,type){
 function changePveTurn(){ pveCurrentDetail=""; fetchPveRealData(); }
 function changePveBuild(){ 
   pveCurrentDetail=""; 
-  renderPveBuildTabs();
   fetchPveRealData(); 
 }
 // 경로 헬퍼
@@ -5896,48 +5897,53 @@ function getPveCurrentDataPath(){
   return pveCurrentDetail ? `${getPveBuildPath()}/details/${pveCurrentDetail}` : getPveBuildPath();
 }
 
-function fetchPveRealData(){
+async function fetchPveRealData(){
   ["viewPveDeck","viewPveSkill","viewPveEquip"].forEach(id=>document.getElementById(id).textContent="로딩중...");
-  const buildPath=getPveBuildPath();
-  // 빌드 이름 드롭다운 갱신
-  let namePath=getPveBasePath()+(pveCurrentType==="turn_build"?`/${document.getElementById("pveTurnSelect").value}`:"");
-  db.ref(namePath).once("value").then(snap=>{
-    const data=snap.val()||{};
-    const sel=document.getElementById("pveBuildSelect");
-    const defaultNames=["빌드 1","빌드 2","빌드 3","빌드 4"];
-    ["build1","build2","build3","build4"].forEach((bk,i)=>{
-      const opt=sel.querySelector(`option[value="${bk}"]`);
-      if(opt) opt.textContent=data[bk]?.buildName||defaultNames[i];
-    });
-    
-    // 빌드 순서 불러오기 및 탭 렌더링
-    loadBuildOrder();
+  
+  // 1단계: basePath 계산
+  const basePath = getPveBasePath() + (pveCurrentType === "turn_build" ? `/${document.getElementById("pveTurnSelect").value}` : "");
+  
+  // 2단계: 빌드 이름 업데이트 (await으로 완료 대기)
+  const baseSnap = await db.ref(basePath).once("value");
+  const data = baseSnap.val() || {};
+  const sel = document.getElementById("pveBuildSelect");
+  const defaultNames = ["빌드 1","빌드 2","빌드 3","빌드 4"];
+  ["build1","build2","build3","build4"].forEach((bk,i)=>{
+    const opt = sel.querySelector(`option[value="${bk}"]`);
+    if(opt) opt.textContent = data[bk]?.buildName || defaultNames[i];
   });
-  // 빌드 데이터 + 세부사항 로드
-  db.ref(buildPath).once("value").then(snap=>{
-    const buildData=snap.val()||{};
-    const details=buildData.details||{};
-    if(pveCurrentDetail && !details[pveCurrentDetail]) pveCurrentDetail="";
-    const currentData=(pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
+  
+  // 3단계: 빌드 순서 불러오기 (await으로 완료 대기)
+  await loadBuildOrder();
+  
+  // 4단계: 최종 buildPath 계산 (select.value가 확정된 후)
+  const finalBuildKey = document.getElementById("pveBuildSelect").value;
+  const finalBuildPath = `${basePath}/${finalBuildKey}`;
+  
+  // 5단계: 빌드 데이터 로드
+  const buildSnap = await db.ref(finalBuildPath).once("value");
+  const buildData = buildSnap.val() || {};
+  const details = buildData.details || {};
+  if(pveCurrentDetail && !details[pveCurrentDetail]) pveCurrentDetail = "";
+  const currentData = (pveCurrentDetail && details[pveCurrentDetail]) ? details[pveCurrentDetail] : buildData;
 
-    // 빌드 이름 표시
-    const pveBuildNameEl = document.getElementById("pveBuildNameDisplay");
-    if(pveBuildNameEl) {
-      const buildName = buildData?.buildName || "";
-      pveBuildNameEl.textContent = buildName ? `📌 ${buildName}` : "";
-    }
+  // 빌드 이름 표시
+  const pveBuildNameEl = document.getElementById("pveBuildNameDisplay");
+  if(pveBuildNameEl) {
+    const buildName = buildData?.buildName || "";
+    pveBuildNameEl.textContent = buildName ? `📌 ${buildName}` : "";
+  }
 
-    document.getElementById("viewPveDeck").textContent=currentData?.deck||"(등록된 공략 없음)";
-    const pveFormDisp = document.getElementById("pveFormationDisplay");
-    if(pveFormDisp) renderPveFormations(currentData, pveFormDisp);
-    document.getElementById("viewPveSkill").textContent=currentData?.skill||"-";
-    document.getElementById("viewPveEquip").textContent=currentData?.equip||"-";
-    // 작성자 표시
-    const pveMakerEl = document.getElementById("pveMakerDisplay");
-    if(pveMakerEl) pveMakerEl.textContent = currentData?.maker ? `✏️ By. ${currentData.maker}` : (buildData?.maker ? `✏️ By. ${buildData.maker}` : "");
-    renderPveDetailTabs(details, buildData);
-    if(document.getElementById("pveEditMode").style.display==="block") fillPveEditForm(buildData, details);
-  });
+  document.getElementById("viewPveDeck").textContent = currentData?.deck || "(등록된 공략 없음)";
+  const pveFormDisp = document.getElementById("pveFormationDisplay");
+  if(pveFormDisp) renderPveFormations(currentData, pveFormDisp);
+  document.getElementById("viewPveSkill").textContent = currentData?.skill || "-";
+  document.getElementById("viewPveEquip").textContent = currentData?.equip || "-";
+  // 작성자 표시
+  const pveMakerEl = document.getElementById("pveMakerDisplay");
+  if(pveMakerEl) pveMakerEl.textContent = currentData?.maker ? `✏️ By. ${currentData.maker}` : (buildData?.maker ? `✏️ By. ${buildData.maker}` : "");
+  renderPveDetailTabs(details, buildData);
+  if(document.getElementById("pveEditMode").style.display === "block") fillPveEditForm(buildData, details);
 }
 
 function renderPveDetailTabs(details, buildData = {}){
@@ -6155,7 +6161,16 @@ function saveBuildOrder() {
     const tab = Array.from(tabs).find(t => t.dataset.buildKey === key);
     const opt = document.createElement('option');
     opt.value = key;
-    opt.textContent = tab.querySelector('span').textContent.replace('⋮⋮', '').trim();
+    
+    // 탭의 모든 텍스트를 가져와서 ⋮⋮ 제거
+    const allSpans = tab.querySelectorAll('span');
+    let buildName = '';
+    allSpans.forEach(span => {
+      const text = span.textContent.trim();
+      if(text !== '⋮⋮') buildName = text;
+    });
+    
+    opt.textContent = buildName || tab.textContent.replace('⋮⋮', '').trim();
     select.appendChild(opt);
   });
   
@@ -6179,9 +6194,16 @@ async function loadBuildOrder() {
   const snap = await db.ref(`${basePath}/buildOrder`).once("value");
   const savedOrder = snap.val();
   
-  if(!savedOrder) return;
-  
   const select = document.getElementById('pveBuildSelect');
+  
+  if(!savedOrder) {
+    // 저장된 순서가 없으면 첫 번째 빌드 선택
+    if(select.options.length > 0) {
+      select.value = select.options[0].value;
+    }
+    return;
+  }
+  
   const currentOptions = Array.from(select.options).map(opt => ({
     key: opt.value,
     name: opt.textContent
@@ -6214,7 +6236,14 @@ async function loadBuildOrder() {
     select.appendChild(option);
   });
   
-  select.value = currentValue;
+  // 현재 선택된 값이 유효하면 유지, 아니면 첫 번째 선택
+  if(currentValue && orderedOptions.find(o => o.key === currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = orderedOptions[0].key;
+  }
+  
+  // select 값 설정 후 탭 렌더링
   renderPveBuildTabs();
 }
 
