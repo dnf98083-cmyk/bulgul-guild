@@ -3525,7 +3525,24 @@ function checkLogin(nick,key,isAuto) {
         if(myRole==="관리자") isAdminAuthenticated=true;
         enterApp();
       });
-    } else if(!isAuto) toast("닉네임 또는 코드가 올바르지 않습니다");
+    } else {
+      // 로그인 실패
+      if(isAuto) {
+        // 자동 로그인 실패 시 localStorage 클리어 후 로그인 화면 표시
+        localStorage.removeItem("nickname");
+        localStorage.removeItem("accessKey");
+        myNick = "";
+        // 로그인 화면이 이미 표시되어 있으므로 별도 처리 불필요
+      } else {
+        toast("닉네임 또는 코드가 올바르지 않습니다");
+      }
+    }
+  }).catch(err => {
+    console.error("로그인 오류:", err);
+    if(isAuto) {
+      localStorage.removeItem("nickname");
+      localStorage.removeItem("accessKey");
+    }
   });
 }
 function checkPW() {
@@ -5976,11 +5993,28 @@ async function loadPveData(cat,id,title,type){
   document.getElementById("pveBuildArea").style.display="block";
   if(type==="turn_build") document.getElementById("pveTurnSelect").value="8";
   
-  // 🔧 새로운 보스 선택 시 빌드 선택 초기화
-  document.getElementById("pveBuildSelect").value="build1";
-  
   // 빌드 탭은 fetchPveRealData에서 데이터 로드 후 렌더링
   await fetchPveRealData();
+  
+  // ✅ 데이터 로드 완료 후 탭 명시적으로 렌더링
+  renderPveBuildTabs();
+  
+  // ✅ 새로운 보스 선택 시 맨 왼쪽(첫 번째) 빌드 자동 선택
+  const select = document.getElementById("pveBuildSelect");
+  if(select.options.length > 0) {
+    select.value = select.options[0].value;
+    // 탭 active 상태 업데이트
+    document.querySelectorAll('.pve-build-tab').forEach((tab, idx) => {
+      if(idx === 0) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+    // 내용 다시 로드
+    fetchPveRealData();
+  }
+  
   // 공성전이면 점수 등록 섹션 표시
   const scoreSection = document.getElementById("siegeScoreSection");
   if(cat==="siege" && scoreSection){
@@ -5996,7 +6030,19 @@ async function loadPveData(cat,id,title,type){
 }
 function changePveTurn(){ pveCurrentDetail=""; fetchPveRealData(); }
 function changePveBuild(){ 
+  console.log("changePveBuild 호출됨, 현재 빌드:", document.getElementById("pveBuildSelect").value);
   pveCurrentDetail=""; 
+  
+  // 빌드 탭 active 상태 즉시 업데이트
+  const currentBuild = document.getElementById("pveBuildSelect").value;
+  document.querySelectorAll('.pve-build-tab').forEach(tab => {
+    if(tab.dataset.buildKey === currentBuild) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+  
   fetchPveRealData(); 
 }
 // 경로 헬퍼
@@ -6187,9 +6233,13 @@ function renderPveBuildTabs() {
     }
     
     tab.onclick = () => {
+      console.log("빌드 탭 클릭:", build.key, "순서변경모드:", buildReorderMode, "드래깅중:", tab.classList.contains('dragging'));
       if(!tab.classList.contains('dragging') && !buildReorderMode) {
+        console.log("빌드 변경 실행:", build.key);
         select.value = build.key;
         changePveBuild();
+      } else {
+        console.log("클릭 무시됨 - 순서변경 모드 또는 드래깅 중");
       }
     };
     
