@@ -1532,10 +1532,10 @@ body::before {
     <button class="sb-item" onclick="switchTab('totalwar')"><span class="si-icon">⚔️</span> 총력전</button>
     <button class="sb-item" onclick="switchTab('deckplan')"><span class="si-icon">🗡️</span> 길드전 덱편성</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
+    <button class="sb-item" onclick="switchTab('speedCalc')"><span class="si-icon">⚡</span> 속공 계산기</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
-    <button class="sb-item" onclick="switchTab('speedCalc')"><span class="si-icon">⚡</span> 속공 계산기</button>
     <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
     <button class="sb-item" onclick="switchTab('suggest')"><span class="si-icon">📬</span> 건의사항</button>
     <!-- 관리자 전용 (기본 숨김) -->
@@ -2844,39 +2844,38 @@ body::before {
       <div class="page-title">⚡ 불굴 속공 계산기</div>
     </div>
 
-    <!-- 모드 선택 -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-      <div class="section-title" style="margin-bottom:10px;">전투 모드</div>
-      <div style="display:flex;gap:8px;">
-        <button id="speedMode_3v3" class="pve-tab-btn active" onclick="setSpeedMode('3v3')" style="flex:1;">3 vs 3</button>
-        <button id="speedMode_5v5" class="pve-tab-btn" style="flex:1;opacity:0.3;cursor:not-allowed;" disabled>5 vs 5 (준비중)</button>
+    <!-- 설명 -->
+    <div style="background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.2);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text3);line-height:1.6;">
+        상대팀 속공을 추측하는 계산기입니다.<br>
+        적군은 유형(방어형/만능형/지원형/마법형/공격형)을 선택하면 기본 속공이 자동 설정됩니다.
       </div>
     </div>
 
     <!-- 팀 설정 -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-      <div class="section-title" style="margin-bottom:10px;">팀 설정</div>
+      <div class="section-title" style="margin-bottom:10px;">팀 설정 (3 vs 3)</div>
       
       <!-- 아군 -->
       <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:700;color:#3498db;margin-bottom:8px;">🔵 아군</div>
+        <div style="font-size:12px;font-weight:700;color:#3498db;margin-bottom:8px;">🔵 아군 (속공 직접 입력)</div>
         <div id="speedAllyTeam" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
 
       <!-- 적군 -->
       <div>
-        <div style="font-size:12px;font-weight:700;color:#e74c3c;margin-bottom:8px;">🔴 적군</div>
+        <div style="font-size:12px;font-weight:700;color:#e74c3c;margin-bottom:8px;">🔴 적군 (유형 선택)</div>
         <div id="speedEnemyTeam" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
     </div>
 
     <!-- 분석 버튼 -->
-    <button onclick="calculateSpeed()" style="width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:12px;">⚡ 분석하기</button>
+    <button onclick="calculateSpeed()" style="width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:12px;">⚡ 속공 분석하기</button>
 
     <!-- 결과 -->
     <div id="speedResultCard" style="display:none;">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-        <div class="section-title" style="margin-bottom:12px;">📊 턴 순서</div>
+        <div class="section-title" style="margin-bottom:12px;">📊 예상 턴 순서</div>
         <div id="speedTurnOrder"></div>
       </div>
 
@@ -5009,7 +5008,7 @@ function showAttackSubMenu(anchorBtn){
 // ══ 탭 전환 ══
 // 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
 function switchTab(tab) {
-  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","speedCalc","ranking","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
+  const allTabs=["home","notice","totalwar","deckplan","attack","speedCalc","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -5021,7 +5020,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"speedCalc":8,"ranking":9,"suggest":10,"adminMembers":11,"adminReports":12,"adminSuggest":13,"adminScores":14,"adminRecovery":15,"adminTodayDeck":16,"adminDeckPlan":17};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"speedCalc":5,"defense":6,"pve":7,"calc":8,"ranking":9,"suggest":10,"adminMembers":11,"adminReports":12,"adminSuggest":13,"adminScores":14,"adminRecovery":15,"adminTodayDeck":16,"adminDeckPlan":17};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -7384,18 +7383,18 @@ function toggleManualRecovery() {
 }
 
 // ══ 속공 계산기 ══
-let speedCalcMode = '3v3';
-let speedTeams = {
-  ally: [{name:'',speed:100},{name:'',speed:100},{name:'',speed:100}],
-  enemy: [{name:'',speed:100},{name:'',speed:100},{name:'',speed:100}]
+const speedTypeBase = {
+  '방어형': 19,
+  '지원형': 19,
+  '만능형': 25,
+  '마법형': 29,
+  '공격형': 29
 };
 
-function setSpeedMode(mode) {
-  speedCalcMode = mode;
-  document.querySelectorAll('[id^="speedMode_"]').forEach(btn => btn.classList.remove('active'));
-  document.getElementById(`speedMode_${mode}`).classList.add('active');
-  renderSpeedTeams();
-}
+let speedTeams = {
+  ally: [{name:'',speed:100},{name:'',speed:100},{name:'',speed:100}],
+  enemy: [{name:'',type:'만능형',bonus:0},{name:'',type:'만능형',bonus:0},{name:'',type:'만능형',bonus:0}]
+};
 
 function renderSpeedTeams() {
   const allyDiv = document.getElementById('speedAllyTeam');
@@ -7405,35 +7404,72 @@ function renderSpeedTeams() {
   enemyDiv.innerHTML = '';
   
   speedTeams.ally.forEach((char, idx) => {
-    allyDiv.appendChild(createSpeedChar('ally', idx));
+    allyDiv.appendChild(createAllyChar(idx));
   });
   
   speedTeams.enemy.forEach((char, idx) => {
-    enemyDiv.appendChild(createSpeedChar('enemy', idx));
+    enemyDiv.appendChild(createEnemyChar(idx));
   });
 }
 
-function createSpeedChar(team, idx) {
-  const char = speedTeams[team][idx];
-  const color = team === 'ally' ? '#3498db' : '#e74c3c';
+function createAllyChar(idx) {
+  const char = speedTeams.ally[idx];
   
   const div = document.createElement('div');
   div.style.cssText = `display:flex;gap:8px;align-items:center;background:var(--surface2);border-radius:8px;padding:10px 12px;`;
   
   div.innerHTML = `
-    <div style="width:28px;height:28px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;">${idx+1}</div>
-    <input class="form-input" placeholder="캐릭터 이름" value="${char.name}" onchange="updateSpeedChar('${team}',${idx},'name',this.value)" style="margin:0;flex:1;font-size:12px;">
-    <input class="form-input" type="number" placeholder="속도" value="${char.speed}" onchange="updateSpeedChar('${team}',${idx},'speed',this.value)" style="margin:0;width:80px;font-size:12px;">
+    <div style="width:28px;height:28px;border-radius:50%;background:#3498db;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;">${idx+1}</div>
+    <input class="form-input" placeholder="캐릭터명" value="${char.name}" onchange="updateAllyChar(${idx},'name',this.value)" style="margin:0;flex:1;font-size:12px;">
+    <input class="form-input" type="number" placeholder="속공" value="${char.speed}" onchange="updateAllyChar(${idx},'speed',this.value)" style="margin:0;width:70px;font-size:12px;">
   `;
   
   return div;
 }
 
-function updateSpeedChar(team, idx, field, value) {
+function createEnemyChar(idx) {
+  const char = speedTeams.enemy[idx];
+  const baseSpeed = speedTypeBase[char.type];
+  const totalSpeed = baseSpeed + char.bonus;
+  
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:6px;align-items:center;background:var(--surface2);border-radius:8px;padding:10px 12px;flex-wrap:wrap;`;
+  
+  div.innerHTML = `
+    <div style="width:28px;height:28px;border-radius:50%;background:#e74c3c;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;">${idx+1}</div>
+    <input class="form-input" placeholder="캐릭터명" value="${char.name}" onchange="updateEnemyChar(${idx},'name',this.value)" style="margin:0;flex:1;min-width:100px;font-size:12px;">
+    <select class="form-select" onchange="updateEnemyChar(${idx},'type',this.value)" style="margin:0;width:90px;font-size:11px;padding:8px 10px;">
+      ${Object.keys(speedTypeBase).map(t => `<option value="${t}" ${t===char.type?'selected':''}>${t}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:4px;align-items:center;flex-basis:100%;margin-top:2px;">
+      <span style="font-size:10px;color:var(--text3);width:45px;">기본: ${baseSpeed}</span>
+      <span style="font-size:10px;color:var(--text3);">+</span>
+      <input class="form-input" type="number" placeholder="0" value="${char.bonus}" onchange="updateEnemyChar(${idx},'bonus',this.value)" style="margin:0;width:50px;font-size:11px;padding:6px 8px;">
+      <span style="font-size:10px;font-weight:700;color:#e74c3c;">= ${totalSpeed}</span>
+    </div>
+  `;
+  
+  return div;
+}
+
+function updateAllyChar(idx, field, value) {
   if(field === 'speed') {
-    speedTeams[team][idx][field] = parseInt(value) || 0;
+    speedTeams.ally[idx][field] = parseInt(value) || 0;
   } else {
-    speedTeams[team][idx][field] = value;
+    speedTeams.ally[idx][field] = value;
+  }
+}
+
+function updateEnemyChar(idx, field, value) {
+  if(field === 'bonus') {
+    speedTeams.enemy[idx][field] = parseInt(value) || 0;
+  } else {
+    speedTeams.enemy[idx][field] = value;
+  }
+  
+  // 타입이 변경되면 화면 다시 렌더링
+  if(field === 'type') {
+    renderSpeedTeams();
   }
 }
 
@@ -7453,11 +7489,17 @@ function calculateSpeed() {
   });
   
   speedTeams.enemy.forEach((char, idx) => {
-    if(char.name || char.speed > 0) {
+    if(char.name || char.type) {
+      const baseSpeed = speedTypeBase[char.type];
+      const totalSpeed = baseSpeed + char.bonus;
+      
       allChars.push({
         team: 'enemy',
         name: char.name || `적군 ${idx+1}`,
-        speed: char.speed,
+        type: char.type,
+        baseSpeed: baseSpeed,
+        bonus: char.bonus,
+        speed: totalSpeed,
         index: idx
       });
     }
@@ -7481,28 +7523,44 @@ function calculateSpeed() {
     
     const item = document.createElement('div');
     item.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bgColor};border-radius:8px;margin-bottom:6px;`;
-    item.innerHTML = `
-      <div style="font-size:13px;font-weight:900;color:${color};width:50px;">턴 ${turnIdx+1}</div>
-      <div style="flex:1;font-size:13px;font-weight:700;color:var(--text);">${char.name}</div>
-      <div style="font-size:13px;font-weight:900;color:${color};">⚡ ${char.speed}</div>
-    `;
+    
+    if(char.team === 'enemy') {
+      item.innerHTML = `
+        <div style="font-size:13px;font-weight:900;color:${color};width:50px;">턴 ${turnIdx+1}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${char.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${char.type} (${char.baseSpeed}+${char.bonus})</div>
+        </div>
+        <div style="font-size:13px;font-weight:900;color:${color};">⚡ ${char.speed}</div>
+      `;
+    } else {
+      item.innerHTML = `
+        <div style="font-size:13px;font-weight:900;color:${color};width:50px;">턴 ${turnIdx+1}</div>
+        <div style="flex:1;font-size:13px;font-weight:700;color:var(--text);">${char.name}</div>
+        <div style="font-size:13px;font-weight:900;color:${color};">⚡ ${char.speed}</div>
+      `;
+    }
+    
     turnDiv.appendChild(item);
   });
   
   // 속도 분석
   const analysisDiv = document.getElementById('speedAnalysis');
-  const allySpeed = speedTeams.ally.map(c => c.speed);
-  const enemySpeed = speedTeams.enemy.map(c => c.speed);
+  const allyChars = allChars.filter(c => c.team === 'ally');
+  const enemyChars = allChars.filter(c => c.team === 'enemy');
+  
+  const allyAvg = allyChars.length > 0 ? Math.round(allyChars.reduce((sum,c)=>sum+c.speed,0) / allyChars.length) : 0;
+  const enemyAvg = enemyChars.length > 0 ? Math.round(enemyChars.reduce((sum,c)=>sum+c.speed,0) / enemyChars.length) : 0;
   
   analysisDiv.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="background:rgba(52,152,219,0.1);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:11px;color:#3498db;font-weight:700;margin-bottom:4px;">🔵 아군 평균 속도</div>
-        <div style="font-size:16px;font-weight:900;color:#3498db;">${Math.round(allySpeed.reduce((a,b)=>a+b,0) / allySpeed.length)}</div>
+        <div style="font-size:11px;color:#3498db;font-weight:700;margin-bottom:4px;">🔵 아군 평균</div>
+        <div style="font-size:16px;font-weight:900;color:#3498db;">${allyAvg}</div>
       </div>
       <div style="background:rgba(231,76,60,0.1);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:11px;color:#e74c3c;font-weight:700;margin-bottom:4px;">🔴 적군 평균 속도</div>
-        <div style="font-size:16px;font-weight:900;color:#e74c3c;">${Math.round(enemySpeed.reduce((a,b)=>a+b,0) / enemySpeed.length)}</div>
+        <div style="font-size:11px;color:#e74c3c;font-weight:700;margin-bottom:4px;">🔴 적군 평균 (추정)</div>
+        <div style="font-size:16px;font-weight:900;color:#e74c3c;">${enemyAvg}</div>
       </div>
     </div>
   `;
