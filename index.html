@@ -2855,9 +2855,8 @@ body::before {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
       <div class="section-title" style="margin-bottom:10px;">⚖️ 속공 승패</div>
       <div style="display:flex;gap:8px;">
-        <button id="speedResult_win" class="pve-tab-btn" onclick="setSpeedResult('win')" style="flex:1;">✅ 속공승</button>
+        <button id="speedResult_win" class="pve-tab-btn active" onclick="setSpeedResult('win')" style="flex:1;">✅ 속공승</button>
         <button id="speedResult_lose" class="pve-tab-btn" onclick="setSpeedResult('lose')" style="flex:1;">❌ 속공패</button>
-        <button id="speedResult_unknown" class="pve-tab-btn active" onclick="setSpeedResult('unknown')" style="flex:1;">❓ 모름</button>
       </div>
     </div>
 
@@ -7400,7 +7399,7 @@ let speedOrder = [
   {team:'',name:'',speed:0,type:'만능형'}
 ];
 
-let speedResultChoice = 'unknown'; // 'win', 'lose', 'unknown'
+let speedResultChoice = 'win'; // 'win', 'lose'
 
 function setSpeedResult(result) {
   speedResultChoice = result;
@@ -7503,7 +7502,7 @@ function analyzeSpeed() {
   // 아군 합산 속공
   const allyTotal = allyChars.reduce((sum, c) => sum + c.speed, 0);
   
-  // 적군 속공 추측
+  // 적군 속공 추측 (순수하게 순서만 보고 계산)
   const enemyChars = chars.filter(c => c.team === 'enemy');
   const results = [];
   
@@ -7511,33 +7510,42 @@ function analyzeSpeed() {
     if(char.team === 'enemy') {
       const baseSpeed = speedTypeBase[char.type];
       
-      // 이전 아군 찾기
-      let prevAllySpeed = null;
-      for(let j = i - 1; j >= 0; j--) {
-        if(chars[j].team === 'ally') {
-          prevAllySpeed = chars[j].speed;
-          break;
+      // 바로 이전 캐릭터 찾기
+      let prevSpeed = null;
+      if(i > 0) {
+        const prev = chars[i - 1];
+        if(prev.team === 'ally') {
+          prevSpeed = prev.speed;
         }
+        // 이전이 적군이면 무시 (순서 기준으로만)
       }
       
-      // 다음 아군 찾기
-      let nextAllySpeed = null;
-      for(let j = i + 1; j < chars.length; j++) {
-        if(chars[j].team === 'ally') {
-          nextAllySpeed = chars[j].speed;
-          break;
+      // 바로 다음 캐릭터 찾기
+      let nextSpeed = null;
+      if(i < chars.length - 1) {
+        const next = chars[i + 1];
+        if(next.team === 'ally') {
+          nextSpeed = next.speed;
         }
+        // 다음이 적군이면 무시
       }
       
-      // 속공 범위
+      // 속공 범위 (순서만 보고 계산)
       let minSpeed = baseSpeed;
       let maxSpeed = baseSpeed + 100;
       
-      if(prevAllySpeed !== null) {
-        maxSpeed = Math.min(maxSpeed, prevAllySpeed - 1);
+      if(nextSpeed !== null) {
+        minSpeed = Math.max(minSpeed, nextSpeed + 1);
       }
-      if(nextAllySpeed !== null) {
-        minSpeed = Math.max(minSpeed, nextAllySpeed + 1);
+      if(prevSpeed !== null) {
+        maxSpeed = Math.min(maxSpeed, prevSpeed - 1);
+      }
+      
+      // 범위 검증
+      if(minSpeed > maxSpeed) {
+        // 불가능한 범위면 기본값으로
+        minSpeed = baseSpeed;
+        maxSpeed = baseSpeed;
       }
       
       const minBonus = Math.max(0, minSpeed - baseSpeed);
@@ -7556,35 +7564,17 @@ function analyzeSpeed() {
     }
   });
   
-  // 적군 합산 범위 계산
+  // 적군 합산 범위 계산 (개별 범위의 합)
   let enemyMinTotal = results.reduce((sum, r) => sum + r.minSpeed, 0);
   let enemyMaxTotal = results.reduce((sum, r) => sum + r.maxSpeed, 0);
   
-  // ✅ 속공 승/패 정보로 범위 조정
+  // ✅ 속공 승/패 정보로 "합산만" 조정
   if(speedResultChoice === 'win') {
-    // 속공승: 적군 합산이 아군보다 낮음
+    // 속공승: 적군 최대값을 아군-1로 제한
     enemyMaxTotal = Math.min(enemyMaxTotal, allyTotal - 1);
   } else if(speedResultChoice === 'lose') {
-    // 속공패: 적군 합산이 아군보다 높음
+    // 속공패: 적군 최소값을 아군+1로 제한
     enemyMinTotal = Math.max(enemyMinTotal, allyTotal + 1);
-  }
-  
-  // 개별 적군 속공도 비례 조정
-  if(enemyChars.length > 0 && speedResultChoice !== 'unknown') {
-    const originalTotal = results.reduce((sum, r) => sum + (r.minSpeed + r.maxSpeed) / 2, 0);
-    const targetTotal = (enemyMinTotal + enemyMaxTotal) / 2;
-    const adjustRatio = targetTotal / originalTotal;
-    
-    results.forEach(r => {
-      const avgSpeed = (r.minSpeed + r.maxSpeed) / 2;
-      const adjustedAvg = Math.round(avgSpeed * adjustRatio);
-      const range = (r.maxSpeed - r.minSpeed) / 2;
-      
-      r.minSpeed = Math.max(r.baseSpeed, Math.round(adjustedAvg - range));
-      r.maxSpeed = Math.min(r.baseSpeed + 100, Math.round(adjustedAvg + range));
-      r.minBonus = Math.max(0, r.minSpeed - r.baseSpeed);
-      r.maxBonus = r.maxSpeed - r.baseSpeed;
-    });
   }
   
   // 합산 속공 비교 표시
@@ -7595,23 +7585,9 @@ function analyzeSpeed() {
   if(speedResultChoice === 'win') {
     resultText = '✅ 속공승 (아군이 빠름)';
     resultColor = '#27ae60';
-  } else if(speedResultChoice === 'lose') {
+  } else {
     resultText = '❌ 속공패 (적군이 빠름)';
     resultColor = '#e74c3c';
-  } else {
-    const isWin = allyTotal > enemyMaxTotal;
-    const isLose = allyTotal < enemyMinTotal;
-    
-    if(isWin) {
-      resultText = '✅ 승리 예상 (아군이 빠름)';
-      resultColor = '#27ae60';
-    } else if(isLose) {
-      resultText = '❌ 패배 예상 (적군이 빠름)';
-      resultColor = '#e74c3c';
-    } else {
-      resultText = '❓ 불확실 (범위 겹침)';
-      resultColor = '#f39c12';
-    }
   }
   
   comparisonDiv.innerHTML = `
