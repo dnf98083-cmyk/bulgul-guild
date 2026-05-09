@@ -11,7 +11,7 @@
 /* ════════════════════════════════════
    🔥 불굴 길드 DB — Design System v2
    ════════════════════════════════════ */
-   
+
 /* ── 색상 토큰 ── */
 :root {
   /* 배경 */
@@ -1535,6 +1535,7 @@ body::before {
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
+    <button class="sb-item" onclick="switchTab('speedCalc')"><span class="si-icon">⚡</span> 속공 계산기</button>
     <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
     <button class="sb-item" onclick="switchTab('suggest')"><span class="si-icon">📬</span> 건의사항</button>
     <!-- 관리자 전용 (기본 숨김) -->
@@ -2833,6 +2834,55 @@ body::before {
           <div id="c_r_hpbar_after" style="height:100%;border-radius:99px;background:#27ae60;transition:width 0.4s;width:0%;"></div>
         </div>
         <div id="c_r_verdict" style="border-radius:var(--radius);padding:12px 16px;text-align:center;font-weight:900;font-size:15px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 속공 계산기 ══ -->
+  <div id="speedCalcScreen" class="screen" style="padding-bottom:calc(var(--tab-h)+40px);">
+    <div class="page-header">
+      <div class="page-title">⚡ 불굴 속공 계산기</div>
+    </div>
+
+    <!-- 모드 선택 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
+      <div class="section-title" style="margin-bottom:10px;">전투 모드</div>
+      <div style="display:flex;gap:8px;">
+        <button id="speedMode_3v3" class="pve-tab-btn active" onclick="setSpeedMode('3v3')" style="flex:1;">3 vs 3</button>
+        <button id="speedMode_5v5" class="pve-tab-btn" style="flex:1;opacity:0.3;cursor:not-allowed;" disabled>5 vs 5 (준비중)</button>
+      </div>
+    </div>
+
+    <!-- 팀 설정 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
+      <div class="section-title" style="margin-bottom:10px;">팀 설정</div>
+      
+      <!-- 아군 -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:#3498db;margin-bottom:8px;">🔵 아군</div>
+        <div id="speedAllyTeam" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- 적군 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#e74c3c;margin-bottom:8px;">🔴 적군</div>
+        <div id="speedEnemyTeam" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 분석 버튼 -->
+    <button onclick="calculateSpeed()" style="width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:12px;">⚡ 분석하기</button>
+
+    <!-- 결과 -->
+    <div id="speedResultCard" style="display:none;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
+        <div class="section-title" style="margin-bottom:12px;">📊 턴 순서</div>
+        <div id="speedTurnOrder"></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+        <div class="section-title" style="margin-bottom:12px;">🎯 속도 분석</div>
+        <div id="speedAnalysis"></div>
       </div>
     </div>
   </div>
@@ -4959,7 +5009,7 @@ function showAttackSubMenu(anchorBtn){
 // ══ 탭 전환 ══
 // 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
 function switchTab(tab) {
-  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","ranking","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
+  const allTabs=["home","notice","totalwar","deckplan","attack","defense","pve","calc","speedCalc","ranking","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ const el=document.getElementById(t+"Screen"); if(el) el.classList.remove("active"); });
   const screen=document.getElementById(tab+"Screen");
   if(screen) screen.classList.add("active");
@@ -4971,7 +5021,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"ranking":8,"suggest":9,"adminMembers":10,"adminReports":11,"adminSuggest":12,"adminScores":13,"adminRecovery":14,"adminTodayDeck":15,"adminDeckPlan":16};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"defense":5,"pve":6,"calc":7,"speedCalc":8,"ranking":9,"suggest":10,"adminMembers":11,"adminReports":12,"adminSuggest":13,"adminScores":14,"adminRecovery":15,"adminTodayDeck":16,"adminDeckPlan":17};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -5007,6 +5057,7 @@ function switchTab(tab) {
   if(tab==="adminTodayDeck") renderTodayDeckAdminList();
   if(tab==="deckplan") initDeckPlan();
   if(tab==="adminDeckPlan") loadAdminDeckPlan();
+  if(tab==="speedCalc") renderSpeedTeams();
 }
 
 // ══ 방어팀 드롭다운 ══
@@ -5993,27 +6044,17 @@ async function loadPveData(cat,id,title,type){
   document.getElementById("pveBuildArea").style.display="block";
   if(type==="turn_build") document.getElementById("pveTurnSelect").value="8";
   
-  // 빌드 탭은 fetchPveRealData에서 데이터 로드 후 렌더링
-  await fetchPveRealData();
-  
-  // ✅ 데이터 로드 완료 후 탭 명시적으로 렌더링
-  renderPveBuildTabs();
-  
-  // ✅ 새로운 보스 선택 시 맨 왼쪽(첫 번째) 빌드 자동 선택
+  // ✅ 새로운 보스 선택 시 맨 왼쪽(첫 번째) 빌드로 초기화
   const select = document.getElementById("pveBuildSelect");
   if(select.options.length > 0) {
     select.value = select.options[0].value;
-    // 탭 active 상태 업데이트
-    document.querySelectorAll('.pve-build-tab').forEach((tab, idx) => {
-      if(idx === 0) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
-    });
-    // 내용 다시 로드
-    fetchPveRealData();
   }
+  
+  // 데이터 로드
+  await fetchPveRealData();
+  
+  // 탭 렌더링
+  renderPveBuildTabs();
   
   // 공성전이면 점수 등록 섹션 표시
   const scoreSection = document.getElementById("siegeScoreSection");
@@ -7340,6 +7381,134 @@ function toggleManualRecovery() {
     content.style.display = "none";
     toggle.textContent = "▼ 펼치기";
   }
+}
+
+// ══ 속공 계산기 ══
+let speedCalcMode = '3v3';
+let speedTeams = {
+  ally: [{name:'',speed:100},{name:'',speed:100},{name:'',speed:100}],
+  enemy: [{name:'',speed:100},{name:'',speed:100},{name:'',speed:100}]
+};
+
+function setSpeedMode(mode) {
+  speedCalcMode = mode;
+  document.querySelectorAll('[id^="speedMode_"]').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`speedMode_${mode}`).classList.add('active');
+  renderSpeedTeams();
+}
+
+function renderSpeedTeams() {
+  const allyDiv = document.getElementById('speedAllyTeam');
+  const enemyDiv = document.getElementById('speedEnemyTeam');
+  
+  allyDiv.innerHTML = '';
+  enemyDiv.innerHTML = '';
+  
+  speedTeams.ally.forEach((char, idx) => {
+    allyDiv.appendChild(createSpeedChar('ally', idx));
+  });
+  
+  speedTeams.enemy.forEach((char, idx) => {
+    enemyDiv.appendChild(createSpeedChar('enemy', idx));
+  });
+}
+
+function createSpeedChar(team, idx) {
+  const char = speedTeams[team][idx];
+  const color = team === 'ally' ? '#3498db' : '#e74c3c';
+  
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:8px;align-items:center;background:var(--surface2);border-radius:8px;padding:10px 12px;`;
+  
+  div.innerHTML = `
+    <div style="width:28px;height:28px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;">${idx+1}</div>
+    <input class="form-input" placeholder="캐릭터 이름" value="${char.name}" onchange="updateSpeedChar('${team}',${idx},'name',this.value)" style="margin:0;flex:1;font-size:12px;">
+    <input class="form-input" type="number" placeholder="속도" value="${char.speed}" onchange="updateSpeedChar('${team}',${idx},'speed',this.value)" style="margin:0;width:80px;font-size:12px;">
+  `;
+  
+  return div;
+}
+
+function updateSpeedChar(team, idx, field, value) {
+  if(field === 'speed') {
+    speedTeams[team][idx][field] = parseInt(value) || 0;
+  } else {
+    speedTeams[team][idx][field] = value;
+  }
+}
+
+function calculateSpeed() {
+  // 모든 캐릭터 수집
+  const allChars = [];
+  
+  speedTeams.ally.forEach((char, idx) => {
+    if(char.name || char.speed > 0) {
+      allChars.push({
+        team: 'ally',
+        name: char.name || `아군 ${idx+1}`,
+        speed: char.speed,
+        index: idx
+      });
+    }
+  });
+  
+  speedTeams.enemy.forEach((char, idx) => {
+    if(char.name || char.speed > 0) {
+      allChars.push({
+        team: 'enemy',
+        name: char.name || `적군 ${idx+1}`,
+        speed: char.speed,
+        index: idx
+      });
+    }
+  });
+  
+  if(allChars.length === 0) {
+    toast('캐릭터 정보를 입력하세요');
+    return;
+  }
+  
+  // 속도 순으로 정렬
+  allChars.sort((a, b) => b.speed - a.speed);
+  
+  // 턴 순서 표시
+  const turnDiv = document.getElementById('speedTurnOrder');
+  turnDiv.innerHTML = '';
+  
+  allChars.forEach((char, turnIdx) => {
+    const color = char.team === 'ally' ? '#3498db' : '#e74c3c';
+    const bgColor = char.team === 'ally' ? 'rgba(52,152,219,0.1)' : 'rgba(231,76,60,0.1)';
+    
+    const item = document.createElement('div');
+    item.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bgColor};border-radius:8px;margin-bottom:6px;`;
+    item.innerHTML = `
+      <div style="font-size:13px;font-weight:900;color:${color};width:50px;">턴 ${turnIdx+1}</div>
+      <div style="flex:1;font-size:13px;font-weight:700;color:var(--text);">${char.name}</div>
+      <div style="font-size:13px;font-weight:900;color:${color};">⚡ ${char.speed}</div>
+    `;
+    turnDiv.appendChild(item);
+  });
+  
+  // 속도 분석
+  const analysisDiv = document.getElementById('speedAnalysis');
+  const allySpeed = speedTeams.ally.map(c => c.speed);
+  const enemySpeed = speedTeams.enemy.map(c => c.speed);
+  
+  analysisDiv.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="background:rgba(52,152,219,0.1);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#3498db;font-weight:700;margin-bottom:4px;">🔵 아군 평균 속도</div>
+        <div style="font-size:16px;font-weight:900;color:#3498db;">${Math.round(allySpeed.reduce((a,b)=>a+b,0) / allySpeed.length)}</div>
+      </div>
+      <div style="background:rgba(231,76,60,0.1);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#e74c3c;font-weight:700;margin-bottom:4px;">🔴 적군 평균 속도</div>
+        <div style="font-size:16px;font-weight:900;color:#e74c3c;">${Math.round(enemySpeed.reduce((a,b)=>a+b,0) / enemySpeed.length)}</div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('speedResultCard').style.display = 'block';
+  toast('분석 완료!');
 }
 
 // ══ 제보 검토 모달 ══
