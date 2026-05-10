@@ -1559,13 +1559,13 @@ body::before {
     <button class="sb-item" onclick="switchTab('notice')"><span class="si-icon">📢</span> 공지사항</button>
     <button class="sb-item" onclick="switchTab('totalwar')"><span class="si-icon">⚔️</span> 총력전</button>
     <button class="sb-item" onclick="switchTab('deckplan')"><span class="si-icon">🗡️</span> 길드전 덱편성</button>
+    <button class="sb-item" onclick="switchTab('todayWar')"><span class="si-icon">📅</span> 오늘의 길드전</button>
     <button class="sb-item" onclick="switchTab('attack')"><span class="si-icon">⚔️</span> 길드전 공격</button>
     <button class="sb-item" onclick="switchTab('speedCalc')"><span class="si-icon">⚡</span> 속공 계산기</button>
     <button class="sb-item" onclick="switchTab('defense')"><span class="si-icon">🛡️</span> 추천 방어</button>
     <button class="sb-item" onclick="switchTab('pve')"><span class="si-icon">🏰</span> PVE 공략</button>
     <button class="sb-item" onclick="switchTab('calc')"><span class="si-icon">🧮</span> 딜 계산기</button>
     <button class="sb-item" onclick="switchTab('ranking')"><span class="si-icon">🏆</span> 랭킹</button>
-    <button class="sb-item" onclick="switchTab('todayWar')"><span class="si-icon">📅</span> 오늘의 길드전</button>
     <button class="sb-item" onclick="switchTab('suggest')"><span class="si-icon">📬</span> 건의사항</button>
     <!-- 관리자 전용 (기본 숨김) -->
     <div id="adminNavSection" style="display:none;">
@@ -5106,7 +5106,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"attack":4,"speedCalc":5,"defense":6,"pve":7,"calc":8,"ranking":9,"todayWar":10,"suggest":11,"adminMembers":12,"adminReports":13,"adminSuggest":14,"adminScores":15,"adminRecovery":16,"adminTodayDeck":17,"adminDeckPlan":18};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"todayWar":4,"attack":5,"speedCalc":6,"defense":7,"pve":8,"calc":9,"ranking":10,"suggest":11,"adminMembers":12,"adminReports":13,"adminSuggest":14,"adminScores":15,"adminRecovery":16,"adminTodayDeck":17,"adminDeckPlan":18};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
