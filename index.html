@@ -1106,6 +1106,17 @@ body::before {
 .empty-state{ text-align: center; padding: 36px 20px; color: var(--text3); font-size: 13px; }
 
 /* ── 모달 ── */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
 .modal-overlay {
   display: none;
   position: fixed;
@@ -1118,6 +1129,23 @@ body::before {
   box-sizing: border-box;
 }
 .modal-overlay.open { display: flex; }
+.modal-content {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 0;
+  width: 100%;
+  max-width: 460px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
 .modal-box {
   background: var(--surface);
   border-radius: 20px;
@@ -5696,6 +5724,18 @@ function addLose() {
   // 방어팀 닉네임 자동 채우기
   const defName = defenseDataCache[currentDefense]?.name || "";
   document.getElementById("defeatEnemyInput").value = defName;
+  
+  // 사용한 덱 정보 표시
+  const atkData = defenseDataCache[currentDefense]?.attackTeams?.[currentAttack];
+  const atkName = atkData?.name || "알 수 없음";
+  document.getElementById("defeatUsedDeck").textContent = atkName;
+  
+  // 임시 저장 (패배 기록 시 사용)
+  window._defeatDeckInfo = {
+    deckKey: currentAttack,
+    deckName: atkName,
+    defenseKey: currentDefense
+  };
 }
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
@@ -7705,6 +7745,26 @@ function analyzeSpeed() {
 }
 
 // ══ 패배 기록 모달 ══
+function goToAttackDeck(defenseKey, deckKey) {
+  // 길드전 공격 페이지로 이동
+  switchTab('attack');
+  
+  // 방어팀 선택
+  currentDefense = defenseKey;
+  const defName = defenseDataCache[defenseKey]?.name || "";
+  document.getElementById('defCurrentText').textContent = defName;
+  
+  // 공격덱 카드 렌더링
+  renderAttackList();
+  
+  // 해당 공격덱 카드 열기
+  setTimeout(() => {
+    currentAttack = deckKey;
+    openAttackCard(deckKey);
+  }, 100);
+}
+
+// ══ 패배 기록 모달 ══
 function openDefeatRecordModal() {
   document.getElementById('defeatRecordModal').style.display = 'flex';
   document.getElementById('defeatFortressSelect').value = '';
@@ -7753,6 +7813,7 @@ async function saveDefeatRecord(speedMin, speedMax) {
   if(!window._defeatRecord) return;
   
   const {fortress, enemy} = window._defeatRecord;
+  const deckInfo = window._defeatDeckInfo || {};
   
   if(!todayGuildWar.fortresses[fortress]) {
     todayGuildWar.fortresses[fortress] = {};
@@ -7769,7 +7830,10 @@ async function saveDefeatRecord(speedMin, speedMax) {
       speedMin: newMin,
       speedMax: newMax,
       defeats: existing.defeats + 1,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      deckName: deckInfo.deckName || existing.deckName,
+      deckKey: deckInfo.deckKey || existing.deckKey,
+      defenseKey: deckInfo.defenseKey || existing.defenseKey
     };
   } else {
     // 새로 생성
@@ -7777,11 +7841,21 @@ async function saveDefeatRecord(speedMin, speedMax) {
       speedMin: speedMin,
       speedMax: speedMax,
       defeats: 1,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      deckName: deckInfo.deckName,
+      deckKey: deckInfo.deckKey,
+      defenseKey: deckInfo.defenseKey
     };
   }
   
   await db.ref('todayGuildWar').set(todayGuildWar);
+  
+  // 공격덱 패배 카운트 증가
+  if(deckInfo.defenseKey && deckInfo.deckKey) {
+    const atkSnap = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}/lose`).once('value');
+    const currentLose = atkSnap.val() || 0;
+    await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).update({lose: currentLose + 1});
+  }
   
   // 속공 계산기 초기화
   speedOrder = [
@@ -8021,24 +8095,27 @@ function createFortressCard(fortressKey) {
     
     enemies.forEach(([nick, data]) => {
       const item = document.createElement('div');
-      item.style.cssText = `background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.15);border-radius:8px;padding:10px 12px;cursor:pointer;transition:all 0.2s;`;
-      item.onmouseover = () => {
-        item.style.background = 'rgba(231,76,60,0.1)';
-        item.style.borderColor = 'rgba(231,76,60,0.3)';
-      };
-      item.onmouseout = () => {
-        item.style.background = 'rgba(231,76,60,0.06)';
-        item.style.borderColor = 'rgba(231,76,60,0.15)';
-      };
+      item.style.cssText = `background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.15);border-radius:8px;padding:10px 12px;transition:all 0.2s;`;
       
       const timeStr = new Date(data.lastUpdate).toLocaleString('ko-KR', {
         month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
       });
       
+      // 덱 이름 클릭 영역
+      const deckClickable = data.deckName && data.defenseKey && data.deckKey;
+      
       item.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <div>
+          <div style="flex:1;">
             <div style="font-size:13px;font-weight:900;color:var(--text);">${nick}</div>
+            ${deckClickable ? `
+              <div style="font-size:11px;color:#3498db;margin-top:3px;cursor:pointer;display:inline-block;" 
+                   onmouseover="this.style.textDecoration='underline'" 
+                   onmouseout="this.style.textDecoration='none'"
+                   onclick="event.stopPropagation();goToAttackDeck('${data.defenseKey}','${data.deckKey}')">
+                덱: ${data.deckName} 🔗
+              </div>
+            ` : ''}
             <div style="font-size:10px;color:var(--text3);margin-top:2px;">
               ${data.defeats}회 패배 · ${timeStr}
             </div>
@@ -13074,9 +13151,17 @@ function goToTodayDeck(defKey,atkKey){
       </div>
 
       <!-- 상대 닉네임 입력 -->
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:14px;">
         <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">🎯 상대 닉네임</div>
         <input id="defeatEnemyInput" class="form-input" placeholder="상대 닉네임 입력" style="margin:0;width:100%;">
+      </div>
+
+      <!-- 사용한 덱 표시 -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">⚔️ 사용한 공격덱</div>
+        <div id="defeatUsedDeck" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);">
+          선택된 덱이 없습니다
+        </div>
       </div>
 
       <!-- 버튼 -->
