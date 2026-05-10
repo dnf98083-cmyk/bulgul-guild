@@ -2061,7 +2061,6 @@ body::before {
         </div>
         <!-- 버튼 한 줄 -->
         <div style="display:flex;gap:8px;margin-bottom:14px;">
-          <button onclick="openDefeatRecordModal()" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);font-size:12px;font-weight:700;">💀 패배</button>
           <button onclick="openModal('defense_add')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 방어팀 제보</button>
           <button onclick="openModal('attack')" class="btn-icon" style="flex:1;padding:11px;border-radius:12px;border-style:dashed;font-size:12px;">+ 공격덱 제보</button>
           <button onclick="openMyReportsPopup()" class="btn-icon" style="padding:11px 12px;border-radius:12px;font-size:12px;white-space:nowrap;">📨 내 제보</button>
@@ -5690,10 +5689,13 @@ function addLose() {
     if(badge){ badge.textContent="💀 패배로 기록"; badge.style.background="rgba(231,76,60,0.12)"; badge.style.color="#e74c3c"; }
     return;
   }
-  if(!confirm("패배를 기록할까요?")) return;
-  const l=+document.getElementById("cardLose").textContent;
-  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({lose:l+1});
-  writeLog("lose"); toast("💀 패배");
+  
+  // 패배 모달 열기
+  openDefeatRecordModal();
+  
+  // 방어팀 닉네임 자동 채우기
+  const defName = defenseDataCache[currentDefense]?.name || "";
+  document.getElementById("defeatEnemyInput").value = defName;
 }
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
