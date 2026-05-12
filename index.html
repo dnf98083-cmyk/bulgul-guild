@@ -8520,9 +8520,34 @@ function loadNotices(){
 // 공지 팝업 열기
 let _noticePopupData = {};
 function openNoticePopup(key){
-  const val = _noticePopupData[key];
-  if(!val) return;
   const overlay = document.getElementById("noticePopupOverlay");
+  const titleEl = document.getElementById("noticePopupTitle");
+  const metaEl  = document.getElementById("noticePopupMeta");
+  const bodyEl  = document.getElementById("noticePopupBody");
+  const imgEl   = document.getElementById("noticePopupImages");
+
+  // 로딩 표시 먼저
+  titleEl.textContent = "불러오는 중...";
+  metaEl.textContent = "";
+  bodyEl.innerHTML = "";
+  imgEl.style.display = "none";
+  imgEl.innerHTML = "";
+  overlay.style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  // 캐시 우선, 없으면 Firebase에서 직접 가져오기
+  const val = _noticePopupData[key];
+  if(val){
+    _fillNoticePopup(val);
+  } else {
+    db.ref("notices/" + key).once("value").then(snap => {
+      const data = snap.val();
+      if(!data){ titleEl.textContent = "불러오기 실패"; return; }
+      _fillNoticePopup(data);
+    }).catch(() => { titleEl.textContent = "불러오기 실패"; });
+  }
+}
+function _fillNoticePopup(val){
   const titleEl = document.getElementById("noticePopupTitle");
   const metaEl  = document.getElementById("noticePopupMeta");
   const bodyEl  = document.getElementById("noticePopupBody");
@@ -8533,7 +8558,7 @@ function openNoticePopup(key){
   if(val.images && val.images.length){
     imgEl.style.display = "grid";
     imgEl.innerHTML = val.images.map(src =>
-      `<img src="${src}" onclick="openNoticeImageFull('${src}')"
+      `<img src="${src}" onclick="openNoticeImageFull(this.src)"
         style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;
                border:1px solid var(--border2);cursor:zoom-in;">`
     ).join("");
@@ -8541,8 +8566,6 @@ function openNoticePopup(key){
     imgEl.style.display = "none";
     imgEl.innerHTML = "";
   }
-  overlay.style.display = "flex";
-  document.body.style.overflow = "hidden";
 }
 function closeNoticePopup(){
   document.getElementById("noticePopupOverlay").style.display = "none";
