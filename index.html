@@ -3812,6 +3812,7 @@ async function enterApp() {
   checkNoticeNew();
   checkSuggestReply();
   initTodayDeck();
+  initNoticeImageUpload();
   setTimeout(showTodayDeckPopupIfEnabled, 1000);
   checkDeckPlanNotify();
   await loadTodayGuildWar();
@@ -8505,28 +8506,135 @@ function loadNotices(){
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);padding:6px 0 2px;">작성자: ${val.author||"관리자"}</div>
-        <div class="notice-banner-body" id="noticeBody_${key}">${(val.body||"").split("\n").join("<br>")}</div>`;
+        <div class="notice-banner-body" id="noticeBody_${key}">
+          ${(val.body||"").split("\n").join("<br>")}
+          ${(val.images&&val.images.length)?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">${val.images.map(src=>`<img src="${src}" onclick="openNoticeImageFull(this.src)" style="max-width:160px;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);cursor:zoom-in;">`).join("")}</div>`:""}
+        </div>`;
       list.appendChild(div);
     });
   }).catch(()=>{
     list.innerHTML='<div class="empty-state">불러오기 실패. 새로고침 해주세요.</div>';
   });
 }
+function openNoticeImageFull(src){
+  const overlay = document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;";
+  const img = document.createElement("img");
+  img.src = src;
+  img.style.cssText="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:10px;";
+  overlay.appendChild(img);
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
 function toggleNotice(key){
   const body=document.getElementById("noticeBody_"+key);
   if(!body) return;
   body.classList.toggle("open");
 }
+// ══ 공지 이미지 업로드 ══
+let noticeImages = []; // {dataUrl, name} 배열
+
+function initNoticeImageUpload(){
+  const dropZone = document.getElementById("noticeImageDropZone");
+  const fileInput = document.getElementById("noticeImageFile");
+  if(!dropZone || !fileInput) return;
+
+  // 파일 선택
+  fileInput.addEventListener("change", e => {
+    handleNoticeImageFiles(Array.from(e.target.files));
+    fileInput.value = "";
+  });
+
+  // 드래그 앤 드롭
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.style.borderColor = "var(--accent)";
+    dropZone.style.background = "rgba(255,77,46,0.08)";
+  });
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.style.borderColor = "";
+    dropZone.style.background = "";
+  });
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.style.borderColor = "";
+    dropZone.style.background = "";
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    if(!files.length) return toast("이미지 파일만 올려주세요");
+    handleNoticeImageFiles(files);
+  });
+
+  // Ctrl+V 붙여넣기
+  document.addEventListener("paste", e => {
+    // 공지 탭(noticeScreen)이 활성화된 상태에서만 동작
+    const noticeScreen = document.getElementById("noticeScreen");
+    if(!noticeScreen || noticeScreen.style.display === "none") return;
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItems = items.filter(item => item.type.startsWith("image/"));
+    if(!imageItems.length) return;
+    e.preventDefault();
+    const files = imageItems.map(item => item.getAsFile()).filter(Boolean);
+    handleNoticeImageFiles(files);
+    toast("이미지 붙여넣기 완료 🖼️");
+  });
+}
+
+function handleNoticeImageFiles(files){
+  files.forEach(file => {
+    if(!file.type.startsWith("image/")) return;
+    if(noticeImages.length >= 10) { toast("이미지는 최대 10장까지 첨부할 수 있어요"); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      noticeImages.push({ dataUrl: e.target.result, name: file.name });
+      renderNoticeImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderNoticeImagePreviews(){
+  const container = document.getElementById("noticeImagePreviewContainer");
+  if(!container) return;
+  if(!noticeImages.length){
+    container.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+  container.style.display = "block";
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">첨부 이미지 (${noticeImages.length}/10)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${noticeImages.map((img, i) => `
+        <div style="position:relative;display:inline-block;">
+          <img src="${img.dataUrl}"
+            style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);display:block;">
+          <button onclick="removeNoticeImage(${i})"
+            style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+                   background:var(--accent);border:none;color:#fff;font-size:12px;line-height:20px;
+                   text-align:center;cursor:pointer;padding:0;">✕</button>
+        </div>
+      `).join("")}
+    </div>`;
+}
+
+function removeNoticeImage(index){
+  noticeImages.splice(index, 1);
+  renderNoticeImagePreviews();
+}
+
 function addNotice(){
   const title=document.getElementById("noticeTitle").value.trim();
   const body=document.getElementById("noticeBody").value.trim();
   if(!title) return toast("제목을 입력하세요");
   const now=new Date();
   const date=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
-  db.ref("notices").push({title,body,date,author:myNick,createdAt:Date.now()}).then(()=>{
+  const images = noticeImages.map(img => img.dataUrl); // base64 배열
+  db.ref("notices").push({title,body,date,author:myNick,createdAt:Date.now(),images}).then(()=>{
     toast("공지 등록됨 📢");
     document.getElementById("noticeTitle").value="";
     document.getElementById("noticeBody").value="";
+    noticeImages = [];
+    renderNoticeImagePreviews();
     loadNotices();
     loadHomeNotice();
   });
