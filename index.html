@@ -7798,7 +7798,7 @@ function analyzeSpeed() {
       
       // 속공 범위 (순서만 보고 계산)
       let minSpeed = baseSpeed;
-      let maxSpeed = baseSpeed + 100;
+      let maxSpeed = baseSpeed + 96;  // 장비 4부위 × 24 = 96
       
       if(nextSpeed !== null) {
         minSpeed = Math.max(minSpeed, nextSpeed + 1);
@@ -8272,7 +8272,7 @@ function analyzeSpeedPopup() {
       }
       
       let minSpeed = baseSpeed;
-      let maxSpeed = baseSpeed + 100;
+      let maxSpeed = baseSpeed + 96;  // 장비 4부위 × 24 = 96
       
       if(nextSpeed !== null) {
         minSpeed = Math.max(minSpeed, nextSpeed + 1);
@@ -8858,7 +8858,7 @@ function saveDefeatRecordFromSpeed() {
       }
       
       let minSpeed = baseSpeed;
-      let maxSpeed = baseSpeed + 100;
+      let maxSpeed = baseSpeed + 96;  // 장비 4부위 × 24 = 96
       
       if(nextSpeed !== null) {
         minSpeed = Math.max(minSpeed, nextSpeed + 1);
