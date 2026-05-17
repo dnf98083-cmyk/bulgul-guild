@@ -2140,6 +2140,7 @@ body::before {
           <div class="atk-card-header">
             <div>
               <div class="atk-card-name"><span id="cardFire"></span> <span id="cardName"></span></div>
+              <div id="cardImportantNote" style="display:none;margin-top:4px;padding:6px 10px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:8px;font-size:12px;font-weight:700;color:#ff6b6b;line-height:1.4;"></div>
               <div class="atk-card-maker" id="cardMaker"></div>
               <div style="margin-top:6px;font-size:13px;color:var(--text2);"><span id="cardWin">0</span>승 <span id="cardLose">0</span>패</div>
             </div>
@@ -2214,6 +2215,19 @@ body::before {
         <div class="admin-section-title">⚔️ 공격팀 관리</div>
         <input class="form-input" id="atkName" placeholder="공격팀 이름">
         <select class="form-select" id="atkType"><option value="" disabled selected>속공 선택</option><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select>
+        
+        <!-- 캐릭터 선택 -->
+        <div style="margin:8px 0;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;">👥 캐릭터 구성 (속공 계산용)</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <input id="atkCharSearch" type="text" class="form-input" placeholder="캐릭터 검색..." style="margin:0;flex:1;font-size:12px;" oninput="searchAtkCharacters(this.value)">
+            <button onclick="document.getElementById('atkCharSearch').value='';document.getElementById('atkCharSearchResults').innerHTML=''" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
+          </div>
+          <div id="atkCharSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:150px;overflow-y:auto;margin-bottom:8px;"></div>
+          <div id="atkSelectedChars" style="display:flex;gap:6px;flex-wrap:wrap;min-height:32px;"></div>
+        </div>
+        
+        <textarea class="form-textarea" id="atkImportantNote" rows="2" placeholder="🔥 간단 필수 설명 (예: 효자 세팅, 무조건 이걸로)" style="margin-top:8px;"></textarea>
         <input class="form-input" id="ringRec" placeholder="반지">
         <input class="form-input" id="atkPet" placeholder="펫">
         <div style="margin-bottom:4px;">
@@ -2967,9 +2981,22 @@ body::before {
       </div>
     </div>
 
+    <!-- 캐릭터 검색 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
+      <div class="section-title" style="margin-bottom:10px;">🔍 캐릭터 검색</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input id="pageCharSearchInput" type="text" class="form-input" placeholder="캐릭터 이름 입력..." style="margin:0;flex:1;font-size:13px;" oninput="searchCharactersPage(this.value)">
+        <button onclick="document.getElementById('pageCharSearchInput').value='';document.getElementById('pageCharSearchResults').innerHTML='';document.getElementById('pageCharSearchResults').style.display='none';" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
+      </div>
+      <div id="pageCharSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:200px;overflow-y:auto;"></div>
+    </div>
+
     <!-- 순번별 캐릭터 설정 -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-      <div class="section-title" style="margin-bottom:10px;">🎬 리플레이 순서</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">🎬 리플레이 순서</div>
+        <button onclick="clearAllSlotsPage()" style="padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑️ 초기화</button>
+      </div>
       <div id="speedOrderSlots" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
@@ -3365,6 +3392,19 @@ body::before {
       <div id="characterList" style="display:flex;flex-direction:column;gap:8px;">
         <div class="empty-state">로딩 중...</div>
       </div>
+    </div>
+
+    <!-- 방어덱 데이터 분석 -->
+    <div class="admin-section">
+      <div class="admin-section-title">🔍 방어덱 캐릭터 분석</div>
+      <div style="margin-bottom:8px;">
+        <button class="btn-sm btn-blue" onclick="analyzeDefenseNames()" style="width:100%;">모든 방어덱 이름 분석</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <button class="btn-sm" onclick="checkMissingCharacters()" style="width:100%;background:rgba(243,156,18,0.15);color:#f39c12;border:1px solid rgba(243,156,18,0.3);">⚠️ characters 미등록 공격덱 확인 &amp; 자동 채우기</button>
+      </div>
+      <div id="defenseAnalysisResult" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;max-height:400px;overflow-y:auto;"></div>
+      <div id="missingCharsResult" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;max-height:400px;overflow-y:auto;"></div>
     </div>
 
     <!-- 펫 추가 -->
@@ -5591,6 +5631,16 @@ function selectAttack(dk,ak) {
     document.getElementById("attackCard").style.display="block";
     const _col2=document.querySelector(".attack-2col"); if(_col2) _col2.style.gridTemplateColumns=isPC()?"45% 1fr":"1fr";
     document.getElementById("cardName").textContent=d.name;
+    
+    // 중요 알림 표시
+    const importantNoteDiv = document.getElementById("cardImportantNote");
+    if(d.importantNote && d.importantNote.trim()) {
+      importantNoteDiv.textContent = "🔥 " + d.importantNote;
+      importantNoteDiv.style.display = "block";
+    } else {
+      importantNoteDiv.style.display = "none";
+    }
+    
     document.getElementById("cardMaker").textContent=d.maker?`By. ${d.maker}`:"";
     document.getElementById("cardWin").textContent=d.win;
     document.getElementById("cardLose").textContent=d.lose;
@@ -5606,6 +5656,12 @@ function selectAttack(dk,ak) {
     loadRecentRecord(dk,ak);
     document.getElementById("atkName").value=d.name;
     document.getElementById("atkType").value=d.type||"";
+    document.getElementById("atkImportantNote").value=d.importantNote||"";
+    
+    // 캐릭터 로드
+    selectedAtkChars = d.characters || [];
+    renderSelectedAtkChars();
+    
     document.getElementById("ringRec").value=d.ring||"";
     document.getElementById("atkPet").value=d.pet||"";
     document.getElementById("atkFormation").value=d.formation||"";
@@ -5870,12 +5926,106 @@ function addLose() {
   const atkName = atkData?.name || "알 수 없음";
   document.getElementById("defeatUsedDeck").textContent = atkName;
   
+  // 공격팀 캐릭터 (아군 🔵) — selectAttack 시 이미 로드된 selectedAtkChars 사용
+  // selectedAtkChars가 비어있으면 공격덱 이름에서 파싱 시도
+  let atkChars = [];
+  if(selectedAtkChars && selectedAtkChars.length > 0) {
+    atkChars = [...selectedAtkChars];
+  } else if(atkData?.characters && atkData.characters.length > 0) {
+    atkChars = [...atkData.characters];
+  } else if(atkName && atkName !== "알 수 없음") {
+    // 공격덱 이름에서 캐릭터 파싱 (DB에 characters 미등록 시 폴백)
+    atkChars = parseDefenseChars(atkName);
+  }
+  
+  // 방어팀 이름에서 캐릭터 파싱 (적군 🔴)
+  const defTeamName = defenseDataCache[currentDefense]?.name || "";
+  const defChars = parseDefenseChars(defTeamName);
+  
   // 임시 저장 (패배 기록 시 사용)
   window._defeatDeckInfo = {
     deckKey: currentAttack,
     deckName: atkName,
-    defenseKey: currentDefense
+    defenseKey: currentDefense,
+    characters: atkChars,        // 공격팀 캐릭터 (아군)
+    defenseChars: defChars,      // 방어팀 캐릭터 (적군)
+    defenseName: defTeamName
   };
+}
+
+// 방어팀 이름에서 캐릭터 이름 파싱
+function parseDefenseChars(defName) {
+  if(!defName || defName === "없는팀") return [];
+
+  const aliasMap = {
+    '브브': '브란즈&브란셀', '브&브': '브란즈&브란셀',
+    '오공': '손오공', '겔': '겔리두스', '트루': '트루드',
+    '에': '에이스', '초': '초선', '프레': '프레이야',
+    '란': '란드그리드', '라드': '라드그리드', '키리': '키리엘',
+    '아멜': '아멜리아', '밀': '밀리아'
+  };
+
+  // 괄호 제거
+  let clean = defName.replace(/\([^)]+\)/g, '').trim();
+
+  // ── 핵심: aliasMap의 값(ex "브란즈&브란셀")을 먼저 통째로 치환해 토큰화 ──
+  // DB 이름에 "브란즈&브란셀" 형태가 그대로 있는 경우 처리
+  const tokenized = [];
+  // DB에 저장된 전체 캐릭터 이름(& 포함) 중 clean에 포함된 것 먼저 추출
+  const fullNames = [];
+  if(charactersDB) {
+    Object.keys(charactersDB).forEach(n => {
+      if(n.includes('&') && clean.includes(n)) fullNames.push(n);
+    });
+  }
+  // aliasMap 값 중 & 포함된 것도 추가
+  Object.values(aliasMap).forEach(v => {
+    if(v.includes('&') && clean.includes(v) && !fullNames.includes(v)) fullNames.push(v);
+  });
+
+  // 긴 것부터 처리 (greedy)
+  fullNames.sort((a,b) => b.length - a.length);
+  fullNames.forEach(fn => {
+    if(clean.includes(fn)) {
+      tokenized.push(fn);
+      clean = clean.replace(fn, ' ');
+    }
+  });
+
+  // 나머지를 공백/쉼표로 분리 (& 는 단독 구분자로만 사용, 단어 안 &는 위에서 처리됨)
+  const words = clean.split(/[\s,]+/).map(w => w.replace(/^&+|&+$/g,'')).filter(w => w.length > 0);
+
+  const result = [];
+  // 이미 추출된 전체 이름 먼저
+  tokenized.forEach(t => result.push(t));
+
+  words.forEach(word => {
+    if(!word) return;
+    // 별칭 테이블
+    if(aliasMap[word]) { result.push(aliasMap[word]); return; }
+    // DB 정확 일치
+    if(charactersDB && charactersDB[word]) { result.push(word); return; }
+    // TW_CHARS 정확 일치
+    if(typeof TW_CHARS !== 'undefined') {
+      const exact = TW_CHARS.find(c => c === word);
+      if(exact) { result.push(exact); return; }
+    }
+    // DB 부분 일치
+    if(charactersDB) {
+      const match = Object.keys(charactersDB).find(c => c.includes(word) || word.includes(c));
+      if(match) { result.push(match); return; }
+    }
+    // TW_CHARS 부분 일치
+    if(typeof TW_CHARS !== 'undefined') {
+      const match = TW_CHARS.find(c => c.includes(word) || word.includes(c));
+      if(match) { result.push(match); return; }
+    }
+    // 그래도 없으면 원본 단어 그대로 (2글자 이상)
+    if(word.length >= 2) result.push(word);
+  });
+
+  // 중복 제거
+  return [...new Set(result)];
 }
 function resetRecord() { if(checkAdmin()){ db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({win:0,lose:0}); toast("초기화됨"); } }
 function addDefense() { if(checkResearcher()){ db.ref("defenseTeams").push({name:document.getElementById("newDefName").value,attackTeams:{}}); toast("방어팀 추가됨"); } }
@@ -5903,10 +6053,18 @@ async function delDefense() {
   });
 }
 function clearAtkForm(){
-  ["atkName","ringRec","atkPet","atkFormation","armorRec","skillOrder"].forEach(id=>{
+  ["atkName","atkImportantNote","ringRec","atkPet","atkFormation","armorRec","skillOrder"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value="";
   });
   const atkType=document.getElementById("atkType"); if(atkType) atkType.value="";
+  
+  // 캐릭터 선택 초기화
+  selectedAtkChars = [];
+  renderSelectedAtkChars();
+  document.getElementById("atkCharSearch").value = "";
+  document.getElementById("atkCharSearchResults").innerHTML = "";
+  document.getElementById("atkCharSearchResults").style.display = "none";
+  
   // 진형 버튼 초기화
   ["기본","밸런스","공격","보호"].forEach(t=>{
     const btn=document.getElementById("ftype_"+t);
@@ -5928,15 +6086,27 @@ function addAttack() {
     const dup = Object.values(existing).find(v => v.name && v.name.replace(/\s/g,"").includes(name.replace(/\s/g,"")));
     if(dup && !confirm(`"${dup.name}" 과 비슷한 공격팀이 이미 있어요!
 그래도 추가할까요?`)) return;
-    db.ref(`defenseTeams/${currentDefense}/attackTeams`).push({
+    
+    const newData = {
       name, type:document.getElementById("atkType").value,
+      importantNote:document.getElementById("atkImportantNote").value,
       ring:document.getElementById("ringRec").value,
       pet:document.getElementById("atkPet").value,
       formation:document.getElementById("atkFormation").value,
       armor:document.getElementById("armorRec").value,
       skill:document.getElementById("skillOrder").value,
       win:0, lose:0, maker:myNick
-    }).then(()=>{ toast("추가됨 ✅"); clearAtkForm(); });
+    };
+    
+    // 캐릭터 필드 추가
+    if(selectedAtkChars.length > 0) {
+      newData.characters = selectedAtkChars;
+    }
+    
+    db.ref(`defenseTeams/${currentDefense}/attackTeams`).push(newData).then(()=>{ 
+      toast("추가됨 ✅"); 
+      clearAtkForm(); 
+    });
   });
 }
 
@@ -5944,15 +6114,27 @@ function editAttack() {
   if(!checkResearcher()) return;
   if(!currentDefense) return toast("⚠️ 먼저 방어팀을 선택해주세요!");
   if(!currentAttack) return toast("⚠️ 수정할 공격덱을 선택해주세요!");
-  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update({
+  
+  const updateData = {
     name:document.getElementById("atkName").value,
     type:document.getElementById("atkType").value,
+    importantNote:document.getElementById("atkImportantNote").value,
     ring:document.getElementById("ringRec").value,
     pet:document.getElementById("atkPet").value,
     formation:document.getElementById("atkFormation").value,
     armor:document.getElementById("armorRec").value,
     skill:document.getElementById("skillOrder").value
-  }).then(()=>{ toast("수정됨 ✅"); clearAtkForm(); });
+  };
+  
+  // 캐릭터 필드 업데이트
+  if(selectedAtkChars.length > 0) {
+    updateData.characters = selectedAtkChars;
+  }
+  
+  db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update(updateData).then(()=>{ 
+    toast("수정됨 ✅"); 
+    clearAtkForm(); 
+  });
 }
 async function delAttack() { 
   if(!checkResearcher() || !currentAttack) return;
@@ -8110,6 +8292,9 @@ function openDefeatSpeedPopup() {
   document.getElementById('speedCalcPopup').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   
+  // 덱 캐릭터 빠른 선택 버튼 렌더링
+  renderDeckCharButtons();
+  
   renderSpeedTeamsPopup();
   setSpeedResultPopup('win');
 }
@@ -8118,6 +8303,113 @@ function closeSpeedCalcPopup() {
   document.getElementById('speedCalcPopup').style.display = 'none';
   document.body.style.overflow = '';
   document.getElementById('speedResultCardPopup').style.display = 'none';
+}
+
+// 검색창 토글
+function togglePopupCharSearch() {
+  const box = document.getElementById('popupCharSearchBox');
+  const btn = document.getElementById('popupCharSearchToggle');
+  const isOpen = box.style.display !== 'none';
+  box.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '펼치기 ▼' : '접기 ▲';
+}
+
+// 방어팀 / 공격팀 캐릭터 버튼 렌더링
+function renderDeckCharButtons() {
+  const deckInfo = window._defeatDeckInfo;
+  
+  // ── 방어팀 (적군 🔴) ──
+  const defSec = document.getElementById('defCharQuickSelect');
+  const defDiv = document.getElementById('defCharButtons');
+  const defNameSpan = document.getElementById('defCharTeamName');
+  const defChars = deckInfo?.defenseChars || [];
+  
+  if(defChars.length > 0) {
+    defSec.style.display = 'block';
+    if(defNameSpan) defNameSpan.textContent = `(${deckInfo.defenseName || ''})`;
+    defDiv.innerHTML = defChars.map(charName => {
+      const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
+      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\\'")}', '${charData.type}', 'enemy')"
+        style="padding:7px 13px;border-radius:8px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.12);color:#e74c3c;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+        onmouseover="this.style.background='rgba(231,76,60,0.25)'"
+        onmouseout="this.style.background='rgba(231,76,60,0.12)'">🔴 ${charName}</button>`;
+    }).join('');
+  } else {
+    defSec.style.display = 'none';
+  }
+  
+  // ── 공격팀 (아군 🔵) ──
+  const atkSec = document.getElementById('atkCharQuickSelect');
+  const atkDiv = document.getElementById('atkCharButtons');
+  const atkNameSpan = document.getElementById('atkCharDeckName');
+  const atkChars = deckInfo?.characters || [];
+  
+  if(atkChars.length > 0) {
+    atkSec.style.display = 'block';
+    if(atkNameSpan) atkNameSpan.textContent = `(${deckInfo.deckName || ''})`;
+    atkDiv.innerHTML = atkChars.map(charName => {
+      const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
+      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\\'")}', '${charData.type}', 'ally')"
+        style="padding:7px 13px;border-radius:8px;border:1px solid rgba(52,152,219,0.4);background:rgba(52,152,219,0.12);color:#3498db;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+        onmouseover="this.style.background='rgba(52,152,219,0.25)'"
+        onmouseout="this.style.background='rgba(52,152,219,0.12)'">🔵 ${charName}</button>`;
+    }).join('');
+  } else {
+    atkSec.style.display = 'none';
+  }
+  
+  // 둘 다 없으면 검색창 자동 펼침
+  if(defChars.length === 0 && atkChars.length === 0) {
+    const box = document.getElementById('popupCharSearchBox');
+    const btn = document.getElementById('popupCharSearchToggle');
+    if(box) { box.style.display = 'block'; }
+    if(btn) { btn.textContent = '접기 ▲'; }
+  }
+}
+
+// 덱 캐릭터를 속공 슬롯에 추가
+function addDeckCharToSpeed(name, type, team) {
+  // 아군/적군 개수 체크
+  if(team === 'ally') {
+    const allyCount = speedOrderPopup.filter(s => s.team === 'ally').length;
+    if(allyCount >= 3) {
+      toast('아군은 최대 3개까지만 선택할 수 있습니다');
+      return;
+    }
+  } else if(team === 'enemy') {
+    const enemyCount = speedOrderPopup.filter(s => s.team === 'enemy').length;
+    if(enemyCount >= 3) {
+      toast('적군은 최대 3개까지만 선택할 수 있습니다');
+      return;
+    }
+  }
+  
+  // 빈 슬롯 찾기
+  const emptyIdx = speedOrderPopup.findIndex(s => s.team === '');
+  if(emptyIdx === -1) {
+    toast('빈 슬롯이 없습니다');
+    return;
+  }
+  
+  // 슬롯에 추가
+  speedOrderPopup[emptyIdx] = {
+    team: team,
+    name: name,
+    speed: 0,
+    type: type
+  };
+  
+  renderSpeedTeamsPopup();
+  
+  // 아군이면 속공 입력창에 포커스
+  if(team === 'ally') {
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('#speedOrderSlotsPopup input[type="number"]');
+      if(inputs[inputs.length - 1]) {
+        inputs[inputs.length - 1].focus();
+      }
+    }, 100);
+  }
 }
 
 function setSpeedResultPopup(result) {
@@ -8596,6 +8888,634 @@ function filterCharacterList() {
   renderCharacterList();
 }
 
+// ══ 방어덱 캐릭터 분석 ══
+let lastAnalysisResults = null; // 분석 결과 저장
+
+async function analyzeDefenseNames() {
+  if(!checkAdmin()) return;
+  
+  const resultDiv = document.getElementById('defenseAnalysisResult');
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);">분석 중...</div>';
+  
+  try {
+    const snap = await db.ref('defenseTeams').once('value');
+    const defenses = snap.val() || {};
+    
+    const results = {
+      defenses: {
+        total: 0,
+        matched: [],
+        partial: [],
+        failed: [],
+        withNotes: []
+      },
+      attacks: {
+        total: 0,
+        matched: [],
+        partial: [],
+        failed: [],
+        withNotes: []
+      }
+    };
+    
+    // 방어덱 분석
+    for(const [defKey, def] of Object.entries(defenses)) {
+      const name = def.name || '';
+      results.defenses.total++;
+      
+      const analyzed = analyzeNameString(name, defKey, '방어덱');
+      categorizeResult(analyzed, results.defenses);
+      
+      // 공격덱 분석
+      const attacks = def.attackTeams || {};
+      for(const [atkKey, atk] of Object.entries(attacks)) {
+        const atkName = atk.name || '';
+        results.attacks.total++;
+        
+        const atkAnalyzed = analyzeNameString(atkName, atkKey, '공격덱', defKey);
+        categorizeResult(atkAnalyzed, results.attacks);
+      }
+    }
+    
+    // 결과 저장
+    lastAnalysisResults = results;
+    
+    // 결과 렌더링
+    let html = `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:8px;">📊 분석 결과</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6;">
+          <div><strong>방어덱:</strong> 전체 ${results.defenses.total}개 | ✅${results.defenses.matched.length} | ⚠️${results.defenses.partial.length} | ❌${results.defenses.failed.length} | 🔥${results.defenses.withNotes.length}</div>
+          <div><strong>공격덱:</strong> 전체 ${results.attacks.total}개 | ✅${results.attacks.matched.length} | ⚠️${results.attacks.partial.length} | ❌${results.attacks.failed.length} | 🔥${results.attacks.withNotes.length}</div>
+        </div>
+        <div style="margin-top:12px;">
+          <button onclick="applyCharactersToDecks()" class="btn-sm btn-green" style="width:100%;padding:12px;font-size:13px;">
+            🔄 매칭 성공한 덱 이름을 DB 이름으로 변환 (${results.defenses.matched.length + results.attacks.matched.length}개)
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // 방어덱 실패
+    if(results.defenses.failed.length > 0) {
+      html += renderFailedSection('방어덱', results.defenses.failed);
+    }
+    
+    // 공격덱 실패
+    if(results.attacks.failed.length > 0) {
+      html += renderFailedSection('공격덱', results.attacks.failed);
+    }
+    
+    // 방어덱 부분 매칭
+    if(results.defenses.partial.length > 0) {
+      html += renderPartialSection('방어덱', results.defenses.partial);
+    }
+    
+    // 공격덱 부분 매칭
+    if(results.attacks.partial.length > 0) {
+      html += renderPartialSection('공격덱', results.attacks.partial);
+    }
+    
+    // 중요 표시
+    const allNotes = [...results.defenses.withNotes, ...results.attacks.withNotes];
+    if(allNotes.length > 0) {
+      html += renderNotesSection(allNotes);
+    }
+    
+    resultDiv.innerHTML = html;
+    
+    console.log('=== 분석 결과 ===');
+    console.log('방어덱 실패:', results.defenses.failed);
+    console.log('공격덱 실패:', results.attacks.failed);
+    
+  } catch(err) {
+    console.error('분석 오류:', err);
+    resultDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#e74c3c;">분석 실패</div>';
+  }
+}
+
+// 이름 분석
+function analyzeNameString(name, key, type, parentKey = null) {
+  // 별칭 매핑 테이블
+  const aliasMap = {
+    '브브': '브란즈&브란셀',
+    '브&브': '브란즈&브란셀',
+    '오공': '손오공',
+    '겔': '겔리두스',
+    '트루': '트루드',
+    '에': '에이스',
+    '초': '초선',
+    '프레': '프레이야',
+    '란': '란드그리드',
+    '라드': '라드그리드',
+    '키리': '키리엘',
+    '아멜': '아멜리아',
+    '밀': '밀리아'
+  };
+  
+  // 괄호 안 내용 추출
+  const noteMatch = name.match(/\(([^)]+)\)/);
+  const note = noteMatch ? noteMatch[1] : null;
+  const cleanName = name.replace(/\([^)]+\)/g, '').trim();
+  
+  // 띄어쓰기로 분리
+  const words = cleanName.split(/\s+/).filter(w => w.length > 0);
+  
+  // 캐릭터 매칭 시도
+  const matched = [];
+  const unmatched = [];
+  
+  words.forEach(word => {
+    // 1. 별칭 테이블 확인
+    if(aliasMap[word]) {
+      matched.push(`${word}→${aliasMap[word]}`);
+      return;
+    }
+    
+    // 2. charactersDB에서 정확히 일치 (새로 추가된 캐릭터)
+    if(charactersDB && charactersDB[word]) {
+      matched.push(word);
+      return;
+    }
+    
+    // 3. TW_CHARS에서 정확히 일치
+    const exactMatch = TW_CHARS.find(char => char === word);
+    if(exactMatch) {
+      matched.push(word);
+      return;
+    }
+    
+    // 4. charactersDB 부분 일치
+    if(charactersDB) {
+      const dbPartialMatch = Object.keys(charactersDB).find(char => 
+        char.includes(word) || word.includes(char)
+      );
+      if(dbPartialMatch) {
+        matched.push(`${word}→${dbPartialMatch}`);
+        return;
+      }
+    }
+    
+    // 5. TW_CHARS 부분 일치
+    const partialMatch = TW_CHARS.find(char => 
+      char.includes(word) || word.includes(char)
+    );
+    if(partialMatch) {
+      matched.push(`${word}→${partialMatch}`);
+      return;
+    }
+    
+    // 6. 매칭 실패
+    unmatched.push(word);
+  });
+  
+  return {
+    key,
+    parentKey,
+    type,
+    original: name,
+    clean: cleanName,
+    note,
+    words,
+    matched,
+    unmatched
+  };
+}
+
+// 결과 분류
+function categorizeResult(item, results) {
+  if(item.note) results.withNotes.push(item);
+  
+  if(item.unmatched.length === 0 && item.matched.length > 0) {
+    results.matched.push(item);
+  } else if(item.matched.length > 0) {
+    results.partial.push(item);
+  } else {
+    results.failed.push(item);
+  }
+}
+
+// 실패 섹션 렌더링
+function renderFailedSection(title, items) {
+  let html = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:900;color:#e74c3c;margin-bottom:8px;">❌ ${title} 매칭 실패 (${items.length}개)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+  `;
+  items.forEach(item => {
+    const isAttack = item.type === '공격덱';
+    const clickHandler = isAttack 
+      ? `onclick="goToAttackDeck('${item.parentKey}', '${item.key}')"` 
+      : `onclick="goToDefenseDeck('${item.key}')"`;
+    
+    html += `
+      <div ${clickHandler} style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:8px 10px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(231,76,60,0.2)'" onmouseout="this.style.background='rgba(231,76,60,0.1)'">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">[${item.type}]</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">${item.original}</div>
+            <div style="font-size:11px;color:var(--text3);">단어: ${item.words.join(', ')}</div>
+          </div>
+          <div style="font-size:20px;color:#e74c3c;">→</div>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+// 공격덱으로 이동
+function goToAttackDeck(defenseKey, attackKey) {
+  switchTab('attack');
+  setTimeout(() => {
+    currentDefense = defenseKey;
+    currentAttack = attackKey;
+    
+    // 방어덱 선택
+    const defSelect = document.querySelectorAll('.def-card');
+    defSelect.forEach(card => {
+      const cardDefKey = card.getAttribute('data-key');
+      if(cardDefKey === defenseKey) {
+        card.click();
+      }
+    });
+    
+    // 공격덱 선택
+    setTimeout(() => {
+      const atkCards = document.querySelectorAll('.atk-item');
+      atkCards.forEach(card => {
+        const cardAtkKey = card.getAttribute('data-key');
+        if(cardAtkKey === attackKey) {
+          card.click();
+          // 스크롤
+          setTimeout(() => {
+            const atkForm = document.getElementById('atkImportantNote');
+            if(atkForm) {
+              atkForm.scrollIntoView({behavior: 'smooth', block: 'center'});
+              // 하이라이트 효과
+              atkForm.style.transition = 'all 0.3s';
+              atkForm.style.background = 'rgba(255,107,107,0.3)';
+              setTimeout(() => {
+                atkForm.style.background = '';
+              }, 1000);
+            }
+          }, 300);
+        }
+      });
+    }, 500);
+  }, 100);
+  
+  toast('💡 해당 덱으로 이동합니다');
+}
+
+// 방어덱으로 이동
+function goToDefenseDeck(defenseKey) {
+  switchTab('attack');
+  setTimeout(() => {
+    currentDefense = defenseKey;
+    const defSelect = document.querySelectorAll('.def-card');
+    defSelect.forEach(card => {
+      const cardDefKey = card.getAttribute('data-key');
+      if(cardDefKey === defenseKey) {
+        card.click();
+      }
+    });
+  }, 100);
+  
+  toast('💡 해당 방어덱으로 이동합니다');
+}
+
+// ══ 일괄 변환 ══
+async function applyCharactersToDecks() {
+  if(!checkAdmin()) return;
+  if(!lastAnalysisResults) {
+    toast('먼저 분석을 실행하세요');
+    return;
+  }
+  
+  const totalCount = lastAnalysisResults.defenses.matched.length + lastAnalysisResults.attacks.matched.length;
+  
+  if(!confirm(`매칭 성공한 ${totalCount}개의 덱 이름을 DB 캐릭터 이름으로 변환할까요?\n\n예시:\n"겔트에" → "겔리두스 트루드 에이스"\n"브브 키리엘" → "브란즈&브란셀 키리엘"\n\n⚠️ 이 작업은 되돌릴 수 없습니다!`)) {
+    return;
+  }
+  
+  toast('변환 중...');
+  
+  try {
+    let successCount = 0;
+    
+    // 방어덱 업데이트
+    for(const item of lastAnalysisResults.defenses.matched) {
+      const convertedName = convertToDbNames(item.matched);
+      if(convertedName !== item.original) {
+        await db.ref(`defenseTeams/${item.key}`).update({
+          name: convertedName
+        });
+        successCount++;
+      }
+    }
+    
+    // 공격덱 업데이트
+    for(const item of lastAnalysisResults.attacks.matched) {
+      const convertedName = convertToDbNames(item.matched);
+      const charArray = extractCharacterNames(item.matched);
+      if(convertedName !== item.original) {
+        await db.ref(`defenseTeams/${item.parentKey}/attackTeams/${item.key}`).update({
+          name: convertedName,
+          characters: charArray
+        });
+        successCount++;
+      }
+    }
+    
+    toast(`✅ ${successCount}개 덱 이름이 변환되었습니다!`);
+    
+    // 분석 다시 실행
+    setTimeout(() => {
+      analyzeDefenseNames();
+    }, 1000);
+    
+  } catch(err) {
+    console.error('일괄 변환 오류:', err);
+    toast('❌ 변환 중 오류 발생');
+  }
+}
+
+// ── characters 미등록 공격덱 확인 & 자동 채우기 ──
+async function checkMissingCharacters() {
+  if(!checkAdmin()) return;
+
+  const resultDiv = document.getElementById('missingCharsResult');
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);">확인 중...</div>';
+
+  try {
+    const snap = await db.ref('defenseTeams').once('value');
+    const defenses = snap.val() || {};
+
+    const missing = [];   // characters 없는 공격덱
+    const ok      = [];   // characters 이미 있는 공격덱
+
+    for(const [defKey, def] of Object.entries(defenses)) {
+      const attacks = def.attackTeams || {};
+      for(const [atkKey, atk] of Object.entries(attacks)) {
+        if(!atk || !atk.name) continue;
+        const hasChars = atk.characters && atk.characters.length > 0;
+        if(hasChars) {
+          ok.push({ defKey, atkKey, name: atk.name, chars: atk.characters });
+        } else {
+          // 이름에서 파싱 시도
+          const parsed = parseDefenseChars(atk.name);
+          missing.push({ defKey, atkKey, name: atk.name, parsed });
+        }
+      }
+    }
+
+    const canFill   = missing.filter(m => m.parsed.length > 0);
+    const cantFill  = missing.filter(m => m.parsed.length === 0);
+
+    let html = `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:900;margin-bottom:6px;">📊 현황</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.8;">
+          ✅ characters 등록됨: <b style="color:var(--green);">${ok.length}개</b><br>
+          ⚠️ 미등록 (이름에서 파싱 가능): <b style="color:#f39c12;">${canFill.length}개</b><br>
+          ❌ 미등록 (파싱 불가): <b style="color:var(--red);">${cantFill.length}개</b>
+        </div>
+      </div>
+    `;
+
+    if(canFill.length > 0) {
+      html += `
+        <button onclick="fillMissingCharacters()" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:12px;">
+          ✅ ${canFill.length}개 자동 채우기
+        </button>
+      `;
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">⚠️ 파싱 가능 목록</div>';
+      html += canFill.map(m => `
+        <div style="background:var(--surface);border:1px solid rgba(243,156,18,0.25);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11px;">
+          <div style="font-weight:700;color:var(--text);">⚔️ ${m.name}</div>
+          <div style="color:#f39c12;margin-top:2px;">→ [${m.parsed.join(', ')}]</div>
+        </div>
+      `).join('');
+    }
+
+    if(cantFill.length > 0) {
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 6px;">❌ 파싱 불가 (직접 등록 필요)</div>';
+      html += cantFill.map(m => `
+        <div style="background:var(--surface);border:1px solid rgba(231,76,60,0.2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11px;">
+          <div style="font-weight:700;color:var(--text);">⚔️ ${m.name}</div>
+          <div style="color:var(--text3);margin-top:2px;">파싱 불가 — 공격덱에서 직접 캐릭터 등록 필요</div>
+        </div>
+      `).join('');
+    }
+
+    resultDiv.innerHTML = html;
+
+    // 자동 채우기용 데이터 저장
+    window._missingCharsData = canFill;
+
+  } catch(err) {
+    console.error('확인 오류:', err);
+    resultDiv.innerHTML = '<div style="color:#e74c3c;padding:12px;">오류 발생</div>';
+  }
+}
+
+async function fillMissingCharacters() {
+  const canFill = window._missingCharsData;
+  if(!canFill || canFill.length === 0) { toast('채울 데이터가 없습니다'); return; }
+  if(!confirm(`${canFill.length}개 공격덱에 characters를 자동 등록할까요?`)) return;
+
+  toast('등록 중...');
+  let count = 0;
+  try {
+    for(const { defKey, atkKey, parsed } of canFill) {
+      await db.ref(`defenseTeams/${defKey}/attackTeams/${atkKey}`).update({ characters: parsed });
+      count++;
+    }
+    toast(`✅ ${count}개 완료`);
+    checkMissingCharacters(); // 결과 새로고침
+  } catch(err) {
+    console.error(err);
+    toast('❌ 오류 발생');
+  }
+}
+
+// 매칭 결과를 DB 이름으로 변환
+function convertToDbNames(matched) {
+  return matched.map(m => {
+    // "겔→겔리두스" 형태면 화살표 뒤의 이름 사용
+    if(m.includes('→')) {
+      return m.split('→')[1];
+    }
+    // 그냥 이름이면 그대로 사용
+    return m;
+  }).join(' ');
+}
+
+// 매칭 결과에서 캐릭터 이름 추출
+function extractCharacterNames(matched) {
+  return matched.map(m => {
+    // "겔→겔리두스" 형태면 화살표 뒤의 이름 사용
+    if(m.includes('→')) {
+      return m.split('→')[1];
+    }
+    // 그냥 이름이면 그대로 사용
+    return m;
+  });
+}
+
+// ══ 공격덱 캐릭터 선택 ══
+let selectedAtkChars = [];
+
+// 캐릭터 검색
+function searchAtkCharacters(query) {
+  const resultsDiv = document.getElementById('atkCharSearchResults');
+  
+  if(!query || query.trim().length === 0) {
+    resultsDiv.style.display = 'none';
+    resultsDiv.innerHTML = '';
+    return;
+  }
+  
+  // charactersDB 로드 확인
+  if(!charactersDB || Object.keys(charactersDB).length === 0) {
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px;">캐릭터 DB 로딩 중...</div>';
+    return;
+  }
+  
+  query = query.toLowerCase();
+  const matches = Object.entries(charactersDB).filter(([name]) => 
+    name.toLowerCase().includes(query)
+  );
+  
+  if(matches.length === 0) {
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px;">검색 결과 없음</div>';
+    return;
+  }
+  
+  const limitedMatches = matches.slice(0, 8);
+  
+  resultsDiv.style.display = 'block';
+  resultsDiv.innerHTML = limitedMatches.map(([name, data]) => `
+    <div onclick="addAtkCharacter('${name}')" style="padding:6px 8px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--surface);border:1px solid var(--border);transition:all 0.2s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
+      <div style="font-size:12px;font-weight:700;color:var(--text);">${name}</div>
+      <div style="font-size:10px;color:var(--text3);">${data.type}</div>
+    </div>
+  `).join('');
+  
+  if(matches.length > 8) {
+    resultsDiv.innerHTML += `<div style="text-align:center;color:var(--text3);font-size:10px;padding:4px;">+${matches.length - 8}개 더</div>`;
+  }
+}
+
+// 캐릭터 추가
+function addAtkCharacter(name) {
+  if(selectedAtkChars.includes(name)) {
+    toast('이미 추가된 캐릭터입니다');
+    return;
+  }
+  
+  if(selectedAtkChars.length >= 5) {
+    toast('최대 5개까지만 선택 가능합니다');
+    return;
+  }
+  
+  selectedAtkChars.push(name);
+  renderSelectedAtkChars();
+  
+  // 검색창 초기화
+  document.getElementById('atkCharSearch').value = '';
+  document.getElementById('atkCharSearchResults').innerHTML = '';
+  document.getElementById('atkCharSearchResults').style.display = 'none';
+}
+
+// 캐릭터 제거
+function removeAtkCharacter(name) {
+  selectedAtkChars = selectedAtkChars.filter(c => c !== name);
+  renderSelectedAtkChars();
+}
+
+// 선택된 캐릭터 렌더링
+function renderSelectedAtkChars() {
+  const container = document.getElementById('atkSelectedChars');
+  
+  if(selectedAtkChars.length === 0) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px;">선택된 캐릭터 없음</div>';
+    return;
+  }
+  
+  container.innerHTML = selectedAtkChars.map(name => `
+    <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(52,152,219,0.15);border:1px solid rgba(52,152,219,0.3);border-radius:6px;">
+      <span style="font-size:11px;font-weight:700;color:#3498db;">${name}</span>
+      <button onclick="removeAtkCharacter('${name}')" style="background:none;border:none;color:#3498db;cursor:pointer;font-size:14px;line-height:1;padding:0 4px;">×</button>
+    </div>
+  `).join('');
+}
+
+// 부분 매칭 섹션
+function renderPartialSection(title, items) {
+  const showCount = 10;
+  let html = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:900;color:#f39c12;margin-bottom:8px;">⚠️ ${title} 부분 매칭 (${items.length}개)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+  `;
+  items.slice(0, showCount).forEach(item => {
+    const isAttack = item.type === '공격덱';
+    const clickHandler = isAttack 
+      ? `onclick="goToAttackDeck('${item.parentKey}', '${item.key}')"` 
+      : `onclick="goToDefenseDeck('${item.key}')"`;
+    
+    html += `
+      <div ${clickHandler} style="background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:8px;padding:8px 10px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(243,156,18,0.2)'" onmouseout="this.style.background='rgba(243,156,18,0.1)'">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">[${item.type}]</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">${item.original}</div>
+            <div style="font-size:11px;color:#27ae60;">✅ ${item.matched.join(', ')}</div>
+            ${item.unmatched.length > 0 ? `<div style="font-size:11px;color:#e74c3c;">❌ ${item.unmatched.join(', ')}</div>` : ''}
+          </div>
+          <div style="font-size:20px;color:#f39c12;">→</div>
+        </div>
+      </div>
+    `;
+  });
+  if(items.length > showCount) {
+    html += `<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px;">...외 ${items.length - showCount}개</div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+// 중요 표시 섹션
+function renderNotesSection(items) {
+  const showCount = 10;
+  let html = `
+    <div>
+      <div style="font-size:13px;font-weight:900;color:#3498db;margin-bottom:8px;">🔥 중요 표시 포함 (${items.length}개)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+  `;
+  items.slice(0, showCount).forEach(item => {
+    html += `
+      <div style="background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.3);border-radius:8px;padding:8px 10px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">[${item.type}]</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">${item.clean}</div>
+        <div style="font-size:11px;color:#3498db;">💬 ${item.note}</div>
+      </div>
+    `;
+  });
+  if(items.length > showCount) {
+    html += `<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px;">...외 ${items.length - showCount}개</div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
 
 // 캐릭터 검색
 function searchCharacters(query) {
@@ -8645,6 +9565,97 @@ function searchCharacters(query) {
   if(matches.length > 10) {
     resultsDiv.innerHTML += `<div style="text-align:center;color:var(--text3);font-size:11px;padding:6px 8px;border-top:1px solid var(--border);">+${matches.length - 10}개 더 있음 (더 입력하세요)</div>`;
   }
+}
+
+// ── 속공 계산기 페이지 전용 캐릭터 검색 ──
+function searchCharactersPage(query) {
+  const resultsDiv = document.getElementById('pageCharSearchResults');
+
+  if(!query || query.trim().length === 0) {
+    resultsDiv.style.display = 'none';
+    resultsDiv.innerHTML = '';
+    return;
+  }
+
+  if(Object.keys(charactersDB).length === 0) {
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;padding:8px;">캐릭터 DB 로딩 중...</div>';
+    loadCharactersDB().then(() => searchCharactersPage(query));
+    return;
+  }
+
+  query = query.toLowerCase();
+  const matches = Object.entries(charactersDB).filter(([name]) =>
+    name.toLowerCase().includes(query)
+  );
+
+  if(matches.length === 0) {
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;padding:8px;">검색 결과가 없습니다</div>';
+    return;
+  }
+
+  const limited = matches.slice(0, 10);
+  resultsDiv.style.display = 'block';
+  resultsDiv.innerHTML = limited.map(([name, data]) => `
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${name}</div>
+        <div style="font-size:10px;color:var(--text3);">${data.type}</div>
+      </div>
+      <button onclick="addCharFromSearchPage('${name.replace(/'/g,"\\'")}','${data.type}','ally')" style="padding:6px 12px;border-radius:6px;border:1px solid rgba(52,152,219,0.3);background:rgba(52,152,219,0.1);color:#3498db;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔵 아군</button>
+      <button onclick="addCharFromSearchPage('${name.replace(/'/g,"\\'")}','${data.type}','enemy')" style="padding:6px 12px;border-radius:6px;border:1px solid rgba(231,76,60,0.3);background:rgba(231,76,60,0.1);color:#e74c3c;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔴 적군</button>
+    </div>
+  `).join('');
+
+  if(matches.length > 10) {
+    resultsDiv.innerHTML += `<div style="text-align:center;color:var(--text3);font-size:11px;padding:6px 8px;border-top:1px solid var(--border);">+${matches.length - 10}개 더 있음 (더 입력하세요)</div>`;
+  }
+}
+
+function addCharFromSearchPage(name, type, team) {
+  if(team === 'ally') {
+    const count = speedOrder.filter(s => s.team === 'ally').length;
+    if(count >= 3) { toast('아군은 최대 3개까지만 선택할 수 있습니다'); return; }
+  } else {
+    const count = speedOrder.filter(s => s.team === 'enemy').length;
+    if(count >= 3) { toast('적군은 최대 3개까지만 선택할 수 있습니다'); return; }
+  }
+
+  const emptyIdx = speedOrder.findIndex(s => s.team === '');
+  if(emptyIdx === -1) { toast('빈 슬롯이 없습니다'); return; }
+
+  speedOrder[emptyIdx] = { team, name, speed: 0, type };
+  renderSpeedTeams();
+
+  // 검색창 초기화
+  document.getElementById('pageCharSearchInput').value = '';
+  document.getElementById('pageCharSearchResults').innerHTML = '';
+  document.getElementById('pageCharSearchResults').style.display = 'none';
+
+  toast(`${name} 추가됨`);
+
+  if(team === 'ally') {
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('#speedOrderSlots input[type="number"]');
+      if(inputs[inputs.length - 1]) inputs[inputs.length - 1].focus();
+    }, 100);
+  }
+}
+
+function clearAllSlotsPage() {
+  if(!confirm('모든 입력을 초기화할까요?')) return;
+  speedOrder = [
+    {team:'',name:'',speed:0,type:'만능형'},
+    {team:'',name:'',speed:0,type:'만능형'},
+    {team:'',name:'',speed:0,type:'만능형'},
+    {team:'',name:'',speed:0,type:'만능형'},
+    {team:'',name:'',speed:0,type:'만능형'},
+    {team:'',name:'',speed:0,type:'만능형'}
+  ];
+  document.getElementById('speedResultCard').style.display = 'none';
+  renderSpeedTeams();
+  toast('초기화되었습니다');
 }
 
 // 검색 결과에서 캐릭터 추가
@@ -14453,15 +15464,38 @@ function goToTodayDeck(defKey,atkKey){
         </div>
       </div>
 
-      <!-- 캐릭터 검색 입력 -->
-      <div style="margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;">🔍 캐릭터 검색</div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <input id="charSearchInput" type="text" class="form-input" placeholder="캐릭터 이름 입력..." style="margin:0;flex:1;font-size:13px;" oninput="searchCharacters(this.value)">
-          <button onclick="document.getElementById('charSearchInput').value='';document.getElementById('charSearchResults').innerHTML=''" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
-        </div>
-        <div id="charSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:200px;overflow-y:auto;"></div>
+      <!-- 방어팀 캐릭터 (적군 🔴) -->
+      <div id="defCharQuickSelect" style="display:none;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">🛡️ 상대 방어팀 <span id="defCharTeamName" style="color:var(--accent);font-size:11px;"></span></div>
+        <div id="defCharButtons" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       </div>
+
+      <!-- 공격팀 캐릭터 (아군 🔵) -->
+      <div id="atkCharQuickSelect" style="display:none;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">⚔️ 우리팀 공격덱 <span id="atkCharDeckName" style="color:#3498db;font-size:11px;"></span></div>
+        <div id="atkCharButtons" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- 캐릭터 검색 (기타) -->
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">🔍 기타 캐릭터 검색</div>
+          <button onclick="togglePopupCharSearch()" id="popupCharSearchToggle" style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">펼치기 ▼</button>
+        </div>
+        <div id="popupCharSearchBox" style="display:none;">
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <input id="charSearchInput" type="text" class="form-input" placeholder="캐릭터 이름 입력..." style="margin:0;flex:1;font-size:13px;" oninput="searchCharacters(this.value)">
+            <button onclick="document.getElementById('charSearchInput').value='';document.getElementById('charSearchResults').innerHTML='';document.getElementById('charSearchResults').style.display='none';" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
+          </div>
+          <div id="charSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- 구분선 -->
+      <div style="height:1px;background:var(--border);margin-bottom:14px;"></div>
+
+      <!-- 숨겨진 레거시 div (기존 코드 호환) -->
+      <div id="deckCharQuickSelect" style="display:none;"><div id="deckCharButtons"></div></div>
 
       <!-- 캐릭터 슬롯 -->
       <div style="margin-bottom:14px;">
