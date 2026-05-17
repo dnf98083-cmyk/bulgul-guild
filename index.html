@@ -3818,7 +3818,11 @@ async function enterApp() {
   initMobileAdminBtn();
   loadHomeBanner();
   loadHomeAdventGraph();
+  
+  // 공지사항 읽음 상태 동기화 먼저 실행
+  await syncReadNoticesFromFirebase();
   checkNoticeNew();
+  
   checkSuggestReply();
   initTodayDeck();
   initNoticeImageUpload();
@@ -7869,6 +7873,46 @@ async function skipDefeatSpeed() {
   
   const deckInfo = window._defeatDeckInfo || {};
   
+  // todayGuildWar가 로드되어 있는지 확인
+  if(!todayGuildWar) {
+    console.log('⚠️ todayGuildWar 로드 중...');
+    await loadTodayGuildWar();
+  }
+  
+  // 오늘의 길드전에도 패배 기록 (속공 정보 없이)
+  if(!todayGuildWar.fortresses) {
+    todayGuildWar.fortresses = {};
+  }
+  if(!todayGuildWar.fortresses[fortress]) {
+    todayGuildWar.fortresses[fortress] = {};
+  }
+  
+  const existing = todayGuildWar.fortresses[fortress][enemy];
+  
+  if(existing) {
+    todayGuildWar.fortresses[fortress][enemy] = {
+      ...existing,
+      defeats: existing.defeats + 1,
+      lastUpdate: Date.now(),
+      deckName: deckInfo.deckName || existing.deckName,
+      deckKey: deckInfo.deckKey || existing.deckKey,
+      defenseKey: deckInfo.defenseKey || existing.defenseKey
+    };
+  } else {
+    todayGuildWar.fortresses[fortress][enemy] = {
+      speedMin: null,
+      speedMax: null,
+      defeats: 1,
+      lastUpdate: Date.now(),
+      deckName: deckInfo.deckName,
+      deckKey: deckInfo.deckKey,
+      defenseKey: deckInfo.defenseKey
+    };
+  }
+  
+  await db.ref('todayGuildWar').set(todayGuildWar);
+  console.log('✅ 오늘의 길드전 저장 완료 (속공 없음)');
+  
   // 공격덱 패배 카운트 증가
   if(deckInfo.defenseKey && deckInfo.deckKey) {
     const atkSnap = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}/lose`).once('value');
@@ -7878,6 +7922,10 @@ async function skipDefeatSpeed() {
   
   closeDefeatRecordModal();
   toast('패배가 기록되었습니다');
+  
+  // 오늘의 길드전 화면으로 이동
+  switchTab('todayWar');
+  renderTodayGuildWar();
 }
 
 function openDefeatSpeedCalc() {
@@ -10400,6 +10448,41 @@ function markSingleNoticeRead(key){
 function isNoticeRead(key){
   return !!getReadNotices()[key];
 }
+
+// Firebase에서 내가 읽은 공지 목록 동기화
+async function syncReadNoticesFromFirebase() {
+  if(!myNick) return;
+  
+  try {
+    // Firebase의 모든 공지 목록 가져오기
+    const noticesSnap = await db.ref("notices").once("value");
+    if(!noticesSnap.exists()) return;
+    
+    const noticeKeys = Object.keys(noticesSnap.val());
+    const reads = getReadNotices();
+    let updated = false;
+    
+    // 각 공지별로 내가 읽었는지 확인
+    for(const key of noticeKeys) {
+      const readSnap = await db.ref(`noticeReads/${key}/${myNick}`).once("value");
+      if(readSnap.exists() && readSnap.val() === true) {
+        if(!reads[key]) {
+          reads[key] = true;
+          updated = true;
+        }
+      }
+    }
+    
+    // localStorage 업데이트
+    if(updated) {
+      localStorage.setItem("readNotices", JSON.stringify(reads));
+      console.log('✅ Firebase에서 읽은 공지 동기화 완료');
+    }
+  } catch(err) {
+    console.error('공지 동기화 오류:', err);
+  }
+}
+
 function checkNoticeNew(){
   db.ref("notices").orderByChild("createdAt").limitToLast(1).once("value").then(snap=>{
     const badge = document.getElementById("noticeNewBadge");
