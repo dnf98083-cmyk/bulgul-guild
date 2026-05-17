@@ -7918,6 +7918,22 @@ async function skipDefeatSpeed() {
     const atkSnap = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}/lose`).once('value');
     const currentLose = atkSnap.val() || 0;
     await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).update({lose: currentLose + 1});
+    
+    // 패배 로그 기록
+    const atkData = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).once('value');
+    const atk = atkData.val();
+    if(atk) {
+      await db.ref("logs").push({
+        nick: myNick,
+        result: 'lose',
+        defense: deckInfo.defenseKey,
+        attack: deckInfo.deckKey,
+        attackName: atk.name,
+        attackType: atk.type,
+        date: new Date().toISOString().slice(0,10),
+        time: Date.now()
+      });
+    }
   }
   
   closeDefeatRecordModal();
@@ -8032,6 +8048,23 @@ async function saveDefeatRecord(speedMin, speedMax) {
     console.log('현재 패배:', currentLose, '→ 증가 후:', currentLose + 1);
     await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).update({lose: currentLose + 1});
     console.log('✅ 패배 카운트 증가 완료!');
+    
+    // 패배 로그 기록
+    const atkData = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).once('value');
+    const atk = atkData.val();
+    if(atk) {
+      await db.ref("logs").push({
+        nick: myNick,
+        result: 'lose',
+        defense: deckInfo.defenseKey,
+        attack: deckInfo.deckKey,
+        attackName: atk.name,
+        attackType: atk.type,
+        date: new Date().toISOString().slice(0,10),
+        time: Date.now()
+      });
+      console.log('✅ 패배 로그 기록 완료!');
+    }
   } else {
     console.log('⚠️ deckInfo가 없어서 패배 카운트를 증가시키지 못했습니다!');
   }
