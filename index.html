@@ -6049,10 +6049,9 @@ function clearAtkForm(){
   
   // 캐릭터 선택 초기화
   selectedAtkChars = [];
-  renderSelectedAtkChars();
-  document.getElementById("atkCharSearch").value = "";
-  document.getElementById("atkCharSearchResults").innerHTML = "";
-  document.getElementById("atkCharSearchResults").style.display = "none";
+  const _acs = document.getElementById("atkCharSearch"); if(_acs) _acs.value = "";
+  const _acr = document.getElementById("atkCharSearchResults"); if(_acr){_acr.innerHTML="";_acr.style.display="none";}
+  const _asc = document.getElementById("atkSelectedChars"); if(_asc) _asc.innerHTML = "";
   
   // 진형 버튼 초기화
   ["기본","밸런스","공격","보호"].forEach(t=>{
@@ -9448,12 +9447,20 @@ function extractCharacterNames(matched) {
 
 // ══ 이름 입력 자동완성 (방어팀/공격팀 이름란) ══
 // 입력값의 마지막 단어로 DB 캐릭터 검색 → 선택 시 이름에 추가
+// 별칭 → 정식이름 매핑
+const AC_ALIAS = {
+  '브브':'브란즈&브란셀','브&브':'브란즈&브란셀',
+  '오공':'손오공','겔':'겔리두스','트루':'트루드',
+  '에':'에이스','초':'초선','프레':'프레이야',
+  '란':'란드그리드','라드':'라드그리드','키리':'키리엘',
+  '아멜':'아멜리아','밀':'밀리아'
+};
+
 function acNameInput(inputEl, dropdownId) {
   const dropdown = document.getElementById(dropdownId);
   if(!dropdown) return;
 
   const val = inputEl.value;
-  // 마지막 단어(공백 이후) 추출
   const parts = val.split(' ');
   const lastWord = parts[parts.length - 1];
 
@@ -9469,22 +9476,37 @@ function acNameInput(inputEl, dropdownId) {
   }
 
   const q = lastWord.toLowerCase();
-  const matches = Object.keys(charactersDB).filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+
+  // 1. 별칭 매칭 (브브→브란즈&브란셀 등)
+  const aliasMatches = Object.entries(AC_ALIAS)
+    .filter(([alias]) => alias.toLowerCase().includes(q))
+    .map(([, fullName]) => fullName);
+
+  // 2. DB 정식이름 매칭
+  const dbMatches = Object.keys(charactersDB)
+    .filter(n => n.toLowerCase().includes(q));
+
+  // 합치되 중복 제거, 최대 8개
+  const matches = [...new Set([...aliasMatches, ...dbMatches])].slice(0, 8);
 
   if(!matches.length) {
     dropdown.style.display = 'none';
     return;
   }
 
+  // innerHTML에 특수문자(&등) 포함 이름 안전하게 표시
   dropdown.style.display = 'block';
-  dropdown.innerHTML = matches.map(name => `
-    <div onclick="acSelectChar('${inputEl.id}','${dropdownId}','${name.replace(/'/g,"\'")}")"
-      style="padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s;"
-      onmouseover="this.style.background='rgba(255,77,46,0.07)'"
-      onmouseout="this.style.background='transparent'">
-      ${name}
-    </div>
-  `).join('');
+  dropdown.innerHTML = matches.map((name, idx) =>
+    `<div data-ac-idx="${idx}" style="padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s;" onmouseover="this.style.background='rgba(255,77,46,0.07)'" onmouseout="this.style.background='transparent'">${name}</div>`
+  ).join('');
+
+  // onclick 속성 대신 addEventListener로 바인딩 (& 등 특수문자 오류 방지)
+  dropdown.querySelectorAll('[data-ac-idx]').forEach((el, idx) => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      acSelectChar(inputEl.id, dropdownId, matches[idx]);
+    });
+  });
 }
 
 function acSelectChar(inputId, dropdownId, charName) {
@@ -9492,7 +9514,6 @@ function acSelectChar(inputId, dropdownId, charName) {
   const dropdown = document.getElementById(dropdownId);
   if(!inputEl) return;
 
-  // 마지막 단어를 선택한 캐릭터로 교체
   const parts = inputEl.value.split(' ');
   parts[parts.length - 1] = charName;
   inputEl.value = parts.join(' ');
@@ -9521,6 +9542,7 @@ let selectedAtkChars = [];
 // 캐릭터 검색
 function searchAtkCharacters(query) {
   const resultsDiv = document.getElementById('atkCharSearchResults');
+  if(!resultsDiv) return;  // 요소 없으면 무시
   
   if(!query || query.trim().length === 0) {
     resultsDiv.style.display = 'none';
@@ -9577,9 +9599,8 @@ function addAtkCharacter(name) {
   renderSelectedAtkChars();
   
   // 검색창 초기화
-  document.getElementById('atkCharSearch').value = '';
-  document.getElementById('atkCharSearchResults').innerHTML = '';
-  document.getElementById('atkCharSearchResults').style.display = 'none';
+  const _s = document.getElementById('atkCharSearch'); if(_s) _s.value = '';
+  const _r = document.getElementById('atkCharSearchResults'); if(_r){_r.innerHTML='';_r.style.display='none';}
 }
 
 // 캐릭터 제거
@@ -9591,6 +9612,7 @@ function removeAtkCharacter(name) {
 // 선택된 캐릭터 렌더링
 function renderSelectedAtkChars() {
   const container = document.getElementById('atkSelectedChars');
+  if(!container) return;  // 요소 없으면 무시
   
   if(selectedAtkChars.length === 0) {
     container.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px;">선택된 캐릭터 없음</div>';
