@@ -3366,6 +3366,26 @@ body::before {
         <div class="empty-state">로딩 중...</div>
       </div>
     </div>
+
+    <!-- 펫 추가 -->
+    <div class="admin-section">
+      <div class="admin-section-title">➕ 신규 펫 등록</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input class="form-input" id="newPetName" placeholder="펫 이름" style="margin:0;flex:1;min-width:120px;">
+        <button class="btn-sm btn-green" onclick="addNewPet()">등록</button>
+      </div>
+    </div>
+
+    <!-- 펫 목록 -->
+    <div class="admin-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="admin-section-title" style="margin:0;">🐾 펫 목록</div>
+        <input class="form-input" id="petFilterInput" placeholder="검색..." oninput="filterPetList()" style="margin:0;width:140px;font-size:12px;">
+      </div>
+      <div id="petList" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
   </div>
 
   <!-- ══ 관리자: 제보 관리 ══ -->
@@ -5057,6 +5077,7 @@ function buildMobileAdminMenu(){
 
   const menus = [];
   if(isAdmin) menus.push(["👥","길드원 관리","adminMembers"]);
+  if(isAdmin) menus.push(["📚","캐릭터/펫 DB","adminDatabase"]);
   menus.push(["📋","제보 관리","adminReports"]);
   menus.push(["📬","건의 관리","adminSuggest"]);
   if(isAdmin) menus.push(["📊","승패 관리","adminScores"]);
@@ -5204,7 +5225,7 @@ function showAttackSubMenu(anchorBtn){
 // ══ 탭 전환 ══
 // 탭 전환 - 화면 표시/숨김 및 사이드바 active 처리
 function switchTab(tab) {
-  const allTabs=["home","notice","totalwar","deckplan","attack","speedCalc","defense","pve","calc","ranking","todayWar","suggest","adminMembers","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
+  const allTabs=["home","notice","totalwar","deckplan","attack","speedCalc","defense","pve","calc","ranking","todayWar","suggest","adminMembers","adminDatabase","adminReports","adminScores","adminRecovery","adminSuggest","adminTodayDeck","adminDeckPlan"];
   allTabs.forEach(t=>{ 
     const el=document.getElementById(t+"Screen"); 
     if(el) {
@@ -5225,7 +5246,7 @@ function switchTab(tab) {
   });
   // PC 사이드바
   document.querySelectorAll(".sb-item").forEach(el=>el.classList.remove("active"));
-  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"todayWar":4,"attack":5,"speedCalc":6,"defense":7,"pve":8,"calc":9,"ranking":10,"suggest":11,"adminMembers":12,"adminReports":13,"adminSuggest":14,"adminScores":15,"adminRecovery":16,"adminTodayDeck":17,"adminDeckPlan":18};
+  const tabToIdx={"home":0,"notice":1,"totalwar":2,"deckplan":3,"todayWar":4,"attack":5,"speedCalc":6,"defense":7,"pve":8,"calc":9,"ranking":10,"suggest":11,"adminMembers":12,"adminDatabase":13,"adminReports":14,"adminSuggest":15,"adminScores":16,"adminRecovery":17,"adminTodayDeck":18,"adminDeckPlan":19};
   const allSbItems=document.querySelectorAll(".sb-item");
   if(tab in tabToIdx && allSbItems[tabToIdx[tab]]) allSbItems[tabToIdx[tab]].classList.add("active");
   // 탭별 데이터 로드
@@ -5255,6 +5276,7 @@ function switchTab(tab) {
   if(tab==="suggest"){ loadMySuggests(); markSuggestReplyRead(); }
   if(tab==="adminSuggest") loadAdminSuggests();
   if(tab==="adminMembers"){ loadAdminMembers(); loadRoleList(); }
+  if(tab==="adminDatabase"){ renderCharacterList(); }
   if(tab==="adminReports"){ loadAdminReports(); markReportsAsRead(); }
   if(tab==="adminScores") loadAdminScores();
   if(tab==="adminRecovery") loadDeletionLogs();
@@ -8405,43 +8427,19 @@ let charactersDB = {};
 // Firebase에서 캐릭터 목록 로드
 async function loadCharactersDB() {
   try {
-    const snap = await db.ref('characters').once('value');
-    if(snap.exists()) {
-      charactersDB = snap.val();
-    } else {
-      // 기존 TW_CHARS 데이터로 초기화
-      charactersDB = {};
-      
-      // 기본 타입 매핑 (일부 주요 캐릭터만 설정, 나머지는 만능형)
-      const typeMapping = {
-        '소교': '만능형',
-        '파스칼': '공격형',
-        '풍연': '마법형',
-        '카일': '방어형',
-        '겔리두스': '만능형',
-        '트루드': '마법형',
-        '에이스': '공격형',
-        '파이': '공격형',
-        '비스킷': '지원형',
-        '백룡': '방어형',
-        '여포': '공격형',
-        '조운': '공격형',
-        '관우': '공격형',
-        '초선': '지원형',
-        '아수라': '마법형',
-        '백각': '방어형',
-        '유신': '지원형',
-        '비담': '공격형'
-      };
-      
-      TW_CHARS.forEach(name => {
-        charactersDB[name] = {
-          type: typeMapping[name] || '만능형',
-          category: 'hero'
-        };
-      });
-      
-      await db.ref('characters').set(charactersDB);
+    // 일단 로컬 데이터로 초기화
+    initLocalCharactersDB();
+    
+    // Firebase에서 가져오기 시도 (권한 있으면)
+    try {
+      const snap = await db.ref('characters').once('value');
+      if(snap.exists()) {
+        // Firebase 데이터로 덮어쓰기
+        charactersDB = snap.val();
+        console.log('✅ Firebase에서 캐릭터 DB 로드됨');
+      }
+    } catch(err) {
+      console.log('⚠️ Firebase 캐릭터 DB 접근 불가, 로컬 데이터 사용:', err.message);
     }
     
     // 관리자 화면에 있으면 목록 렌더링
@@ -8449,6 +8447,39 @@ async function loadCharactersDB() {
   } catch(err) {
     console.error('캐릭터 DB 로드 오류:', err);
   }
+}
+
+// 로컬 캐릭터 DB 초기화
+function initLocalCharactersDB() {
+  // 기본 타입 매핑
+  const typeMapping = {
+    '소교': '만능형',
+    '파스칼': '공격형',
+    '풍연': '마법형',
+    '카일': '방어형',
+    '겔리두스': '만능형',
+    '트루드': '마법형',
+    '에이스': '공격형',
+    '파이': '공격형',
+    '비스킷': '지원형',
+    '백룡': '방어형',
+    '여포': '공격형',
+    '조운': '공격형',
+    '관우': '공격형',
+    '초선': '지원형',
+    '아수라': '마법형',
+    '백각': '방어형',
+    '유신': '지원형',
+    '비담': '공격형'
+  };
+  
+  charactersDB = {};
+  TW_CHARS.forEach(name => {
+    charactersDB[name] = {
+      type: typeMapping[name] || '만능형',
+      category: 'hero'
+    };
+  });
 }
 
 // 신규 캐릭터 추가
@@ -8474,7 +8505,14 @@ async function addNewCharacter() {
     addedAt: Date.now()
   };
   
-  await db.ref('characters').set(charactersDB);
+  // Firebase 저장 시도
+  try {
+    await db.ref('characters').set(charactersDB);
+    console.log('✅ Firebase에 캐릭터 저장됨');
+  } catch(err) {
+    console.log('⚠️ Firebase 저장 실패, 로컬에만 저장:', err.message);
+    toast('⚠️ Firebase 권한 없음 (로컬에만 저장됨)');
+  }
   
   document.getElementById('newCharName').value = '';
   toast(`✅ ${name} 등록 완료`);
@@ -8489,7 +8527,13 @@ async function deleteCharacter(name) {
   if(!confirm(`'${name}' 캐릭터를 삭제할까요?`)) return;
   
   delete charactersDB[name];
-  await db.ref('characters').set(charactersDB);
+  
+  // Firebase 저장 시도
+  try {
+    await db.ref('characters').set(charactersDB);
+  } catch(err) {
+    console.log('⚠️ Firebase 저장 실패, 로컬에만 적용:', err.message);
+  }
   
   toast(`🗑️ ${name} 삭제됨`);
   renderCharacterList();
@@ -8502,7 +8546,13 @@ async function updateCharacterType(name, newType) {
   if(!charactersDB[name]) return;
   
   charactersDB[name].type = newType;
-  await db.ref('characters').set(charactersDB);
+  
+  // Firebase 저장 시도
+  try {
+    await db.ref('characters').set(charactersDB);
+  } catch(err) {
+    console.log('⚠️ Firebase 저장 실패, 로컬에만 적용:', err.message);
+  }
   
   toast(`✅ ${name} → ${newType}`);
 }
