@@ -2173,16 +2173,13 @@ body::before {
             </div>
           </div>
           <div class="info-block"><div class="ib-label">스킬순서</div><div class="ib-value" id="cardSkill">-</div></div>
-          <div id="cardExtraInfo" class="collapsible" style="max-height:0;">
+          <div id="cardExtraInfo">
             <div class="info-block"><div class="ib-label">장비 · 특이사항</div><div class="ib-value" id="cardArmor">-</div></div>
             <div class="info-block">
               <div class="ib-label">최근 10경기</div>
               <div id="recentRecord" class="recent-record"></div>
             </div>
           </div>
-          <button class="card-collapse-btn" onclick="toggleCardExtra()" id="cardCollapseBtn">
-            <span id="cardCollapseBtnText">▼ 상세정보 보기</span>
-          </button>
           <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;">
             <button onclick="copyAtkCard()" class="btn-sm btn-gray" style="flex:1;">📤 복사</button>
             <button onclick="pasteAtkCard()" class="btn-sm btn-gray" style="flex:1;">📥 붙여넣기</button>
@@ -2208,24 +2205,19 @@ body::before {
       </div>
       <div class="admin-section">
         <div class="admin-section-title">🛡️ 방어팀 관리</div>
-        <input class="form-input" id="newDefName" placeholder="새 방어팀 이름">
+        <div style="position:relative;">
+          <input class="form-input" id="newDefName" placeholder="새 방어팀 이름 (캐릭터 입력 시 자동완성)" autocomplete="off" oninput="acNameInput(this,'defNameAc')">
+          <div id="defNameAc" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:500;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;margin-top:4px;max-height:180px;overflow-y:auto;box-shadow:var(--shadow);"></div>
+        </div>
         <div class="btn-row"><button class="btn-sm btn-blue" onclick="addDefense()">추가</button><button class="btn-sm btn-red" onclick="delDefense()">현재 삭제</button></div>
       </div>
       <div class="admin-section">
         <div class="admin-section-title">⚔️ 공격팀 관리</div>
-        <input class="form-input" id="atkName" placeholder="공격팀 이름">
-        <select class="form-select" id="atkType"><option value="" disabled selected>속공 선택</option><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select>
-        
-        <!-- 캐릭터 선택 -->
-        <div style="margin:8px 0;">
-          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;">👥 캐릭터 구성 (속공 계산용)</div>
-          <div style="display:flex;gap:6px;margin-bottom:8px;">
-            <input id="atkCharSearch" type="text" class="form-input" placeholder="캐릭터 검색..." style="margin:0;flex:1;font-size:12px;" oninput="searchAtkCharacters(this.value)">
-            <button onclick="document.getElementById('atkCharSearch').value='';document.getElementById('atkCharSearchResults').innerHTML=''" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
-          </div>
-          <div id="atkCharSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:150px;overflow-y:auto;margin-bottom:8px;"></div>
-          <div id="atkSelectedChars" style="display:flex;gap:6px;flex-wrap:wrap;min-height:32px;"></div>
+        <div style="position:relative;">
+          <input class="form-input" id="atkName" placeholder="공격팀 이름 (캐릭터 입력 시 자동완성)" autocomplete="off" oninput="acNameInput(this,'atkNameAc')">
+          <div id="atkNameAc" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:500;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;margin-top:4px;max-height:180px;overflow-y:auto;box-shadow:var(--shadow);"></div>
         </div>
+        <select class="form-select" id="atkType"><option value="" disabled selected>속공 선택</option><option value="속공 따야 함">⚡ 속공 따야 함</option><option value="내줘도 됨">🛡️ 내줘도 됨</option></select>
         
         <textarea class="form-textarea" id="atkImportantNote" rows="2" placeholder="🔥 간단 필수 설명 (예: 효자 세팅, 무조건 이걸로)" style="margin-top:8px;"></textarea>
         <input class="form-input" id="ringRec" placeholder="반지">
@@ -5671,10 +5663,7 @@ function selectAttack(dk,ak) {
     document.getElementById("attackCard").classList.remove("anim-scale");
     void document.getElementById("attackCard").offsetWidth;
     document.getElementById("attackCard").classList.add("anim-scale");
-    // 더보기 초기화
-    cardExtraOpen=false;
-    const ex=document.getElementById("cardExtraInfo"); if(ex) ex.style.maxHeight="0";
-    const bt=document.getElementById("cardCollapseBtnText"); if(bt) bt.textContent="▼ 상세정보 보기";
+
   });
 }
 function loadRecentRecord(dk,ak) {
@@ -6098,10 +6087,9 @@ function addAttack() {
       win:0, lose:0, maker:myNick
     };
     
-    // 캐릭터 필드 추가
-    if(selectedAtkChars.length > 0) {
-      newData.characters = selectedAtkChars;
-    }
+    // 캐릭터 필드 추가 — 이름에서 자동 파싱
+    const parsedCharsAdd = parseDefenseChars(name);
+    if(parsedCharsAdd.length > 0) newData.characters = parsedCharsAdd;
     
     db.ref(`defenseTeams/${currentDefense}/attackTeams`).push(newData).then(()=>{ 
       toast("추가됨 ✅"); 
@@ -6126,10 +6114,9 @@ function editAttack() {
     skill:document.getElementById("skillOrder").value
   };
   
-  // 캐릭터 필드 업데이트
-  if(selectedAtkChars.length > 0) {
-    updateData.characters = selectedAtkChars;
-  }
+  // 캐릭터 필드 업데이트 — 이름에서 자동 파싱
+  const parsedCharsEdit = parseDefenseChars(updateData.name);
+  if(parsedCharsEdit.length > 0) updateData.characters = parsedCharsEdit;
   
   db.ref(`defenseTeams/${currentDefense}/attackTeams/${currentAttack}`).update(updateData).then(()=>{ 
     toast("수정됨 ✅"); 
@@ -7267,7 +7254,15 @@ function openModal(type){ document.getElementById("modalOverlay").classList.add(
   <button type="button" id="mResultLose" onclick="setModalResult('lose')" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">💀 패배</button>
 </div>
 <input type="hidden" id="mResult" value="">
-`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; document.getElementById("modalPasteRow").style.display="block"; }else if(type==="defense_add"){ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><div>
+<div style="margin:8px 0 4px;">
+  <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">👥 캐릭터 구성 (속공 계산용)</div>
+  <div style="display:flex;gap:6px;margin-bottom:6px;">
+    <input id="mCharSearch" type="text" class="form-input" placeholder="캐릭터 검색..." style="margin:0;flex:1;font-size:12px;" oninput="searchModalChars(this.value)">
+    <button onclick="clearModalCharSearch()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
+  </div>
+  <div id="mCharSearchResults" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:140px;overflow-y:auto;margin-bottom:6px;"></div>
+  <div id="mSelectedChars" style="display:flex;gap:6px;flex-wrap:wrap;min-height:28px;"></div>
+</div>`; document.getElementById("modalSubmitBtn").onclick=submitAttackSug; document.getElementById("modalPasteRow").style.display="block"; window._modalChars=[]; }else if(type==="defense_add"){ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 상대 방어팀덱 제보"; body.innerHTML=`<input class="form-input" id="mDefAddName" placeholder="상대 방어팀 이름 (필수)">`; document.getElementById("modalSubmitBtn").onclick=submitDefenseAdd; }else{ document.getElementById("modalPasteRow").style.display="none"; document.getElementById("modalTitle").textContent="🛡️ 방어덱 제보"; body.innerHTML=`<input class="form-input" id="mDefName" placeholder="방어팀 이름 (필수)"><input class="form-input" id="mHeroes" placeholder="반지 추천"><div>
   <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
     <button type="button" class="pve-tab-btn" onclick="setMFormType('기본')" id="mft_기본" style="font-size:11px;padding:5px 8px;">기본</button>
     <button type="button" class="pve-tab-btn" onclick="setMFormType('밸런스')" id="mft_밸런스" style="font-size:11px;padding:5px 8px;">밸런스</button>
@@ -7296,7 +7291,8 @@ function submitAttackSug(){
   if(!name) return toast("이름을 입력하세요");
   const result=document.getElementById("mResult").value;
   if(!result) return toast("승리 또는 패배를 선택해주세요!");
-  db.ref(`suggestions/attack/${currentDefense}`).push({
+  const chars = window._modalChars || [];
+  const payload = {
     name, type:document.getElementById("mType").value,
     ring:document.getElementById("mRing").value,
     pet:document.getElementById("mPet").value,
@@ -7305,8 +7301,82 @@ function submitAttackSug(){
     skill:document.getElementById("mSkill").value,
     result:result||"",
     suggester:myNick, timestamp:Date.now()
-  });
+  };
+  if(chars.length > 0) payload.characters = chars;
+  db.ref(`suggestions/attack/${currentDefense}`).push(payload);
   toast("제보 완료! 🙏"); closeModal();
+}
+
+// ── 제보 모달 캐릭터 검색 ──
+function searchModalChars(query) {
+  const resultsDiv = document.getElementById('mCharSearchResults');
+  if(!resultsDiv) return;
+  if(!query || !query.trim()) { resultsDiv.style.display='none'; resultsDiv.innerHTML=''; return; }
+  if(!charactersDB || Object.keys(charactersDB).length===0) {
+    resultsDiv.style.display='block';
+    resultsDiv.innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px;">로딩 중...</div>';
+    loadCharactersDB().then(()=>searchModalChars(query));
+    return;
+  }
+  const q = query.toLowerCase();
+  const matches = Object.entries(charactersDB).filter(([n])=>n.toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length) {
+    resultsDiv.style.display='block';
+    resultsDiv.innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px;">검색 결과 없음</div>';
+    return;
+  }
+  resultsDiv.style.display='block';
+  resultsDiv.innerHTML = matches.map(([name,data])=>`
+    <div onclick="addModalChar('${name.replace(/'/g,"\'")}','${data.type}')"
+      style="padding:6px 8px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--surface);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
+      <span style="font-size:12px;font-weight:700;color:var(--text);">${name}</span>
+      <span style="font-size:10px;color:var(--text3);">${data.type}</span>
+    </div>
+  `).join('');
+}
+
+function addModalChar(name, type) {
+  if(!window._modalChars) window._modalChars = [];
+  if(window._modalChars.includes(name)) { toast(name+' 이미 추가됨'); return; }
+  if(window._modalChars.length >= 5) { toast('최대 5명까지 추가 가능'); return; }
+  window._modalChars.push(name);
+  renderModalChars();
+  // 검색창 초기화
+  const inp = document.getElementById('mCharSearch');
+  const res = document.getElementById('mCharSearchResults');
+  if(inp) inp.value='';
+  if(res) { res.innerHTML=''; res.style.display='none'; }
+}
+
+function removeModalChar(name) {
+  if(!window._modalChars) return;
+  window._modalChars = window._modalChars.filter(n=>n!==name);
+  renderModalChars();
+}
+
+function renderModalChars() {
+  const container = document.getElementById('mSelectedChars');
+  if(!container) return;
+  if(!window._modalChars || window._modalChars.length===0) {
+    container.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0;">선택된 캐릭터 없음</div>';
+    return;
+  }
+  container.innerHTML = window._modalChars.map(name=>`
+    <div style="display:flex;align-items:center;gap:4px;background:rgba(52,152,219,0.12);border:1px solid rgba(52,152,219,0.3);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:#3498db;">
+      ${name}
+      <span onclick="removeModalChar('${name.replace(/'/g,"\'")}")" style="cursor:pointer;color:rgba(52,152,219,0.6);font-size:14px;line-height:1;margin-left:2px;">×</span>
+    </div>
+  `).join('');
+}
+
+function clearModalCharSearch() {
+  const inp = document.getElementById('mCharSearch');
+  const res = document.getElementById('mCharSearchResults');
+  if(inp) inp.value='';
+  if(res) { res.innerHTML=''; res.style.display='none'; }
+  window._modalChars = [];
+  renderModalChars();
 }
 
 function submitDefenseAdd(){
@@ -8327,9 +8397,12 @@ function renderDeckCharButtons() {
   if(defChars.length > 0) {
     defSec.style.display = 'block';
     if(defNameSpan) defNameSpan.textContent = `(${deckInfo.defenseName || ''})`;
+    const usedNames = speedOrderPopup.filter(s=>s.name).map(s=>s.name);
     defDiv.innerHTML = defChars.map(charName => {
       const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
-      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\\'")}', '${charData.type}', 'enemy')"
+      const used = usedNames.includes(charName);
+      if(used) return `<button disabled style="padding:7px 13px;border-radius:8px;border:1px solid rgba(231,76,60,0.2);background:rgba(231,76,60,0.04);color:rgba(231,76,60,0.3);font-size:12px;font-weight:700;cursor:default;font-family:inherit;text-decoration:line-through;">🔴 ${charName}</button>`;
+      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\'")}', '${charData.type}', 'enemy')"
         style="padding:7px 13px;border-radius:8px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.12);color:#e74c3c;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
         onmouseover="this.style.background='rgba(231,76,60,0.25)'"
         onmouseout="this.style.background='rgba(231,76,60,0.12)'">🔴 ${charName}</button>`;
@@ -8347,9 +8420,12 @@ function renderDeckCharButtons() {
   if(atkChars.length > 0) {
     atkSec.style.display = 'block';
     if(atkNameSpan) atkNameSpan.textContent = `(${deckInfo.deckName || ''})`;
+    const usedNamesAtk = speedOrderPopup.filter(s=>s.name).map(s=>s.name);
     atkDiv.innerHTML = atkChars.map(charName => {
       const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
-      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\\'")}', '${charData.type}', 'ally')"
+      const used = usedNamesAtk.includes(charName);
+      if(used) return `<button disabled style="padding:7px 13px;border-radius:8px;border:1px solid rgba(52,152,219,0.2);background:rgba(52,152,219,0.04);color:rgba(52,152,219,0.3);font-size:12px;font-weight:700;cursor:default;font-family:inherit;text-decoration:line-through;">🔵 ${charName}</button>`;
+      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\'")}', '${charData.type}', 'ally')"
         style="padding:7px 13px;border-radius:8px;border:1px solid rgba(52,152,219,0.4);background:rgba(52,152,219,0.12);color:#3498db;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
         onmouseover="this.style.background='rgba(52,152,219,0.25)'"
         onmouseout="this.style.background='rgba(52,152,219,0.12)'">🔵 ${charName}</button>`;
@@ -8400,6 +8476,7 @@ function addDeckCharToSpeed(name, type, team) {
   };
   
   renderSpeedTeamsPopup();
+  renderDeckCharButtons();
   
   // 아군이면 속공 입력창에 포커스
   if(team === 'ally') {
@@ -8509,6 +8586,7 @@ function changeTeamPopup(idx, team) {
   speedOrderPopup[idx].speed = 0;
   speedOrderPopup[idx].type = '만능형';
   renderSpeedTeamsPopup();
+  renderDeckCharButtons();
 }
 
 function updateSlotPopup(idx, field, value) {
@@ -8701,6 +8779,7 @@ function quickAddChar(name, team, type = '만능형') {
   };
   
   renderSpeedTeamsPopup();
+  renderDeckCharButtons();
   
   // 아군이면 속공 입력창에 포커스
   if(team === 'ally') {
@@ -9367,6 +9446,75 @@ function extractCharacterNames(matched) {
   });
 }
 
+// ══ 이름 입력 자동완성 (방어팀/공격팀 이름란) ══
+// 입력값의 마지막 단어로 DB 캐릭터 검색 → 선택 시 이름에 추가
+function acNameInput(inputEl, dropdownId) {
+  const dropdown = document.getElementById(dropdownId);
+  if(!dropdown) return;
+
+  const val = inputEl.value;
+  // 마지막 단어(공백 이후) 추출
+  const parts = val.split(' ');
+  const lastWord = parts[parts.length - 1];
+
+  if(!lastWord || lastWord.length < 1) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  if(!charactersDB || Object.keys(charactersDB).length === 0) {
+    loadCharactersDB().then(() => acNameInput(inputEl, dropdownId));
+    return;
+  }
+
+  const q = lastWord.toLowerCase();
+  const matches = Object.keys(charactersDB).filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+
+  if(!matches.length) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = matches.map(name => `
+    <div onclick="acSelectChar('${inputEl.id}','${dropdownId}','${name.replace(/'/g,"\'")}")"
+      style="padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s;"
+      onmouseover="this.style.background='rgba(255,77,46,0.07)'"
+      onmouseout="this.style.background='transparent'">
+      ${name}
+    </div>
+  `).join('');
+}
+
+function acSelectChar(inputId, dropdownId, charName) {
+  const inputEl = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if(!inputEl) return;
+
+  // 마지막 단어를 선택한 캐릭터로 교체
+  const parts = inputEl.value.split(' ');
+  parts[parts.length - 1] = charName;
+  inputEl.value = parts.join(' ');
+
+  dropdown.style.display = 'none';
+  dropdown.innerHTML = '';
+  inputEl.focus();
+}
+
+// 외부 클릭 시 자동완성 닫기
+document.addEventListener('click', (e) => {
+  ['defNameAc','atkNameAc'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el && !el.contains(e.target)) {
+      const parent = el.parentElement;
+      if(parent && !parent.contains(e.target)) {
+        el.style.display = 'none';
+      }
+    }
+  });
+});
+
 // ══ 공격덱 캐릭터 선택 ══
 let selectedAtkChars = [];
 
@@ -9998,112 +10146,91 @@ function renderTodayGuildWar() {
 
 function createFortressCard(fortressKey) {
   const config = fortressConfig[fortressKey];
-  
-  // 안전 장치
   if(!todayGuildWar || !todayGuildWar.fortresses) {
     const emptyCard = document.createElement('div');
-    emptyCard.style.cssText = `background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;`;
+    emptyCard.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;';
     emptyCard.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;">데이터 로딩 중...</div>';
     return emptyCard;
   }
-  
+
   const fortressData = todayGuildWar.fortresses[fortressKey] || {};
   const enemyCount = Object.keys(fortressData).length;
-  
+  const hasData = enemyCount > 0;
+  const totalDefeats = hasData ? Object.values(fortressData).reduce((s,e) => s+(e.defeats||0), 0) : 0;
+
   const card = document.createElement('div');
-  card.style.cssText = `background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;`;
-  
-  // 헤더 (클릭 가능)
+  card.style.cssText = 'background:var(--surface);border:1px solid ' + (hasData ? 'rgba(231,76,60,0.3)' : 'var(--border)') + ';border-radius:var(--radius);overflow:hidden;';
+
+  // ── 헤더 ──
   const header = document.createElement('div');
-  header.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;transition:background 0.2s;`;
-  header.onmouseover = () => header.style.background = 'var(--surface2)';
-  header.onmouseout = () => header.style.background = 'transparent';
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;';
   header.onclick = () => {
-    const content = card.querySelector('.fortress-content');
-    const arrow = header.querySelector('.fortress-arrow');
-    if(content.style.display === 'none') {
-      content.style.display = 'block';
-      arrow.textContent = '▼';
-    } else {
-      content.style.display = 'none';
-      arrow.textContent = '▶';
-    }
+    const body = card.querySelector('.fortress-body');
+    const arrow = header.querySelector('.fw-arrow');
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    arrow.textContent = open ? '▶' : '▼';
   };
-  
-  header.innerHTML = `
-    <div>
-      <div style="font-size:13px;font-weight:900;color:var(--text);">${config.icon} ${config.name}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;">총 ${config.count}명 · ${enemyCount}명 기록</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      ${enemyCount>0?`<div style="font-size:11px;color:#e74c3c;font-weight:700;background:rgba(231,76,60,0.1);padding:4px 8px;border-radius:6px;">${enemyCount}명</div>`:''}
-      <div class="fortress-arrow" style="font-size:12px;color:var(--text3);">${enemyCount>0?'▼':'▶'}</div>
-    </div>
-  `;
+
+  const badge = hasData
+    ? '<div style="font-size:10px;font-weight:700;color:#e74c3c;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.25);padding:2px 7px;border-radius:10px;">' + enemyCount + '명 · ' + totalDefeats + '패</div>'
+    : '<div style="font-size:10px;color:var(--text3);">기록 없음</div>';
+  const arrowChar = hasData ? '▼' : '▶';
+  const titleColor = hasData ? 'var(--text)' : 'var(--text3)';
+
+  header.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<div style="font-size:13px;font-weight:900;color:' + titleColor + ';">' + config.icon + ' ' + config.name + '</div>' +
+      badge +
+    '</div>' +
+    '<div class="fw-arrow" style="font-size:11px;color:var(--text3);">' + arrowChar + '</div>';
   card.appendChild(header);
-  
-  // 내용
-  const content = document.createElement('div');
-  content.className = 'fortress-content';
-  content.style.cssText = `padding:0 14px 12px 14px;${enemyCount===0?'display:none;':''}`;
-  
-  if(enemyCount > 0) {
-    const enemyList = document.createElement('div');
-    enemyList.style.cssText = `display:flex;flex-direction:column;gap:6px;`;
-    
-    // 정렬: 최근 업데이트 순
-    const enemies = Object.entries(fortressData).sort((a,b) => b[1].lastUpdate - a[1].lastUpdate);
-    
-    enemies.forEach(([nick, data]) => {
-      const item = document.createElement('div');
-      item.style.cssText = `background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.15);border-radius:8px;padding:10px 12px;transition:all 0.2s;`;
-      
-      const timeStr = new Date(data.lastUpdate).toLocaleString('ko-KR', {
-        month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
-      });
-      
-      // 덱 이름 클릭 영역
+
+  // ── 바디 ──
+  const body = document.createElement('div');
+  body.className = 'fortress-body';
+  body.style.cssText = 'border-top:1px solid var(--border);display:' + (hasData ? 'block' : 'none') + ';';
+
+  if(hasData) {
+    const enemies = Object.entries(fortressData).sort((a,b) => (b[1].lastUpdate||0) - (a[1].lastUpdate||0));
+    enemies.forEach(([nick, data], idx) => {
+      const row = document.createElement('div');
+      const isLast = idx === enemies.length - 1;
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;' + (isLast ? '' : 'border-bottom:1px solid var(--border);');
+
+      const hasSpeed = data.speedMin !== null && data.speedMax !== null;
+      const speedTxt = hasSpeed ? (data.speedMin + '~' + data.speedMax) : '?';
       const deckClickable = data.deckName && data.defenseKey && data.deckKey;
-      
-      item.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:900;color:var(--text);">${nick}</div>
-            ${deckClickable ? `
-              <div style="font-size:11px;color:#3498db;margin-top:3px;cursor:pointer;display:inline-block;" 
-                   onmouseover="this.style.textDecoration='underline'" 
-                   onmouseout="this.style.textDecoration='none'"
-                   onclick="event.stopPropagation();goToAttackDeck('${data.defenseKey}','${data.deckKey}')">
-                덱: ${data.deckName} 🔗
-              </div>
-            ` : ''}
-            <div style="font-size:10px;color:var(--text3);margin-top:2px;">
-              ${data.defeats}회 패배 · ${timeStr}
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:10px;color:var(--text3);">추정 합산</div>
-            <div style="font-size:15px;font-weight:900;color:#e74c3c;">${data.speedMin} ~ ${data.speedMax}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;font-size:10px;">
-          <div style="background:var(--surface2);padding:4px 8px;border-radius:4px;color:var(--text3);">
-            범위: ${data.speedMax - data.speedMin + 1}
-          </div>
-        </div>
-      `;
-      enemyList.appendChild(item);
+
+      const defeatBadge = (data.defeats > 1)
+        ? '<span style="font-size:10px;font-weight:700;color:#e74c3c;background:rgba(231,76,60,0.1);padding:1px 5px;border-radius:4px;">' + data.defeats + '패</span>'
+        : '';
+      const deckLink = deckClickable
+        ? '<div style="font-size:10px;color:#3498db;margin-top:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation();goToAttackDeck(\'' + data.defenseKey + '\',\'' + data.deckKey + '\')">' + data.deckName + ' 🔗</div>'
+        : '';
+      const speedColor = hasSpeed ? '#e74c3c' : 'var(--text3)';
+      const speedSize  = hasSpeed ? '14px' : '16px';
+      const speedSub   = hasSpeed ? '<div style="font-size:9px;color:var(--text3);margin-top:1px;">추정 합산</div>' : '<div style="font-size:9px;color:var(--text3);">미기록</div>';
+
+      row.innerHTML =
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:5px;">' +
+            '<span style="font-size:13px;font-weight:900;color:var(--text);">' + nick + '</span>' +
+            defeatBadge +
+          '</div>' +
+          deckLink +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0;">' +
+          '<div style="font-size:' + speedSize + ';font-weight:900;color:' + speedColor + ';">' + speedTxt + '</div>' +
+          speedSub +
+        '</div>';
+      body.appendChild(row);
     });
-    
-    content.appendChild(enemyList);
-  } else {
-    content.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px;">아직 패배 기록이 없습니다</div>';
   }
-  
-  card.appendChild(content);
+
+  card.appendChild(body);
   return card;
 }
-
 async function resetTodayGuildWar() {
   if(!confirm('오늘의 길드전 기록을 모두 삭제하시겠습니까?')) return;
   
@@ -10249,7 +10376,9 @@ function approveAtk(dk,sk){ db.ref(`suggestions/attack/${dk}/${sk}`).get().then(
   // 공격팀 등록
   const initWin = d.result==="win" ? 1 : 0;
   const initLose = d.result==="lose" ? 1 : 0;
-  db.ref(`defenseTeams/${dk}/attackTeams`).push({name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:initWin,lose:initLose,maker:d.suggester});
+  const atkPayload = {name:d.name,type:d.type,ring:d.ring,pet:d.pet,formation:d.formation,armor:d.armor,skill:d.skill,win:initWin,lose:initLose,maker:d.suggester};
+  if(d.characters && d.characters.length>0) atkPayload.characters = d.characters;
+  db.ref(`defenseTeams/${dk}/attackTeams`).push(atkPayload);
   // 제보자 승패 자동 기록
   if(d.result==="win"||d.result==="lose"){
     db.ref("logs").push({nick:d.suggester,result:d.result,defense:dk,attack:sk,attackName:d.name,attackType:d.type||"",date:new Date().toISOString().slice(0,10),time:Date.now(),fromSuggest:true});
@@ -10303,23 +10432,9 @@ function updateThemeBtn(){
   const btn2=document.getElementById("themeBtnSb"); if(btn2) btn2.textContent=icon;
 }
 
-// ══ 카드 더보기/접기 ══
 let cardExtraOpen=false;
-function toggleCardExtra(){
-  cardExtraOpen=!cardExtraOpen;
-  const el=document.getElementById("cardExtraInfo");
-  const btn=document.getElementById("cardCollapseBtnText");
-  if(cardExtraOpen){
-    el.style.maxHeight=el.scrollHeight+"px";
-    btn.textContent="▲ 상세정보 접기";
-  } else {
-    el.style.maxHeight="0";
-    btn.textContent="▼ 상세정보 보기";
-  }
-}
-function openCardExtra(){
-  cardExtraOpen=false; toggleCardExtra();
-}
+function toggleCardExtra(){}
+function openCardExtra(){}
 
 // ══ 공지사항 ══
 let selectedNoticeKey="";
