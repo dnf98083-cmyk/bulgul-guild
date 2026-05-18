@@ -10323,9 +10323,8 @@ function createFortressCard(fortressKey) {
         '</div>' +
         ((() => {
           const hasMySub = data.submissions && Object.values(data.submissions).some(s => s.by === myNick);
-          const canDelete = hasMySub || myRole === '관리자';
           return (hasMySub ? '<button onclick="event.stopPropagation();editTodayWarEntry(\'' + fortressKey + '\',\'' + nick + '\')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 3px;flex-shrink:0;" title="수정">✏️</button>' : '') +
-                 (canDelete ? '<button onclick="event.stopPropagation();deleteTodayWarEntry(\'' + fortressKey + '\',\'' + nick + '\')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 3px;flex-shrink:0;" title="삭제">🗑️</button>' : '');
+                 (myRole === '관리자' ? '<button onclick="event.stopPropagation();deleteTodayWarEntry(\'' + fortressKey + '\',\'' + nick + '\')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 3px;flex-shrink:0;" title="삭제">🗑️</button>' : '');
         })());
       body.appendChild(row);
 
