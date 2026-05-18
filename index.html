@@ -3055,6 +3055,33 @@ body::before {
     </div>
   </div>
 
+  <!-- ══ 오늘의 길드전 기록 수정 모달 ══ -->
+  <div id="twEditModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box" onclick="event.stopPropagation()" style="max-width:360px;">
+      <div style="font-size:16px;font-weight:900;margin-bottom:16px;">✏️ 기록 수정</div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">결과</label>
+        <select id="twEditResult" class="form-select" style="margin:0;">
+          <option value="win">⚡ 속공 승리 (우리가 속공 가져감)</option>
+          <option value="lose">💀 속공 패배 (적이 속공 가져감)</option>
+          <option value="none">📝 속공 기록 없음</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">적 합산 속공 최솟값</label>
+        <input id="twEditSpeedMin" type="number" class="form-input" placeholder="속공 기록 없으면 비워두세요" style="margin:0;">
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">적 합산 속공 최댓값</label>
+        <input id="twEditSpeedMax" type="number" class="form-input" placeholder="속공 기록 없으면 비워두세요" style="margin:0;">
+      </div>
+      <div class="modal-btns">
+        <button onclick="document.getElementById('twEditModal').classList.remove('open')" style="padding:13px;border-radius:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">취소</button>
+        <button onclick="saveTodayWarEdit()" style="padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#ff5530,#ff3322);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ 랭킹 ══ -->
   <div id="rankingScreen" class="screen" style="display:none;padding-bottom:calc(var(--tab-h) + 160px);">
     <div class="page-header">
@@ -8214,17 +8241,24 @@ async function skipDefeatSpeed() {
   }
   
   const existing = todayGuildWar.fortresses[fortress][enemy];
-  
+  const subId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const newSub = { by: myNick, speedMin: null, speedMax: null, result: 'none', ts: Date.now() };
+
   if(existing) {
+    const subs = existing.submissions || {};
+    subs[subId] = newSub;
     todayGuildWar.fortresses[fortress][enemy] = {
       ...existing,
-      defeats: existing.defeats + 1,
+      defeats: Object.keys(subs).length,
       lastUpdate: Date.now(),
       deckName: deckInfo.deckName || existing.deckName,
       deckKey: deckInfo.deckKey || existing.deckKey,
-      defenseKey: deckInfo.defenseKey || existing.defenseKey
+      defenseKey: deckInfo.defenseKey || existing.defenseKey,
+      submissions: subs
     };
   } else {
+    const subs = {};
+    subs[subId] = newSub;
     todayGuildWar.fortresses[fortress][enemy] = {
       speedMin: null,
       speedMax: null,
@@ -8232,10 +8266,11 @@ async function skipDefeatSpeed() {
       lastUpdate: Date.now(),
       deckName: deckInfo.deckName,
       deckKey: deckInfo.deckKey,
-      defenseKey: deckInfo.defenseKey
+      defenseKey: deckInfo.defenseKey,
+      submissions: subs
     };
   }
-  
+
   await db.ref('todayGuildWar').set(todayGuildWar);
   console.log('✅ 오늘의 길드전 저장 완료 (속공 없음)');
   
@@ -9924,23 +9959,30 @@ async function saveDefeatRecord(speedMin, speedMax) {
   }
   
   const existing = todayGuildWar.fortresses[fortress][enemy];
-  
+  const subId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const newSub = { by: myNick, speedMin: speedMin, speedMax: speedMax, result: speedResultChoice || 'win', ts: Date.now() };
+
   if(existing) {
-    // 기존 데이터와 교집합
-    const newMin = Math.max(speedMin, existing.speedMin);
-    const newMax = Math.min(speedMax, existing.speedMax);
-    
+    const subs = existing.submissions || {};
+    // 기존 submissions이 없으면 기존 집계 데이터를 unknown 제출로 마이그레이션
+    if(!existing.submissions && existing.defeats > 0) {
+      subs['_legacy'] = { by: '?', speedMin: existing.speedMin, speedMax: existing.speedMax, result: 'win', ts: existing.lastUpdate || 0 };
+    }
+    subs[subId] = newSub;
+    const agg = recalculateEnemyAgg(subs);
     todayGuildWar.fortresses[fortress][enemy] = {
-      speedMin: newMin,
-      speedMax: newMax,
-      defeats: existing.defeats + 1,
+      speedMin: agg.speedMin,
+      speedMax: agg.speedMax,
+      defeats: agg.defeats,
       lastUpdate: Date.now(),
       deckName: deckInfo.deckName || existing.deckName,
       deckKey: deckInfo.deckKey || existing.deckKey,
-      defenseKey: deckInfo.defenseKey || existing.defenseKey
+      defenseKey: deckInfo.defenseKey || existing.defenseKey,
+      submissions: subs
     };
   } else {
-    // 새로 생성
+    const subs = {};
+    subs[subId] = newSub;
     todayGuildWar.fortresses[fortress][enemy] = {
       speedMin: speedMin,
       speedMax: speedMax,
@@ -9948,7 +9990,8 @@ async function saveDefeatRecord(speedMin, speedMax) {
       lastUpdate: Date.now(),
       deckName: deckInfo.deckName,
       deckKey: deckInfo.deckKey,
-      defenseKey: deckInfo.defenseKey
+      defenseKey: deckInfo.defenseKey,
+      submissions: subs
     };
   }
   
@@ -10247,6 +10290,33 @@ function createFortressCard(fortressKey) {
           speedSub +
         '</div>';
       body.appendChild(row);
+
+      // 제출 목록 (수정/삭제)
+      const subs = data.submissions ? Object.entries(data.submissions) : [];
+      if(subs.length > 0) {
+        const subWrap = document.createElement('div');
+        subWrap.style.cssText = 'padding:0 14px 8px;display:flex;flex-direction:column;gap:4px;' + (isLast ? '' : '');
+        subs.sort((a,b) => (a[1].ts||0)-(b[1].ts||0)).forEach(([sid, sub]) => {
+          const canEdit = sub.by === myNick || myRole === '관리자';
+          const subSpeedTxt = (sub.speedMin !== null && sub.speedMax !== null) ? (sub.speedMin + '~' + sub.speedMax) : '속공없음';
+          const resultLabel = sub.result === 'win' ? '⚡승' : sub.result === 'lose' ? '💀패' : '📝';
+          const byLabel = sub.by === '?' ? '(이전기록)' : sub.by;
+          const subRow = document.createElement('div');
+          subRow.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 9px;';
+          subRow.innerHTML =
+            '<div style="font-size:10px;color:var(--text3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+              '<span style="font-weight:700;color:var(--text2);">' + byLabel + '</span>' +
+              ' ' + resultLabel + ' ' +
+              '<span style="color:#e74c3c;font-weight:700;">' + subSpeedTxt + '</span>' +
+            '</div>' +
+            (canEdit
+              ? '<button onclick="event.stopPropagation();editTodayWarSub(\'' + fortressKey + '\',\'' + nick + '\',\'' + sid + '\')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;" title="수정">✏️</button>' +
+                '<button onclick="event.stopPropagation();deleteTodayWarSub(\'' + fortressKey + '\',\'' + nick + '\',\'' + sid + '\')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;" title="삭제">🗑️</button>'
+              : '');
+          subWrap.appendChild(subRow);
+        });
+        body.appendChild(subWrap);
+      }
     });
   }
 
@@ -10265,6 +10335,99 @@ async function resetTodayGuildWar() {
   await db.ref('todayGuildWar').set(todayGuildWar);
   renderTodayGuildWar();
   toast('기록이 초기화되었습니다');
+}
+
+// ══ 오늘의 길드전 수정/삭제 ══
+
+function recalculateEnemyAgg(submissions) {
+  const subs = Object.values(submissions || {});
+  if(subs.length === 0) return null;
+  const speedSubs = subs.filter(s => s.speedMin !== null && s.speedMax !== null);
+  let speedMin = null, speedMax = null;
+  if(speedSubs.length > 0) {
+    speedMin = Math.max(...speedSubs.map(s => s.speedMin));
+    speedMax = Math.min(...speedSubs.map(s => s.speedMax));
+    if(speedMin > speedMax) {
+      const latest = speedSubs.slice().sort((a,b) => (b.ts||0)-(a.ts||0))[0];
+      speedMin = latest.speedMin;
+      speedMax = latest.speedMax;
+    }
+  }
+  return { speedMin, speedMax, defeats: subs.length };
+}
+
+let _twEditCtx = null;
+
+function editTodayWarSub(fortressKey, enemyNick, subId) {
+  const entry = todayGuildWar?.fortresses?.[fortressKey]?.[enemyNick];
+  const sub = entry?.submissions?.[subId];
+  if(!sub) { toast('데이터를 찾을 수 없습니다'); return; }
+  _twEditCtx = { fortressKey, enemyNick, subId };
+  document.getElementById('twEditSpeedMin').value = sub.speedMin !== null && sub.speedMin !== undefined ? sub.speedMin : '';
+  document.getElementById('twEditSpeedMax').value = sub.speedMax !== null && sub.speedMax !== undefined ? sub.speedMax : '';
+  document.getElementById('twEditResult').value = sub.result || 'none';
+  document.getElementById('twEditModal').classList.add('open');
+}
+
+async function saveTodayWarEdit() {
+  if(!_twEditCtx) return;
+  const { fortressKey, enemyNick, subId } = _twEditCtx;
+  const minRaw = document.getElementById('twEditSpeedMin').value.trim();
+  const maxRaw = document.getElementById('twEditSpeedMax').value.trim();
+  const result = document.getElementById('twEditResult').value;
+  const minVal = minRaw !== '' ? parseInt(minRaw) : null;
+  const maxVal = maxRaw !== '' ? parseInt(maxRaw) : null;
+  const hasSpeed = minVal !== null && maxVal !== null && !isNaN(minVal) && !isNaN(maxVal) && minVal <= maxVal;
+
+  const entry = todayGuildWar?.fortresses?.[fortressKey]?.[enemyNick];
+  if(!entry?.submissions?.[subId]) { toast('데이터를 찾을 수 없습니다'); return; }
+
+  entry.submissions[subId] = {
+    ...entry.submissions[subId],
+    speedMin: hasSpeed ? minVal : null,
+    speedMax: hasSpeed ? maxVal : null,
+    result,
+    ts: entry.submissions[subId].ts
+  };
+
+  const agg = recalculateEnemyAgg(entry.submissions);
+  if(agg) {
+    entry.speedMin = agg.speedMin;
+    entry.speedMax = agg.speedMax;
+    entry.defeats = agg.defeats;
+    entry.lastUpdate = Date.now();
+  }
+
+  await db.ref('todayGuildWar').set(todayGuildWar);
+  document.getElementById('twEditModal').classList.remove('open');
+  _twEditCtx = null;
+  renderTodayGuildWar();
+  toast('수정되었습니다');
+}
+
+async function deleteTodayWarSub(fortressKey, enemyNick, subId) {
+  if(!confirm('이 기록을 삭제하시겠습니까?')) return;
+  const entry = todayGuildWar?.fortresses?.[fortressKey]?.[enemyNick];
+  if(!entry?.submissions) return;
+
+  delete entry.submissions[subId];
+  const remaining = Object.keys(entry.submissions).length;
+
+  if(remaining === 0) {
+    delete todayGuildWar.fortresses[fortressKey][enemyNick];
+  } else {
+    const agg = recalculateEnemyAgg(entry.submissions);
+    if(agg) {
+      entry.speedMin = agg.speedMin;
+      entry.speedMax = agg.speedMax;
+      entry.defeats = agg.defeats;
+      entry.lastUpdate = Date.now();
+    }
+  }
+
+  await db.ref('todayGuildWar').set(todayGuildWar);
+  renderTodayGuildWar();
+  toast('삭제되었습니다');
 }
 
 // ══ 제보 검토 모달 ══
