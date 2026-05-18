@@ -10436,11 +10436,12 @@ async function deleteTodayWarEntry(fortressKey, enemyNick) {
   const entry = todayGuildWar?.fortresses?.[fortressKey]?.[enemyNick];
   if(!entry) return;
 
+  const isAdmin = myRole === '관리자';
+
   // 본인 submission 찾기
   const mySubs = entry.submissions
     ? Object.entries(entry.submissions).filter(([,s]) => s.by === myNick)
     : [];
-  const isAdmin = myRole === '관리자';
 
   if(!isAdmin && mySubs.length === 0) {
     toast('본인이 기록한 내용만 삭제할 수 있습니다');
