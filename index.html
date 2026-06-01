@@ -8274,27 +8274,39 @@ async function skipDefeatSpeed() {
   await db.ref('todayGuildWar').set(todayGuildWar);
   console.log('✅ 오늘의 길드전 저장 완료 (속공 없음)');
   
-  // 공격덱 패배 카운트 증가
+  // 공격덱 패배 카운트 증가 + 로그 기록
   if(deckInfo.defenseKey && deckInfo.deckKey) {
     const atkSnap = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}/lose`).once('value');
     const currentLose = atkSnap.val() || 0;
     await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).update({lose: currentLose + 1});
     
-    // 패배 로그 기록
+    // 패배 로그 기록 (덱 정보 있는 경우)
     const atkData = await db.ref(`defenseTeams/${deckInfo.defenseKey}/attackTeams/${deckInfo.deckKey}`).once('value');
     const atk = atkData.val();
-    if(atk) {
-      await db.ref("logs").push({
-        nick: myNick,
-        result: 'lose',
-        defense: deckInfo.defenseKey,
-        attack: deckInfo.deckKey,
-        attackName: atk.name,
-        attackType: atk.type,
-        date: new Date().toISOString().slice(0,10),
-        time: Date.now()
-      });
-    }
+    await db.ref("logs").push({
+      nick: myNick,
+      result: 'lose',
+      defense: deckInfo.defenseKey,
+      attack: deckInfo.deckKey,
+      attackName: atk?.name || deckInfo.deckName || '알 수 없음',
+      attackType: atk?.type || '',
+      defenseName: deckInfo.defenseName || '',
+      date: new Date().toISOString().slice(0,10),
+      time: Date.now()
+    });
+  } else {
+    // 덱 정보 없어도 개인 패배 로그는 반드시 기록
+    await db.ref("logs").push({
+      nick: myNick,
+      result: 'lose',
+      defense: deckInfo.defenseKey || '__skip__',
+      attack: deckInfo.deckKey || '__skip__',
+      attackName: deckInfo.deckName || '건너뛰기',
+      attackType: '',
+      defenseName: deckInfo.defenseName || '',
+      date: new Date().toISOString().slice(0,10),
+      time: Date.now()
+    });
   }
   
   closeDefeatRecordModal();
