@@ -8407,6 +8407,8 @@ function closeSpeedCalcPopup() {
   document.getElementById('speedCalcPopup').style.display = 'none';
   document.body.style.overflow = '';
   document.getElementById('speedResultCardPopup').style.display = 'none';
+  const regSec = document.getElementById('guildWarRegisterSection');
+  if(regSec) regSec.style.display = 'none';
 }
 
 // 검색창 토글
@@ -8435,11 +8437,10 @@ function renderDeckCharButtons() {
     defDiv.innerHTML = defChars.map(charName => {
       const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
       const used = usedNames.includes(charName);
-      if(used) return `<button disabled style="padding:7px 13px;border-radius:8px;border:1px solid rgba(231,76,60,0.2);background:rgba(231,76,60,0.04);color:rgba(231,76,60,0.3);font-size:12px;font-weight:700;cursor:default;font-family:inherit;text-decoration:line-through;">🔴 ${charName}</button>`;
-      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\'")}', '${charData.type}', 'enemy')"
-        style="padding:7px 13px;border-radius:8px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.12);color:#e74c3c;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
-        onmouseover="this.style.background='rgba(231,76,60,0.25)'"
-        onmouseout="this.style.background='rgba(231,76,60,0.12)'">🔴 ${charName}</button>`;
+      const bg = used ? 'rgba(231,76,60,0.35)' : 'rgba(231,76,60,0.12)';
+      const border = used ? '2px solid #e74c3c' : '1px solid rgba(231,76,60,0.4)';
+      const lbl = used ? ('\u2713 '+charName) : ('\uD83D\uDD34 '+charName);
+      return '<button onclick="addDeckCharToSpeed(\'' + charName.replace(/\'/g, "\\\'") + '\', \''+charData.type+'\', \'enemy\')" style="padding:7px 13px;border-radius:8px;border:'+border+';background:'+bg+';color:#e74c3c;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">'+lbl+'</button>';
     }).join('');
   } else {
     defSec.style.display = 'none';
@@ -8458,11 +8459,10 @@ function renderDeckCharButtons() {
     atkDiv.innerHTML = atkChars.map(charName => {
       const charData = (charactersDB && charactersDB[charName]) ? charactersDB[charName] : {type: '만능형'};
       const used = usedNamesAtk.includes(charName);
-      if(used) return `<button disabled style="padding:7px 13px;border-radius:8px;border:1px solid rgba(52,152,219,0.2);background:rgba(52,152,219,0.04);color:rgba(52,152,219,0.3);font-size:12px;font-weight:700;cursor:default;font-family:inherit;text-decoration:line-through;">🔵 ${charName}</button>`;
-      return `<button onclick="addDeckCharToSpeed('${charName.replace(/'/g,"\'")}', '${charData.type}', 'ally')"
-        style="padding:7px 13px;border-radius:8px;border:1px solid rgba(52,152,219,0.4);background:rgba(52,152,219,0.12);color:#3498db;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
-        onmouseover="this.style.background='rgba(52,152,219,0.25)'"
-        onmouseout="this.style.background='rgba(52,152,219,0.12)'">🔵 ${charName}</button>`;
+      const bg = used ? 'rgba(52,152,219,0.35)' : 'rgba(52,152,219,0.12)';
+      const border = used ? '2px solid #3498db' : '1px solid rgba(52,152,219,0.4)';
+      const lbl = used ? ('\u2713 '+charName) : ('\uD83D\uDD35 '+charName);
+      return '<button onclick="addDeckCharToSpeed(\'' + charName.replace(/\'/g, "\\\'") + '\', \''+charData.type+'\', \'ally\')" style="padding:7px 13px;border-radius:8px;border:'+border+';background:'+bg+';color:#3498db;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">'+lbl+'</button>';
     }).join('');
   } else {
     atkSec.style.display = 'none';
@@ -8479,46 +8479,37 @@ function renderDeckCharButtons() {
 
 // 덱 캐릭터를 속공 슬롯에 추가
 function addDeckCharToSpeed(name, type, team) {
-  // 아군/적군 개수 체크
-  if(team === 'ally') {
-    const allyCount = speedOrderPopup.filter(s => s.team === 'ally').length;
-    if(allyCount >= 3) {
-      toast('아군은 최대 3개까지만 선택할 수 있습니다');
-      return;
-    }
-  } else if(team === 'enemy') {
-    const enemyCount = speedOrderPopup.filter(s => s.team === 'enemy').length;
-    if(enemyCount >= 3) {
-      toast('적군은 최대 3개까지만 선택할 수 있습니다');
-      return;
-    }
-  }
-  
-  // 빈 슬롯 찾기
-  const emptyIdx = speedOrderPopup.findIndex(s => s.team === '');
-  if(emptyIdx === -1) {
-    toast('빈 슬롯이 없습니다');
+  // 이미 슬롯에 있으면 제거 (토글)
+  const existIdx = speedOrderPopup.findIndex(s => s.name === name && s.team === team);
+  if(existIdx !== -1) {
+    speedOrderPopup[existIdx] = {team:'', name:'', speed:0, type:'만능형'};
+    renderSpeedTeamsPopup();
+    renderDeckCharButtons();
     return;
   }
-  
-  // 슬롯에 추가
-  speedOrderPopup[emptyIdx] = {
-    team: team,
-    name: name,
-    speed: 0,
-    type: type
-  };
-  
+
+  // 개수 체크
+  if(team === 'ally') {
+    const allyCount = speedOrderPopup.filter(s => s.team === 'ally').length;
+    if(allyCount >= 3) { toast('아군은 최대 3개까지만 선택할 수 있습니다'); return; }
+  } else if(team === 'enemy') {
+    const enemyCount = speedOrderPopup.filter(s => s.team === 'enemy').length;
+    if(enemyCount >= 3) { toast('적군은 최대 3개까지만 선택할 수 있습니다'); return; }
+  }
+
+  // 빈 슬롯 찾기
+  const emptyIdx = speedOrderPopup.findIndex(s => s.team === '');
+  if(emptyIdx === -1) { toast('빈 슬롯이 없습니다'); return; }
+
+  speedOrderPopup[emptyIdx] = { team, name, speed: 0, type };
+
   renderSpeedTeamsPopup();
   renderDeckCharButtons();
-  
-  // 아군이면 속공 입력창에 포커스
+
   if(team === 'ally') {
     setTimeout(() => {
       const inputs = document.querySelectorAll('#speedOrderSlotsPopup input[type="number"]');
-      if(inputs[inputs.length - 1]) {
-        inputs[inputs.length - 1].focus();
-      }
+      if(inputs[inputs.length - 1]) inputs[inputs.length - 1].focus();
     }, 100);
   }
 }
@@ -8755,6 +8746,34 @@ function analyzeSpeedPopup() {
     enemyMinTotal,
     enemyMaxTotal
   };
+
+  // ── 🏰 오늘의 길드전 등록 미리보기 ──
+  const rec = window._defeatRecord || {};
+  const deckInfo = window._defeatDeckInfo || {};
+  const fortressLabel = (() => {
+    const m = {'outer1':'외성 1','outer2':'외성 2','outer3':'외성 3','outer4':'외성 4','outer5':'외성 5','inner1':'내성 1','inner2':'내성 2','inner3':'내성 3','main':'본성'};
+    return m[rec.fortress] || rec.fortress || '성';
+  })();
+  const enemyNick = rec.enemy || '상대';
+  const resultLabel = speedResultChoicePopup === 'win' ? '속공승' : '속공패';
+
+  const previewLines = [
+    `[속공 분석] ${enemyNick} · ${fortressLabel}`,
+    `총속공 추정: ${enemyMinTotal}~${enemyMaxTotal} (아군 ${allyTotal} · ${resultLabel})`,
+    ...results.map(r => `• ${r.name}: ${r.minSpeed}~${r.maxSpeed} (${r.type})`),
+    `⚔️ 기록자: ${myNick || '?'} · ${deckInfo.deckName || '덱 정보 없음'}`
+  ];
+
+  const chipColors = [
+    `<span style="display:inline-block;background:rgba(255,77,46,0.15);border:1px solid rgba(255,77,46,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--accent2);margin:2px;">${fortressLabel}</span>`,
+    `<span style="display:inline-block;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#e74c3c;margin:2px;">${enemyNick}</span>`,
+    `<span style="display:inline-block;background:rgba(241,196,15,0.15);border:1px solid rgba(241,196,15,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#f1c40f;margin:2px;">총속공 ${enemyMinTotal}~${enemyMaxTotal}</span>`,
+    ...results.map(r => `<span style="display:inline-block;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#e74c3c;margin:2px;">${r.name} ${r.minSpeed}~${r.maxSpeed}</span>`)
+  ];
+
+  document.getElementById('guildWarPreviewText').textContent = previewLines.join('\n');
+  document.getElementById('guildWarPreviewChips').innerHTML = chipColors.join('');
+  document.getElementById('guildWarRegisterSection').style.display = 'block';
 }
 
 async function saveSpeedAndDefeat() {
@@ -8791,6 +8810,8 @@ async function saveSpeedAndDefeat() {
     _twEditCtx = null;
     delete window._defeatRecord;
     delete window._speedCalcResult;
+    const regSec = document.getElementById('guildWarRegisterSection');
+    if(regSec) regSec.style.display = 'none';
     renderTodayGuildWar();
     switchTab('todayWar');
     toast('수정되었습니다');
@@ -8810,6 +8831,12 @@ async function saveSpeedAndDefeat() {
   
   // 정리
   delete window._speedCalcResult;
+
+  // 길드전 등록 섹션 숨기기
+  const regSec = document.getElementById('guildWarRegisterSection');
+  if(regSec) regSec.style.display = 'none';
+
+  toast('🏰 속공 분석이 오늘의 길드전에 등록됐습니다!');
 }
 
 // 빠른 입력 기능
@@ -9962,9 +9989,12 @@ function clearAllSlotsPopup() {
   ];
   
   document.getElementById('speedResultCardPopup').style.display = 'none';
+  const regSec = document.getElementById('guildWarRegisterSection');
+  if(regSec) regSec.style.display = 'none';
   delete window._speedCalcResult;
   
   renderSpeedTeamsPopup();
+  renderDeckCharButtons();
   toast('초기화되었습니다');
 }
 
@@ -10309,6 +10339,9 @@ function createFortressCard(fortressKey) {
       const speedSize  = hasSpeed ? '14px' : '16px';
       const speedSub   = hasSpeed ? '<div style="font-size:9px;color:var(--text3);margin-top:1px;">추정 합산</div>' : '<div style="font-size:9px;color:var(--text3);">미기록</div>';
 
+      // 상세보기 가능 여부 (speedOrderData 있는 submission이 하나라도 있으면)
+      const hasDetail = data.submissions && Object.values(data.submissions).some(s => s.speedOrderData && s.speedOrderData.length);
+
       row.innerHTML =
         '<div style="flex:1;min-width:0;">' +
           '<div style="display:flex;align-items:center;gap:5px;">' +
@@ -10321,6 +10354,7 @@ function createFortressCard(fortressKey) {
           '<div style="font-size:' + speedSize + ';font-weight:900;color:' + speedColor + ';">' + speedTxt + '</div>' +
           speedSub +
         '</div>' +
+        (hasDetail ? '<button onclick="event.stopPropagation();openSpeedDetail(\'' + fortressKey + '\',\'' + nick + '\')" style="background:rgba(52,152,219,0.12);border:1px solid rgba(52,152,219,0.3);border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;color:#3498db;padding:4px 8px;flex-shrink:0;" title="상세보기">🔍 분석</button>' : '') +
         ((() => {
           const hasMySub = data.submissions && Object.values(data.submissions).some(s => s.by === myNick);
           return (hasMySub ? '<button onclick="event.stopPropagation();editTodayWarEntry(\'' + fortressKey + '\',\'' + nick + '\')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 3px;flex-shrink:0;" title="수정">✏️</button>' : '') +
@@ -15891,7 +15925,18 @@ function goToTodayDeck(defKey,atkKey){
       </div>
 
       <!-- 결과 표시 -->
-      <div id="speedResultCardPopup" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:14px;"></div>
+      <div id="speedResultCardPopup" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:10px;"></div>
+
+      <!-- 🏰 오늘의 길드전 등록 섹션 -->
+      <div id="guildWarRegisterSection" style="display:none;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.25);border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:#3498db;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          🏰 오늘의 길드전에 등록
+          <span style="font-size:10px;color:var(--text3);font-weight:400;">— 길드원 공개</span>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">📋 등록 미리보기</div>
+        <div id="guildWarPreviewText" style="font-size:12px;color:var(--text2);line-height:1.7;background:var(--surface3);border-radius:8px;padding:10px 12px;white-space:pre-wrap;border:1px solid var(--border);margin-bottom:8px;"></div>
+        <div id="guildWarPreviewChips" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+      </div>
 
       <!-- 버튼 -->
       <div style="display:flex;gap:8px;">
@@ -15901,6 +15946,130 @@ function goToTodayDeck(defKey,atkKey){
     </div>
   </div>
 </div>
+
+<!-- ══ 속공 상세보기 팝업 ══ -->
+<div id="speedDetailPopup" onclick="if(event.target===this)closeSpeedDetail()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:4000;
+         align-items:flex-end;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:22px 22px 0 0;
+              width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;
+              box-shadow:0 -8px 40px rgba(0,0,0,0.6);overflow:hidden;">
+    <!-- 핸들 -->
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0;"></div>
+    <!-- 헤더 -->
+    <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border);
+                display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div id="speedDetailTitle" style="font-size:16px;font-weight:900;color:var(--text);"></div>
+        <div id="speedDetailMeta" style="font-size:11px;color:var(--text3);margin-top:3px;"></div>
+      </div>
+      <button onclick="closeSpeedDetail()"
+        style="background:var(--surface2);border:none;color:var(--text2);font-size:18px;
+               width:32px;height:32px;border-radius:50%;cursor:pointer;flex-shrink:0;
+               display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- 본문 -->
+    <div style="overflow-y:auto;padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:10px;">
+      <div id="speedDetailBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ 속공 상세보기 ══
+function openSpeedDetail(fortressKey, enemyNick) {
+  const entry = todayGuildWar?.fortresses?.[fortressKey]?.[enemyNick];
+  if(!entry) { toast('데이터를 찾을 수 없습니다'); return; }
+
+  const config = fortressConfig[fortressKey];
+  const hasSpeed = entry.speedMin != null && entry.speedMax != null && !isNaN(entry.speedMin);
+
+  document.getElementById('speedDetailTitle').textContent = '⚡ ' + enemyNick + ' 속공 분석';
+  document.getElementById('speedDetailMeta').textContent = config.icon + ' ' + config.name + '  ·  ' + entry.defeats + '회 패배 기록';
+
+  const subs = entry.submissions ? Object.entries(entry.submissions).sort((a,b) => (b[1].ts||0)-(a[1].ts||0)) : [];
+
+  let html = '';
+
+  // ── 합산 요약 ──
+  if(hasSpeed) {
+    html += `
+      <div style="background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:12px;padding:14px;margin-bottom:2px;">
+        <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.8px;">📊 집계 속공 범위</div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <div style="font-size:26px;font-weight:900;color:#e74c3c;">${entry.speedMin}~${entry.speedMax}</div>
+          <div style="font-size:11px;color:var(--text3);">추정 합산</div>
+        </div>
+      </div>`;
+  }
+
+  // ── 제출별 상세 ──
+  if(subs.length > 0) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-top:4px;margin-bottom:6px;">📋 제출 기록 (${subs.length}건)</div>`;
+
+    subs.forEach(([sid, sub], idx) => {
+      const resultLabel = sub.result === 'win' ? '⚡ 속공승' : sub.result === 'lose' ? '💀 속공패' : '📝 기록';
+      const resultColor = sub.result === 'win' ? '#27ae60' : sub.result === 'lose' ? '#e74c3c' : 'var(--text3)';
+      const subSpeedTxt = (sub.speedMin != null && sub.speedMax != null && !isNaN(sub.speedMin)) ? sub.speedMin + '~' + sub.speedMax : '미기록';
+      const byLabel = sub.by === '?' ? '이전 기록' : (sub.by || '?');
+      const timeStr = sub.ts ? new Date(sub.ts).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}) : '';
+
+      // speedOrderData로 순서 재현
+      let orderHtml = '';
+      if(sub.speedOrderData && sub.speedOrderData.length) {
+        const filled = sub.speedOrderData.filter(s => s.team !== '');
+        if(filled.length) {
+          orderHtml = '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">';
+          filled.forEach((s, i) => {
+            const isAlly = s.team === 'ally';
+            const teamColor = isAlly ? '#3498db' : '#e74c3c';
+            const teamBg = isAlly ? 'rgba(52,152,219,0.1)' : 'rgba(231,76,60,0.1)';
+            const teamLabel = isAlly ? '🔵 아군' : '🔴 적군';
+            const speedOrType = isAlly
+              ? `<span style="font-size:12px;font-weight:900;color:${teamColor};">${s.speed}</span>`
+              : `<span style="font-size:11px;color:var(--text3);">${s.type}</span>`;
+            orderHtml += `
+              <div style="display:flex;align-items:center;gap:7px;background:${teamBg};border-radius:7px;padding:5px 10px;">
+                <div style="width:20px;height:20px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:var(--text3);flex-shrink:0;">${i+1}</div>
+                <span style="font-size:10px;font-weight:700;color:${teamColor};flex-shrink:0;">${teamLabel}</span>
+                <span style="font-size:12px;font-weight:700;color:var(--text);flex:1;">${s.name || '이름없음'}</span>
+                ${speedOrType}
+              </div>`;
+          });
+          orderHtml += '</div>';
+        }
+      }
+
+      html += `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;font-weight:900;color:var(--text);">${byLabel}</span>
+              <span style="font-size:11px;font-weight:700;color:${resultColor};background:rgba(${sub.result==='win'?'39,174,96':sub.result==='lose'?'231,76,60':'120,120,120'},0.1);border:1px solid rgba(${sub.result==='win'?'39,174,96':sub.result==='lose'?'231,76,60':'120,120,120'},0.3);border-radius:20px;padding:2px 8px;">${resultLabel}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:14px;font-weight:900;color:#e74c3c;">${subSpeedTxt}</span>
+              ${timeStr ? '<span style="font-size:10px;color:var(--text3);">' + timeStr + '</span>' : ''}
+            </div>
+          </div>
+          ${orderHtml}
+        </div>`;
+    });
+  } else {
+    html += '<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px;">상세 데이터가 없습니다</div>';
+  }
+
+  document.getElementById('speedDetailBody').innerHTML = html;
+  const popup = document.getElementById('speedDetailPopup');
+  popup.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSpeedDetail() {
+  document.getElementById('speedDetailPopup').style.display = 'none';
+  document.body.style.overflow = '';
+}
+</script>
 
 <!-- ══ 공지사항 상세 팝업 ══ -->
 <div id="noticePopupOverlay" onclick="if(event.target===this)closeNoticePopup()"
