@@ -4398,7 +4398,20 @@ function previewModalFormation(){
   if(!input || !preview) return;
   renderFormation(input.value.trim(), preview, true, (newVal)=>{
     input.value = newVal;
+    syncFormationToModalChars(newVal);
   });
+  syncFormationToModalChars(input.value.trim());
+}
+
+function syncFormationToModalChars(formationText){
+  if(!formationText || formationText==="-") return;
+  const type = detectFormationType(formationText);
+  if(!type) return;
+  const cleaned = formationText.replace(type,"").trim();
+  const chars = cleaned ? cleaned.split(/\s+/).filter(c=>c&&c!=="_") : [];
+  if(chars.length===0) return;
+  window._modalChars = chars.slice(0,5);
+  renderModalChars();
 }
 
 
