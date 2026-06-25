@@ -6843,9 +6843,12 @@ async function loadBuildOrder() {
   const select = document.getElementById('pveBuildSelect');
   
   if(!savedOrder) {
-    // 저장된 순서가 없으면 첫 번째 빌드 선택
+    // 현재 선택값이 유효하지 않을 때만 첫 번째로 초기화
     if(select.options.length > 0) {
-      select.value = select.options[0].value;
+      const validValues = Array.from(select.options).map(o => o.value);
+      if(!validValues.includes(select.value)) {
+        select.value = select.options[0].value;
+      }
     }
     // 순서가 없어도 탭은 렌더링
     renderPveBuildTabs();
